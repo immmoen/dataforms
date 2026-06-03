@@ -82,8 +82,7 @@
 						:reduce="(o) => o.id"
 						label="label"
 						:clearable="false"
-						:disabled="!!editingField"
-						:input-label="t('dataforms', 'Type')" />
+						:disabled="!!editingField" />
 					<p v-if="editingField" class="block-hint">
 						{{ t('dataforms', 'Type and machine name “{name}” cannot change.', { name: editingField.machineName }) }}
 					</p>

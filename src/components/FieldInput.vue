@@ -85,13 +85,22 @@
 				<a v-if="modelValue && modelValue.id" :href="fileUrl(modelValue.id)" target="_blank" rel="noopener noreferrer" class="file-link">
 					📎 {{ modelValue.name }}
 				</a>
-				<span v-else class="no-file">{{ t('dataforms', 'No file') }}</span>
-				<NcButton v-if="!disabled" @click="pickFile">
-					{{ modelValue ? t('dataforms', 'Change') : t('dataforms', 'Choose from Files') }}
+				<span v-else class="no-file">{{ t('dataforms', 'No file attached') }}</span>
+			</div>
+			<div v-if="!disabled" class="file-row">
+				<NcButton @click.prevent="triggerUpload">
+					<template #icon><UploadIcon :size="18" /></template>
+					{{ t('dataforms', 'Upload from computer') }}
 				</NcButton>
-				<NcButton v-if="modelValue && !disabled" type="tertiary" @click="emit(null)">
+				<NcButton type="tertiary" @click.prevent="pickFile">
+					<template #icon><FolderIcon :size="18" /></template>
+					{{ t('dataforms', 'Choose from Files') }}
+				</NcButton>
+				<NcButton v-if="modelValue" type="tertiary" @click.prevent="emit(null)">
 					{{ t('dataforms', 'Remove') }}
 				</NcButton>
+				<NcLoadingIcon v-if="uploading" :size="20" />
+				<input ref="fileInput" type="file" class="hidden-input" @change="onLocalFile">
 			</div>
 		</div>
 
@@ -111,15 +120,19 @@ import { generateUrl } from '@nextcloud/router'
 
 import NcButton from '@nextcloud/vue/components/NcButton'
 import NcCheckboxRadioSwitch from '@nextcloud/vue/components/NcCheckboxRadioSwitch'
+import NcLoadingIcon from '@nextcloud/vue/components/NcLoadingIcon'
 import NcSelect from '@nextcloud/vue/components/NcSelect'
 import NcTextArea from '@nextcloud/vue/components/NcTextArea'
 import NcTextField from '@nextcloud/vue/components/NcTextField'
 
-import { listOptions, resolveFile } from '../api/records.js'
+import UploadIcon from 'vue-material-design-icons/Upload.vue'
+import FolderIcon from 'vue-material-design-icons/Folder.vue'
+
+import { listOptions, resolveFile, uploadLocalFile } from '../api/records.js'
 
 export default {
 	name: 'FieldInput',
-	components: { NcButton, NcCheckboxRadioSwitch, NcSelect, NcTextArea, NcTextField },
+	components: { NcButton, NcCheckboxRadioSwitch, NcLoadingIcon, NcSelect, NcTextArea, NcTextField, UploadIcon, FolderIcon },
 	props: {
 		field: { type: Object, required: true },
 		modelValue: { type: [String, Number, Boolean, Array, Object, null], default: null },
@@ -132,6 +145,7 @@ export default {
 			relationOptions: [],
 			relLoading: false,
 			relTimer: null,
+			uploading: false,
 		}
 	},
 	mounted() {
@@ -161,6 +175,26 @@ export default {
 		},
 		fileUrl(id) {
 			return generateUrl('/f/{id}', { id })
+		},
+		triggerUpload() {
+			this.$refs.fileInput?.click()
+		},
+		async onLocalFile(event) {
+			const file = event.target.files?.[0]
+			event.target.value = '' // allow re-picking the same file
+			if (!file) {
+				return
+			}
+			this.uploading = true
+			try {
+				const attached = await uploadLocalFile(file)
+				this.emit(attached)
+			} catch (e) {
+				showError(t('dataforms', 'Could not upload the file'))
+				console.error(e)
+			} finally {
+				this.uploading = false
+			}
 		},
 		async pickFile() {
 			try {
@@ -242,5 +276,9 @@ export default {
 
 .no-file {
 	color: var(--color-text-maxcontrast);
+}
+
+.hidden-input {
+	display: none;
 }
 </style>

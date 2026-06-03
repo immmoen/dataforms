@@ -12,6 +12,7 @@ use OCA\Dataforms\Service\RecordService;
 use OCP\AppFramework\Controller;
 use OCP\AppFramework\Http;
 use OCP\AppFramework\Http\Attribute\NoAdminRequired;
+use OCP\AppFramework\Http\Attribute\NoCSRFRequired;
 use OCP\AppFramework\Http\DataDownloadResponse;
 use OCP\AppFramework\Http\DataResponse;
 use OCP\IRequest;
@@ -33,6 +34,7 @@ class ExportController extends Controller {
 	}
 
 	#[NoAdminRequired]
+	#[NoCSRFRequired]
 	public function csv(int $registerId): DataDownloadResponse|DataResponse {
 		$user = $this->userSession->getUser();
 		$userId = $user !== null ? $user->getUID() : '';

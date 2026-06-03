@@ -11,7 +11,7 @@
 				@update:model-value="onSearch" />
 			<span class="spacer" />
 			<input ref="importInput" type="file" accept=".csv,text/csv" class="hidden-file" @change="onImportFile">
-			<NcButton :disabled="fields.length === 0 || importing" @click="$refs.importInput.click()">
+			<NcButton :disabled="fields.length === 0 || importing" @click="showImport = true">
 				<template #icon>
 					<UploadIcon :size="20" />
 				</template>
@@ -108,6 +108,37 @@
 			:record="detailRecord"
 			@edit="onDetailEdit"
 			@close="showDetail = false" />
+
+		<NcDialog
+			v-if="showImport"
+			:name="t('dataforms', 'Import records from CSV')"
+			size="normal"
+			@closing="showImport = false">
+			<div class="import-help">
+				<p>{{ t('dataforms', 'Upload a CSV file. The first row must be column headers that match your field names; each following row becomes one record.') }}</p>
+				<ul>
+					<li>{{ t('dataforms', 'Column headers are matched to field labels (e.g. “Activity name”) or machine names (e.g. “activity_name”). Unmatched columns are ignored.') }}</li>
+					<li>{{ t('dataforms', 'Yes/No fields accept yes/no or true/false. Multi-select cells use comma-separated values.') }}</li>
+					<li>{{ t('dataforms', 'Relation and file fields cannot be imported and are skipped. Computed fields are recalculated.') }}</li>
+					<li>{{ t('dataforms', 'Rows that fail validation (e.g. a missing required field) are reported and skipped.') }}</li>
+				</ul>
+				<p class="tip">
+					{{ t('dataforms', 'Tip: export first to see the exact column layout, or download a header template.') }}
+				</p>
+				<div v-if="importResult" class="import-result">
+					<p><strong>{{ t('dataforms', 'Imported {ok}, {failed} failed', { ok: importResult.imported, failed: importResult.failed }) }}</strong></p>
+					<ul v-if="importResult.errors && importResult.errors.length">
+						<li v-for="(err, i) in importResult.errors" :key="i" class="err-row">{{ err }}</li>
+					</ul>
+				</div>
+			</div>
+			<template #actions>
+				<NcButton @click="downloadTemplate">{{ t('dataforms', 'Download template') }}</NcButton>
+				<NcButton type="primary" :disabled="importing" @click="$refs.importInput.click()">
+					{{ importing ? t('dataforms', 'Importing…') : t('dataforms', 'Choose CSV file') }}
+				</NcButton>
+			</template>
+		</NcDialog>
 	</div>
 </template>
 
@@ -118,6 +149,7 @@ import { showError, showSuccess, showWarning } from '@nextcloud/dialogs'
 import NcActions from '@nextcloud/vue/components/NcActions'
 import NcActionButton from '@nextcloud/vue/components/NcActionButton'
 import NcButton from '@nextcloud/vue/components/NcButton'
+import NcDialog from '@nextcloud/vue/components/NcDialog'
 import NcEmptyContent from '@nextcloud/vue/components/NcEmptyContent'
 import NcLoadingIcon from '@nextcloud/vue/components/NcLoadingIcon'
 import NcTextField from '@nextcloud/vue/components/NcTextField'
@@ -137,7 +169,7 @@ import { listRules } from '../api/rules.js'
 export default {
 	name: 'RecordsView',
 	components: {
-		NcActions, NcActionButton, NcButton, NcEmptyContent, NcLoadingIcon, NcTextField,
+		NcActions, NcActionButton, NcButton, NcDialog, NcEmptyContent, NcLoadingIcon, NcTextField,
 		PlusIcon, PencilIcon, DeleteIcon, DownloadIcon, UploadIcon, TableIcon, RecordForm, RecordDetail,
 	},
 	props: {
@@ -158,6 +190,8 @@ export default {
 			showDetail: false,
 			detailRecord: null,
 			importing: false,
+			showImport: false,
+			importResult: null,
 			searchTimer: null,
 		}
 	},
@@ -247,9 +281,11 @@ export default {
 			event.target.value = '' // allow re-selecting the same file
 			if (!file) return
 			this.importing = true
+			this.importResult = null
 			try {
 				const csv = await file.text()
 				const result = await importCsv(this.registerId, csv)
+				this.importResult = result
 				if (result.failed > 0) {
 					showWarning(t('dataforms', 'Imported {ok}, {failed} row(s) failed', { ok: result.imported, failed: result.failed }))
 				} else {
@@ -262,6 +298,19 @@ export default {
 			} finally {
 				this.importing = false
 			}
+		},
+		downloadTemplate() {
+			// Header-only CSV from the importable field labels.
+			const headers = this.fields
+				.filter((f) => !['relation', 'file'].includes(f.type))
+				.map((f) => '"' + f.label.replace(/"/g, '""') + '"')
+				.join(',')
+			const blob = new Blob(['﻿' + headers + '\n'], { type: 'text/csv;charset=utf-8' })
+			const a = document.createElement('a')
+			a.href = URL.createObjectURL(blob)
+			a.download = 'template.csv'
+			a.click()
+			URL.revokeObjectURL(a.href)
 		},
 		async remove(record) {
 			if (!window.confirm(t('dataforms', 'Delete this record?'))) return
@@ -300,6 +349,36 @@ export default {
 
 .search {
 	max-width: 320px;
+}
+
+.import-help {
+	max-width: 540px;
+	font-size: 0.95em;
+}
+
+.import-help ul {
+	margin: 8px 0 8px 18px;
+	list-style: disc;
+}
+
+.import-help li {
+	margin-bottom: 4px;
+	color: var(--color-main-text);
+}
+
+.import-help .tip {
+	color: var(--color-text-maxcontrast);
+}
+
+.import-result {
+	margin-top: 12px;
+	padding-top: 12px;
+	border-top: 1px solid var(--color-border);
+}
+
+.import-result .err-row {
+	color: var(--color-error-text, var(--color-error));
+	font-size: 0.88em;
 }
 
 .hidden-file {

@@ -12,6 +12,8 @@ return [
 	'routes' => [
 		// CSV export (normal route so it can return a file download).
 		['name' => 'export#csv', 'url' => '/registers/{registerId}/export/csv', 'verb' => 'GET', 'requirements' => ['registerId' => '\d+']],
+		// File upload from the user's computer (normal route for multipart).
+		['name' => 'upload#upload', 'url' => '/upload', 'verb' => 'POST'],
 	],
 	'ocs' => [
 		['name' => 'register#index', 'url' => '/api/v1/registers', 'verb' => 'GET'],

@@ -38,6 +38,10 @@
 				<span class="summary">{{ ruleSummary(rule) }}</span>
 				<span class="spacer" />
 				<NcActions>
+					<NcActionButton @click="openEdit(rule)">
+						<template #icon><PencilIcon :size="20" /></template>
+						{{ t('dataforms', 'Edit') }}
+					</NcActionButton>
 					<NcActionButton @click="remove(rule)">
 						<template #icon><DeleteIcon :size="20" /></template>
 						{{ t('dataforms', 'Delete') }}
@@ -49,7 +53,7 @@
 		<!-- Add rule dialog -->
 		<NcDialog
 			v-if="showAdd"
-			:name="t('dataforms', 'Add rule')"
+			:name="editingRule ? t('dataforms', 'Edit rule') : t('dataforms', 'Add rule')"
 			size="large"
 			:can-close="!saving"
 			@closing="showAdd = false">
@@ -74,7 +78,17 @@
 					<div v-for="(c, i) in draft.conditions" :key="i" class="cond-row">
 						<NcSelect v-model="c.field" :options="fieldOptions" :reduce="(o) => o.id" label="label" :clearable="false" class="cond-field" />
 						<NcSelect v-model="c.op" :options="ops" :reduce="(o) => o.id" label="label" :clearable="false" class="cond-op" />
-						<NcTextField v-if="!['isEmpty', 'isNotEmpty'].includes(c.op)" v-model="c.value" :label="t('dataforms', 'Value')" class="cond-val" />
+						<template v-if="!['isEmpty', 'isNotEmpty'].includes(c.op)">
+							<NcSelect
+								v-if="optionsForField(c.field).length"
+								v-model="c.value"
+								:options="optionsForField(c.field)"
+								:clearable="false"
+								:taggable="true"
+								:placeholder="t('dataforms', 'Value')"
+								class="cond-val" />
+							<NcTextField v-else v-model="c.value" :label="t('dataforms', 'Value')" class="cond-val" />
+						</template>
 						<NcButton type="tertiary" @click="draft.conditions.splice(i, 1)">
 							<template #icon><DeleteIcon :size="18" /></template>
 						</NcButton>
@@ -117,7 +131,7 @@
 
 			<template #actions>
 				<NcButton :disabled="saving" @click="showAdd = false">{{ t('dataforms', 'Cancel') }}</NcButton>
-				<NcButton type="primary" :disabled="saving || !draft.target" @click="submit">{{ t('dataforms', 'Add rule') }}</NcButton>
+				<NcButton type="primary" :disabled="saving || !draft.target" @click="submit">{{ editingRule ? t('dataforms', 'Save') : t('dataforms', 'Add rule') }}</NcButton>
 			</template>
 		</NcDialog>
 	</div>
@@ -137,10 +151,11 @@ import NcSelect from '@nextcloud/vue/components/NcSelect'
 import NcTextField from '@nextcloud/vue/components/NcTextField'
 
 import PlusIcon from 'vue-material-design-icons/Plus.vue'
+import PencilIcon from 'vue-material-design-icons/Pencil.vue'
 import DeleteIcon from 'vue-material-design-icons/Delete.vue'
 import FlashIcon from 'vue-material-design-icons/Flash.vue'
 
-import { listRules, createRule, deleteRule, RULE_EFFECTS, CONDITION_OPS } from '../api/rules.js'
+import { listRules, createRule, updateRule, deleteRule, RULE_EFFECTS, CONDITION_OPS } from '../api/rules.js'
 import { listFields } from '../api/fields.js'
 
 const emptyDraft = () => ({
@@ -157,7 +172,7 @@ export default {
 	name: 'RuleBuilder',
 	components: {
 		NcActions, NcActionButton, NcButton, NcDialog, NcEmptyContent, NcLoadingIcon,
-		NcSelect, NcTextField, PlusIcon, DeleteIcon, FlashIcon,
+		NcSelect, NcTextField, PlusIcon, PencilIcon, DeleteIcon, FlashIcon,
 	},
 	props: {
 		registerId: { type: Number, required: true },
@@ -168,6 +183,7 @@ export default {
 			fields: [],
 			loading: true,
 			showAdd: false,
+			editingRule: null,
 			saving: false,
 			draft: emptyDraft(),
 			effects: RULE_EFFECTS,
@@ -204,9 +220,29 @@ export default {
 				this.loading = false
 			}
 		},
+		optionsForField(machineName) {
+			const field = this.fields.find((f) => f.machineName === machineName)
+			return field?.config?.options ?? []
+		},
 		openAdd() {
+			this.editingRule = null
 			this.draft = emptyDraft()
 			this.draft.target = this.fields[0]?.machineName ?? ''
+			this.showAdd = true
+		},
+		openEdit(rule) {
+			this.editingRule = rule
+			this.draft = {
+				effect: rule.effect,
+				target: rule.target,
+				logic: rule.conditions?.logic ?? 'and',
+				conditions: (rule.conditions?.rules ?? []).length
+					? rule.conditions.rules.map((c) => ({ field: c.field, op: c.op, value: c.value ?? '' }))
+					: [{ field: this.fields[0]?.machineName ?? '', op: 'eq', value: '' }],
+				value: rule.value ?? '',
+				expression: rule.expression ?? '',
+				validation: { kind: 'regex', pattern: '', min: '', max: '', expression: '', message: '', ...(rule.validation ?? {}) },
+			}
 			this.showAdd = true
 		},
 		addCondition() {
@@ -232,11 +268,16 @@ export default {
 			if (!this.draft.target || this.saving) return
 			this.saving = true
 			try {
-				const rule = await createRule(this.registerId, this.buildPayload())
-				this.rules.push(rule)
+				if (this.editingRule) {
+					const updated = await updateRule(this.editingRule.id, this.buildPayload())
+					const i = this.rules.findIndex((r) => r.id === updated.id)
+					if (i !== -1) this.rules.splice(i, 1, updated)
+				} else {
+					this.rules.push(await createRule(this.registerId, this.buildPayload()))
+				}
 				this.showAdd = false
 			} catch (e) {
-				showError(e.response?.data?.ocs?.data?.message ?? t('dataforms', 'Could not add the rule'))
+				showError(e.response?.data?.ocs?.data?.message ?? t('dataforms', 'Could not save the rule'))
 				console.error(e)
 			} finally {
 				this.saving = false

@@ -62,12 +62,20 @@
 				<div class="register-head">
 					<div class="head-row">
 						<h2>{{ selected.title }}</h2>
-						<NcButton v-if="selected.canManage" type="secondary" @click="showShare = true">
-							<template #icon>
-								<ShareVariantIcon :size="20" />
-							</template>
-							{{ t('dataforms', 'Share') }}
-						</NcButton>
+						<div class="head-actions">
+							<NcButton type="tertiary" :aria-label="t('dataforms', 'Copy link to this register')" @click="copyLink">
+								<template #icon>
+									<LinkIcon :size="20" />
+								</template>
+								{{ t('dataforms', 'Copy link') }}
+							</NcButton>
+							<NcButton v-if="selected.canManage" type="secondary" @click="showShare = true">
+								<template #icon>
+									<ShareVariantIcon :size="20" />
+								</template>
+								{{ t('dataforms', 'Share') }}
+							</NcButton>
+						</div>
 					</div>
 					<p v-if="selected.description" class="description">
 						{{ selected.description }}
@@ -128,7 +136,7 @@
 
 <script>
 import { translate as t } from '@nextcloud/l10n'
-import { showError } from '@nextcloud/dialogs'
+import { showError, showSuccess } from '@nextcloud/dialogs'
 
 import NcContent from '@nextcloud/vue/components/NcContent'
 import NcAppContent from '@nextcloud/vue/components/NcAppContent'
@@ -148,6 +156,7 @@ import PlusIcon from 'vue-material-design-icons/Plus.vue'
 import DeleteIcon from 'vue-material-design-icons/Delete.vue'
 
 import ShareVariantIcon from 'vue-material-design-icons/ShareVariant.vue'
+import LinkIcon from 'vue-material-design-icons/LinkVariant.vue'
 
 import SchemaEditor from './components/SchemaEditor.vue'
 import RecordsView from './components/RecordsView.vue'
@@ -178,6 +187,7 @@ export default {
 		PlusIcon,
 		DeleteIcon,
 		ShareVariantIcon,
+		LinkIcon,
 	},
 	data() {
 		return {
@@ -205,6 +215,16 @@ export default {
 	},
 	async mounted() {
 		await this.load()
+		this.applyHash()
+		window.addEventListener('hashchange', this.applyHash)
+	},
+	beforeUnmount() {
+		window.removeEventListener('hashchange', this.applyHash)
+	},
+	watch: {
+		activeTab() {
+			this.syncHash()
+		},
 	},
 	methods: {
 		async load() {
@@ -222,6 +242,33 @@ export default {
 			this.selectedId = id
 			this.activeTab = 'records'
 			this.showShare = false
+			this.syncHash()
+		},
+		// Deep-linking: the URL hash reflects the open register + tab, so a
+		// register can be bookmarked and shared.
+		syncHash() {
+			const next = this.selectedId ? `#/register/${this.selectedId}/${this.activeTab}` : '#/'
+			if (window.location.hash !== next) {
+				window.history.replaceState(null, '', next)
+			}
+		},
+		applyHash() {
+			const m = window.location.hash.match(/^#\/register\/(\d+)(?:\/(\w+))?/)
+			if (!m) {
+				return
+			}
+			const id = Number(m[1])
+			if (this.registers.some((r) => r.id === id)) {
+				this.selectedId = id
+				this.activeTab = this.tabs.some((tb) => tb.id === m[2]) ? m[2] : 'records'
+			}
+		},
+		copyLink() {
+			const url = window.location.origin + window.location.pathname + `#/register/${this.selectedId}/${this.activeTab}`
+			navigator.clipboard?.writeText(url).then(
+				() => showSuccess(t('dataforms', 'Link copied to clipboard')),
+				() => showError(t('dataforms', 'Could not copy the link')),
+			)
 		},
 		openCreate() {
 			this.draft = { title: '', description: '' }
@@ -287,6 +334,12 @@ export default {
 	align-items: center;
 	justify-content: space-between;
 	gap: 16px;
+}
+
+.head-actions {
+	display: flex;
+	gap: 8px;
+	flex: none;
 }
 
 .register-detail h2 {

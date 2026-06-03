@@ -7,6 +7,32 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.7.0] - Feedback fixes: rules editing, uploads, links, import help
+
+### Added
+- **Edit conditional rules** (not just add/delete).
+- **Condition values are pickable from a select field's options** instead of
+  free text (still allows a custom value).
+- **Deep-linkable register URLs**: the hash reflects the open register + tab, a
+  **Copy link** button is in the header, and opening such a link selects it.
+- **Upload an attachment from your computer** (saved into your Nextcloud Files
+  under a "Dataforms" folder, referenced by id) — in addition to picking an
+  existing file. The file picker button no longer navigates away.
+- **CSV import help dialog** explaining the expected format, with a
+  **Download template** (header-only CSV) and an inline per-row error report.
+
+### Fixed
+- **Hidden fields were being saved.** A field hidden by a show-rule now has its
+  value cleared on save — client-side and authoritatively on the server (fixes
+  a hidden select persisting its first option).
+- **CSV export returned “access forbidden” (403).** The download route now
+  declares the CSRF exemption it needs for a top-level navigation.
+- The **“Type” label appeared twice** in the add-field dialog (duplicate
+  NcSelect input-label removed).
+- **Yes/No fields showed as a bare checkbox** — the field label is now shown on
+  the toggle (no duplicate label row).
+- Improved contrast/readability of required-field and validation error text.
+
 ## [0.6.2] - Field editing, reorder & robustness
 
 ### Added

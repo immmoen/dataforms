@@ -182,6 +182,12 @@ class RecordService {
 		if (count($result['errors']) > 0) {
 			throw new ValidationException('Validation failed', $result['errors']);
 		}
+		// A hidden field's value must not be persisted (authoritative).
+		foreach ($result['visible'] as $machineName => $visible) {
+			if (!$visible) {
+				$result['values'][$machineName] = null;
+			}
+		}
 		return $result['values'];
 	}
 

@@ -16,7 +16,7 @@
 
 			<template v-else>
 				<div v-for="field in visibleFields" :key="field.id" class="form-field">
-					<div class="label-row">
+					<div v-if="field.type !== 'boolean'" class="label-row">
 						<span class="lbl">{{ field.label }}</span>
 						<span v-if="evaluation.required[field.machineName]" class="req">*</span>
 						<span v-if="computedTargets.has(field.machineName)" class="computed-tag">
@@ -25,6 +25,7 @@
 					</div>
 					<FieldInput
 						:field="field"
+						:label="field.label"
 						:model-value="valueFor(field)"
 						:disabled="computedTargets.has(field.machineName)"
 						@update:model-value="onInput(field, $event)" />
@@ -118,11 +119,16 @@ export default {
 			}
 		},
 		async save() {
-			// Apply computed values, then block on client-side errors.
-			const payload = { ...this.evaluation.values }
-			if (Object.keys(this.evaluation.errors).length > 0) {
+			const ev = this.evaluation
+			if (Object.keys(ev.errors).length > 0) {
 				showError(t('dataforms', 'Please fix the highlighted fields'))
 				return
+			}
+			// Build the payload from computed values, but never persist a value
+			// for a hidden field (its value is not meant to apply).
+			const payload = {}
+			for (const f of this.fields) {
+				payload[f.machineName] = ev.visible[f.machineName] === false ? null : ev.values[f.machineName]
 			}
 			this.saving = true
 			try {
@@ -182,9 +188,14 @@ export default {
 	color: var(--color-primary-element);
 }
 
+.lbl {
+	color: var(--color-main-text);
+}
+
 .err {
-	color: var(--color-error);
-	font-size: 0.82em;
+	color: var(--color-error-text, var(--color-error));
+	font-size: 0.85em;
+	font-weight: 500;
 	margin: 4px 0 0;
 }
 </style>

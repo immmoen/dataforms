@@ -67,6 +67,20 @@ export async function resolveFile(path) {
 }
 
 /**
+ * Upload a file from the user's computer into their Nextcloud Files; returns
+ * its id and name. Uses the normal (CSRF-protected) app route.
+ *
+ * @param {File} file the file to upload
+ * @return {Promise<{id:number,name:string}>}
+ */
+export async function uploadLocalFile(file) {
+	const form = new FormData()
+	form.append('file', file)
+	const res = await axios.post(generateUrl('/apps/dataforms/upload'), form, { timeout: 120000 })
+	return res.data
+}
+
+/**
  * Import CSV text into a register.
  *
  * @param {number} registerId register id
