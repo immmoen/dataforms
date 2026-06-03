@@ -46,7 +46,7 @@ class RegisterController extends OCSController {
 	#[NoAdminRequired]
 	public function show(int $id): DataResponse {
 		try {
-			return new DataResponse($this->service->find($this->userId(), $id));
+			return new DataResponse($this->service->findDecorated($this->userId(), $id));
 		} catch (NotFoundException $e) {
 			return new DataResponse(['message' => $e->getMessage()], Http::STATUS_NOT_FOUND);
 		}

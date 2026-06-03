@@ -1,0 +1,89 @@
+{
+	"_comment": "SPDX-License-Identifier: AGPL-3.0-or-later. Shared fixtures asserting the JS (src/rules) and PHP (lib/Rules) evaluators agree. Loaded by both test suites.",
+	"expression": [
+		{ "name": "multiply", "expr": "likelihood * impact", "values": { "likelihood": 3, "impact": 4 }, "expect": 12 },
+		{ "name": "precedence", "expr": "2 + 3 * 4", "values": {}, "expect": 14 },
+		{ "name": "parentheses", "expr": "(2 + 3) * 4", "values": {}, "expect": 20 },
+		{ "name": "round", "expr": "round(price * 1.2, 2)", "values": { "price": 10 }, "expect": 12 },
+		{ "name": "round-half", "expr": "round((a + b) / 2, 1)", "values": { "a": 3, "b": 4 }, "expect": 3.5 },
+		{ "name": "sum", "expr": "sum(a, b, c)", "values": { "a": 1, "b": 2, "c": 3 }, "expect": 6 },
+		{ "name": "min-max", "expr": "max(a, b) - min(a, b)", "values": { "a": 9, "b": 2 }, "expect": 7 },
+		{ "name": "concat", "expr": "concat(first, ' ', last)", "values": { "first": "Ada", "last": "Lovelace" }, "expect": "Ada Lovelace" },
+		{ "name": "string-plus", "expr": "first + last", "values": { "first": "ab", "last": "cd" }, "expect": "abcd" },
+		{ "name": "if-true", "expr": "if(qty > 10, 'bulk', 'single')", "values": { "qty": 20 }, "expect": "bulk" },
+		{ "name": "if-false", "expr": "if(qty > 10, 'bulk', 'single')", "values": { "qty": 5 }, "expect": "single" },
+		{ "name": "comparison", "expr": "score >= 8", "values": { "score": 12 }, "expect": true },
+		{ "name": "abs", "expr": "abs(a - b)", "values": { "a": 3, "b": 10 }, "expect": 7 },
+		{ "name": "upper", "expr": "upper(name)", "values": { "name": "edps" }, "expect": "EDPS" },
+		{ "name": "coalesce", "expr": "coalesce(a, b, 'fallback')", "values": { "a": "", "b": "second" }, "expect": "second" },
+		{ "name": "div-by-zero-safe", "expr": "a / b", "values": { "a": 10, "b": 0 }, "expect": 0 }
+	],
+	"rules": [
+		{
+			"name": "compute-risk-score",
+			"fields": [
+				{ "machineName": "likelihood", "type": "number" },
+				{ "machineName": "impact", "type": "number" },
+				{ "machineName": "risk", "type": "number" }
+			],
+			"rules": [{ "effect": "compute", "target": "risk", "expression": "likelihood * impact" }],
+			"values": { "likelihood": 3, "impact": 4 },
+			"expect": { "values": { "risk": 12 }, "errors": {} }
+		},
+		{
+			"name": "conditional-require-triggered",
+			"fields": [
+				{ "machineName": "basis", "type": "select" },
+				{ "machineName": "dpia", "type": "text" }
+			],
+			"rules": [{ "effect": "require", "target": "dpia", "conditions": { "logic": "and", "rules": [{ "field": "basis", "op": "eq", "value": "public" }] } }],
+			"values": { "basis": "public" },
+			"expect": { "required": { "dpia": true }, "errors": { "dpia": "This field is required" } }
+		},
+		{
+			"name": "conditional-require-not-triggered",
+			"fields": [
+				{ "machineName": "basis", "type": "select" },
+				{ "machineName": "dpia", "type": "text" }
+			],
+			"rules": [{ "effect": "require", "target": "dpia", "conditions": { "logic": "and", "rules": [{ "field": "basis", "op": "eq", "value": "public" }] } }],
+			"values": { "basis": "consent" },
+			"expect": { "errors": {} }
+		},
+		{
+			"name": "show-hides-field",
+			"fields": [
+				{ "machineName": "special", "type": "boolean" },
+				{ "machineName": "categories", "type": "text" }
+			],
+			"rules": [{ "effect": "show", "target": "categories", "conditions": { "logic": "and", "rules": [{ "field": "special", "op": "eq", "value": true }] } }],
+			"values": { "special": false },
+			"expect": { "visible": { "categories": false } }
+		},
+		{
+			"name": "validate-range",
+			"fields": [{ "machineName": "score", "type": "number" }],
+			"rules": [{ "effect": "validate", "target": "score", "validation": { "kind": "range", "min": 0, "max": 10, "message": "0-10 only" } }],
+			"values": { "score": 15 },
+			"expect": { "errors": { "score": "0-10 only" } }
+		},
+		{
+			"name": "validate-regex-ok",
+			"fields": [{ "machineName": "ref", "type": "text" }],
+			"rules": [{ "effect": "validate", "target": "ref", "validation": { "kind": "regex", "pattern": "^DPIA-[0-9]{4}-[0-9]+$", "message": "bad format" } }],
+			"values": { "ref": "DPIA-2026-7" },
+			"expect": { "errors": {} }
+		},
+		{
+			"name": "or-conditions",
+			"fields": [
+				{ "machineName": "a", "type": "text" },
+				{ "machineName": "b", "type": "text" },
+				{ "machineName": "flag", "type": "text" }
+			],
+			"rules": [{ "effect": "require", "target": "flag", "conditions": { "logic": "or", "rules": [{ "field": "a", "op": "eq", "value": "x" }, { "field": "b", "op": "eq", "value": "y" }] } }],
+			"values": { "a": "no", "b": "y" },
+			"expect": { "required": { "flag": true } }
+		}
+	]
+}

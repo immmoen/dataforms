@@ -8,6 +8,8 @@ namespace OCA\Dataforms\Service;
 
 use OCA\Dataforms\Db\Register;
 use OCA\Dataforms\Db\RegisterMapper;
+use OCA\Dataforms\Db\Share;
+use OCA\Dataforms\Db\ShareMapper;
 use OCA\Dataforms\Exception\ForbiddenException;
 use OCA\Dataforms\Exception\NotFoundException;
 use OCP\AppFramework\Db\DoesNotExistException;
@@ -19,12 +21,14 @@ use OCP\IUserManager;
  * Business logic for registers. All access decisions are made here,
  * server-side; controllers never trust client-supplied ownership.
  *
- * Phase 1: owner has full rights; shared users get read access. Finer-grained
- * write/manage sharing is layered on with the share UI in a later slice.
+ * Permissions are a bitmask: read (1), write (2), manage (4). The owner always
+ * has all three. Other users get the OR of permissions from shares to them or
+ * their groups.
  */
 class RegisterService {
 	public function __construct(
 		private RegisterMapper $mapper,
+		private ShareMapper $shareMapper,
 		private IGroupManager $groupManager,
 		private IUserManager $userManager,
 		private ITimeFactory $time,
@@ -32,14 +36,23 @@ class RegisterService {
 	}
 
 	/**
-	 * @return Register[]
+	 * Registers visible to the user, decorated with their permission flags.
+	 *
+	 * @return array<int,array<string,mixed>>
 	 */
 	public function findAll(string $userId): array {
-		return $this->mapper->findAllForUser($userId, $this->groupIdsOf($userId));
+		$groupIds = $this->groupIdsOf($userId);
+		$out = [];
+		foreach ($this->mapper->findAllForUser($userId, $groupIds) as $register) {
+			$out[] = $this->decorate($register, $userId, $groupIds);
+		}
+		return $out;
 	}
 
 	/**
-	 * @throws NotFoundException when the register is missing or not visible.
+	 * Read gate: returns the entity if the user may read it, else NotFound.
+	 *
+	 * @throws NotFoundException
 	 */
 	public function find(string $userId, int $id): Register {
 		try {
@@ -47,13 +60,21 @@ class RegisterService {
 		} catch (DoesNotExistException) {
 			throw new NotFoundException('Register not found');
 		}
-		if (!$this->canRead($register, $userId)) {
+		if (($this->permissionsFor($register, $userId) & Share::PERMISSION_READ) === 0) {
 			throw new NotFoundException('Register not found');
 		}
 		return $register;
 	}
 
-	public function create(string $userId, string $title, string $description = '', string $icon = '', string $color = ''): Register {
+	/**
+	 * @return array<string,mixed>
+	 * @throws NotFoundException
+	 */
+	public function findDecorated(string $userId, int $id): array {
+		return $this->decorate($this->find($userId, $id), $userId, $this->groupIdsOf($userId));
+	}
+
+	public function create(string $userId, string $title, string $description = '', string $icon = '', string $color = ''): array {
 		$now = $this->time->getTime();
 		$register = new Register();
 		$register->setTitle($title);
@@ -63,7 +84,32 @@ class RegisterService {
 		$register->setOwner($userId);
 		$register->setCreated($now);
 		$register->setUpdated($now);
-		return $this->mapper->insert($register);
+		$register = $this->mapper->insert($register);
+		return $this->decorate($register, $userId, []);
+	}
+
+	/**
+	 * Find a register the user may write records to (write bit).
+	 *
+	 * @throws NotFoundException
+	 * @throws ForbiddenException
+	 */
+	public function findWritable(string $userId, int $id): Register {
+		$register = $this->find($userId, $id);
+		$this->require($register, $userId, Share::PERMISSION_WRITE, 'You do not have write access to this register');
+		return $register;
+	}
+
+	/**
+	 * Find a register the user may manage (schema, rules, sharing, deletion).
+	 *
+	 * @throws NotFoundException
+	 * @throws ForbiddenException
+	 */
+	public function findManageable(string $userId, int $id): Register {
+		$register = $this->find($userId, $id);
+		$this->require($register, $userId, Share::PERMISSION_MANAGE, 'You do not have manage access to this register');
+		return $register;
 	}
 
 	/**
@@ -71,22 +117,8 @@ class RegisterService {
 	 * @throws NotFoundException
 	 * @throws ForbiddenException
 	 */
-	/**
-	 * Find a register the user is allowed to manage (owner). Used by other
-	 * services (fields, records) to gate schema/data changes.
-	 *
-	 * @throws NotFoundException
-	 * @throws ForbiddenException
-	 */
-	public function findManageable(string $userId, int $id): Register {
-		$register = $this->find($userId, $id);
-		$this->requireManage($register, $userId);
-		return $register;
-	}
-
-	public function update(string $userId, int $id, array $changes): Register {
+	public function update(string $userId, int $id, array $changes): array {
 		$register = $this->findManageable($userId, $id);
-
 		if (array_key_exists('title', $changes)) {
 			$register->setTitle($changes['title']);
 		}
@@ -100,11 +132,12 @@ class RegisterService {
 			$register->setColor($changes['color']);
 		}
 		$register->setUpdated($this->time->getTime());
-		return $this->mapper->update($register);
+		$register = $this->mapper->update($register);
+		return $this->decorate($register, $userId, $this->groupIdsOf($userId));
 	}
 
 	/**
-	 * Soft-delete: sets deleted_at so the register drops out of all listings.
+	 * Soft-delete the register and remove its shares.
 	 *
 	 * @throws NotFoundException
 	 * @throws ForbiddenException
@@ -113,30 +146,44 @@ class RegisterService {
 		$register = $this->findManageable($userId, $id);
 		$register->setDeletedAt($this->time->getTime());
 		$this->mapper->update($register);
+		$this->shareMapper->deleteByRegister($id);
 	}
 
 	// ---- access control --------------------------------------------------
 
-	private function canRead(Register $register, string $userId): bool {
+	/**
+	 * Effective permission bitmask for a user on a register.
+	 */
+	public function permissionsFor(Register $register, string $userId): int {
 		if ($register->getOwner() === $userId) {
-			return true;
+			return Share::PERMISSION_READ | Share::PERMISSION_WRITE | Share::PERMISSION_MANAGE;
 		}
-		// Visible if it surfaces through the shared listing.
-		foreach ($this->mapper->findAllForUser($userId, $this->groupIdsOf($userId)) as $r) {
-			if ($r->getId() === $register->getId()) {
-				return true;
-			}
-		}
-		return false;
+		return $this->shareMapper->permissionsFor($register->getId(), $userId, $this->groupIdsOf($userId));
 	}
 
 	/**
 	 * @throws ForbiddenException
 	 */
-	private function requireManage(Register $register, string $userId): void {
-		if ($register->getOwner() !== $userId) {
-			throw new ForbiddenException('Only the owner can manage this register');
+	private function require(Register $register, string $userId, int $bit, string $message): void {
+		if (($this->permissionsFor($register, $userId) & $bit) === 0) {
+			throw new ForbiddenException($message);
 		}
+	}
+
+	/**
+	 * @param string[] $groupIds
+	 * @return array<string,mixed>
+	 */
+	private function decorate(Register $register, string $userId, array $groupIds): array {
+		$perms = $register->getOwner() === $userId
+			? (Share::PERMISSION_READ | Share::PERMISSION_WRITE | Share::PERMISSION_MANAGE)
+			: $this->shareMapper->permissionsFor($register->getId(), $userId, $groupIds);
+		return array_merge($register->jsonSerialize(), [
+			'isOwner' => $register->getOwner() === $userId,
+			'permissions' => $perms,
+			'canWrite' => (bool)($perms & Share::PERMISSION_WRITE),
+			'canManage' => (bool)($perms & Share::PERMISSION_MANAGE),
+		]);
 	}
 
 	/**

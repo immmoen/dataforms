@@ -7,6 +7,23 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.4.0] - Sharing (ACL) + rule-engine tests
+
+### Added
+- **Register sharing / access control**: `Share` domain, `ShareMapper`,
+  `ShareService`, OCS `ShareController`. Real read/write/manage permission
+  bitmask — owner has all; others get the OR of user/group shares. Enforced
+  server-side on every record/field/rule/share endpoint. Share dialog UI
+  (add user/group, Read/Write/Manage role, remove); internal users/groups only.
+- Register API responses now carry `permissions` / `canWrite` / `canManage` /
+  `isOwner`; record writes require the write bit, schema/rules/sharing the
+  manage bit.
+- **Rule-engine test suite**: shared fixtures (`tests/fixtures/rule-cases.json`)
+  drive *both* the JS (`src/rules/*.spec.js`, Vitest) and PHP
+  (`tests/unit/Rules/*Test.php`, PHPUnit) evaluators, proving they agree —
+  plus sandbox-safety cases (unknown functions, no global access, malformed
+  input). 30 JS assertions passing.
+
 ## [0.3.2] - Phase 1+2: records, conditional rules engine
 
 ### Added

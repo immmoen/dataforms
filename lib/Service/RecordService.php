@@ -76,7 +76,7 @@ class RecordService {
 	 * @throws ValidationException
 	 */
 	public function create(string $userId, int $registerId, array $values): array {
-		$this->registerService->findManageable($userId, $registerId);
+		$this->registerService->findWritable($userId, $registerId);
 		$fields = $this->fieldMapper->findByRegister($registerId);
 		$values = $this->validateAndCompute($registerId, $fields, $values);
 
@@ -101,7 +101,7 @@ class RecordService {
 	 */
 	public function update(string $userId, int $recordId, array $values): array {
 		$record = $this->findReadable($userId, $recordId);
-		$this->registerService->findManageable($userId, $record->getRegisterId());
+		$this->registerService->findWritable($userId, $record->getRegisterId());
 		$fields = $this->fieldMapper->findByRegister($record->getRegisterId());
 		$values = $this->validateAndCompute($record->getRegisterId(), $fields, $values);
 
@@ -119,7 +119,7 @@ class RecordService {
 	 */
 	public function delete(string $userId, int $recordId): void {
 		$record = $this->findReadable($userId, $recordId);
-		$this->registerService->findManageable($userId, $record->getRegisterId());
+		$this->registerService->findWritable($userId, $record->getRegisterId());
 		$record->setDeletedAt($this->time->getTime());
 		$this->recordMapper->update($record);
 	}

@@ -60,7 +60,15 @@
 
 			<div v-else class="register-detail">
 				<div class="register-head">
-					<h2>{{ selected.title }}</h2>
+					<div class="head-row">
+						<h2>{{ selected.title }}</h2>
+						<NcButton v-if="selected.canManage" type="secondary" @click="showShare = true">
+							<template #icon>
+								<ShareVariantIcon :size="20" />
+							</template>
+							{{ t('dataforms', 'Share') }}
+						</NcButton>
+					</div>
 					<p v-if="selected.description" class="description">
 						{{ selected.description }}
 					</p>
@@ -80,6 +88,8 @@
 				<RecordsView v-if="activeTab === 'records'" :key="'rec-' + selected.id" :register-id="selected.id" />
 				<SchemaEditor v-else-if="activeTab === 'fields'" :key="'fld-' + selected.id" :register-id="selected.id" />
 				<RuleBuilder v-else :key="'rul-' + selected.id" :register-id="selected.id" />
+
+				<ShareDialog v-if="showShare" :register="selected" @close="showShare = false" />
 			</div>
 		</NcAppContent>
 
@@ -137,9 +147,12 @@ import FolderTableIcon from 'vue-material-design-icons/FolderTable.vue'
 import PlusIcon from 'vue-material-design-icons/Plus.vue'
 import DeleteIcon from 'vue-material-design-icons/Delete.vue'
 
+import ShareVariantIcon from 'vue-material-design-icons/ShareVariant.vue'
+
 import SchemaEditor from './components/SchemaEditor.vue'
 import RecordsView from './components/RecordsView.vue'
 import RuleBuilder from './components/RuleBuilder.vue'
+import ShareDialog from './components/ShareDialog.vue'
 import { listRegisters, createRegister, deleteRegister } from './api/registers.js'
 
 export default {
@@ -160,9 +173,11 @@ export default {
 		SchemaEditor,
 		RecordsView,
 		RuleBuilder,
+		ShareDialog,
 		FolderTableIcon,
 		PlusIcon,
 		DeleteIcon,
+		ShareVariantIcon,
 	},
 	data() {
 		return {
@@ -170,6 +185,7 @@ export default {
 			loading: true,
 			selectedId: null,
 			activeTab: 'records',
+			showShare: false,
 			showCreate: false,
 			saving: false,
 			draft: { title: '', description: '' },
@@ -205,6 +221,7 @@ export default {
 		select(id) {
 			this.selectedId = id
 			this.activeTab = 'records'
+			this.showShare = false
 		},
 		openCreate() {
 			this.draft = { title: '', description: '' }
@@ -263,6 +280,13 @@ export default {
 
 .register-head {
 	padding: 24px 24px 0;
+}
+
+.head-row {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 16px;
 }
 
 .register-detail h2 {
