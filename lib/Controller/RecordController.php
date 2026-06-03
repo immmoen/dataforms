@@ -17,6 +17,7 @@ use OCP\AppFramework\Http\Attribute\NoAdminRequired;
 use OCP\AppFramework\Http\DataResponse;
 use OCP\AppFramework\OCSController;
 use OCP\IRequest;
+use OCP\ISession;
 use OCP\IUserSession;
 
 /**
@@ -30,6 +31,7 @@ class RecordController extends OCSController {
 		private RecordService $service,
 		private ImportService $importService,
 		private IUserSession $userSession,
+		private ISession $session,
 	) {
 		parent::__construct(Application::APP_ID, $request);
 	}
@@ -39,10 +41,21 @@ class RecordController extends OCSController {
 		return $user !== null ? $user->getUID() : '';
 	}
 
+	/**
+	 * Resolve the user, then release the PHP session lock so concurrent read
+	 * requests from the SPA don't serialise behind each other (or behind other
+	 * apps' long-polling). Safe for read-only actions that never write session.
+	 */
+	private function readUserId(): string {
+		$userId = $this->userId();
+		$this->session->close();
+		return $userId;
+	}
+
 	#[NoAdminRequired]
 	public function index(int $registerId, int $limit = 50, int $offset = 0, string $sort = 'updated', string $direction = 'DESC', string $search = ''): DataResponse {
 		try {
-			return new DataResponse($this->service->list($this->userId(), $registerId, $limit, $offset, $sort, $direction, $search));
+			return new DataResponse($this->service->list($this->readUserId(), $registerId, $limit, $offset, $sort, $direction, $search));
 		} catch (NotFoundException $e) {
 			return new DataResponse(['message' => $e->getMessage()], Http::STATUS_NOT_FOUND);
 		}
@@ -54,7 +67,7 @@ class RecordController extends OCSController {
 	#[NoAdminRequired]
 	public function options(int $registerId, string $display = '', string $search = ''): DataResponse {
 		try {
-			return new DataResponse($this->service->options($this->userId(), $registerId, $display, $search));
+			return new DataResponse($this->service->options($this->readUserId(), $registerId, $display, $search));
 		} catch (NotFoundException $e) {
 			return new DataResponse(['message' => $e->getMessage()], Http::STATUS_NOT_FOUND);
 		}
@@ -63,7 +76,7 @@ class RecordController extends OCSController {
 	#[NoAdminRequired]
 	public function show(int $id): DataResponse {
 		try {
-			return new DataResponse($this->service->get($this->userId(), $id));
+			return new DataResponse($this->service->get($this->readUserId(), $id));
 		} catch (NotFoundException $e) {
 			return new DataResponse(['message' => $e->getMessage()], Http::STATUS_NOT_FOUND);
 		}

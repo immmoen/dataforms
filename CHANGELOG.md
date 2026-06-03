@@ -7,6 +7,12 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Fixed
+- Read endpoints (records/fields/rules list, relation options) now release the
+  PHP session lock right after authenticating, so the SPA's concurrent reads no
+  longer serialise behind each other — or behind other apps' long-polling
+  requests on the shared session (which could otherwise stall a list load).
+
 ## [0.5.0] - Phase 3: relations, record detail, CSV import
 
 ### Added

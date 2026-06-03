@@ -16,6 +16,7 @@ use OCP\AppFramework\Http\Attribute\NoAdminRequired;
 use OCP\AppFramework\Http\DataResponse;
 use OCP\AppFramework\OCSController;
 use OCP\IRequest;
+use OCP\ISession;
 use OCP\IUserSession;
 
 /**
@@ -28,6 +29,7 @@ class FieldController extends OCSController {
 		IRequest $request,
 		private FieldService $service,
 		private IUserSession $userSession,
+		private ISession $session,
 	) {
 		parent::__construct(Application::APP_ID, $request);
 	}
@@ -40,7 +42,9 @@ class FieldController extends OCSController {
 	#[NoAdminRequired]
 	public function index(int $registerId): DataResponse {
 		try {
-			return new DataResponse($this->service->listForRegister($this->userId(), $registerId));
+			$userId = $this->userId();
+			$this->session->close(); // release the session lock for this read
+			return new DataResponse($this->service->listForRegister($userId, $registerId));
 		} catch (NotFoundException $e) {
 			return new DataResponse(['message' => $e->getMessage()], Http::STATUS_NOT_FOUND);
 		}
