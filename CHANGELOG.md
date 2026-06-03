@@ -7,6 +7,20 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.6.2] - Field editing, reorder & robustness
+
+### Added
+- **Edit a field** after creation: change its label, options, number config and
+  required/unique flags (type and machine name stay immutable, by design).
+- **Reorder fields** with up/down controls in the schema editor.
+- Unit tests for the EAV value coercion (`FieldValueTest`): column mapping and
+  round-tripping for every field type incl. relation and file ids.
+
+### Changed
+- All OCS API calls now use a 30s timeout, so a request that stalls behind a
+  saturated HTTP/1.1 connection pool (e.g. on a busy instance with Talk's
+  long-poll) surfaces an error instead of an indefinite spinner.
+
 ## [0.6.0] - Phase 3 complete: file attachments
 
 ### Added

@@ -10,6 +10,7 @@ import { generateOcsUrl } from '@nextcloud/router'
 const url = (path) => generateOcsUrl('apps/dataforms/api/v1/' + path)
 
 const config = {
+	timeout: 30000,
 	headers: {
 		'OCS-APIRequest': 'true',
 		Accept: 'application/json',

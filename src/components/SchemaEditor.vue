@@ -28,7 +28,7 @@
 		</NcEmptyContent>
 
 		<ul v-else class="field-list">
-			<li v-for="field in fields" :key="field.id" class="field-row">
+			<li v-for="(field, index) in fields" :key="field.id" class="field-row">
 				<span class="type-badge">{{ typeLabel(field.type) }}</span>
 				<span class="field-label">{{ field.label }}</span>
 				<code class="machine-name">{{ field.machineName }}</code>
@@ -38,7 +38,19 @@
 					{{ n('dataforms', '%n option', '%n options', optionCount(field)) }}
 				</span>
 				<span class="spacer" />
+				<NcButton type="tertiary-no-background" :disabled="index === 0" :aria-label="t('dataforms', 'Move up')" @click="move(index, -1)">
+					<template #icon><ChevronUpIcon :size="20" /></template>
+				</NcButton>
+				<NcButton type="tertiary-no-background" :disabled="index === fields.length - 1" :aria-label="t('dataforms', 'Move down')" @click="move(index, 1)">
+					<template #icon><ChevronDownIcon :size="20" /></template>
+				</NcButton>
 				<NcActions>
+					<NcActionButton @click="openEdit(field)">
+						<template #icon>
+							<PencilIcon :size="20" />
+						</template>
+						{{ t('dataforms', 'Edit') }}
+					</NcActionButton>
 					<NcActionButton @click="remove(field)">
 						<template #icon>
 							<DeleteIcon :size="20" />
@@ -52,7 +64,7 @@
 		<!-- Add field dialog -->
 		<NcDialog
 			v-if="showAdd"
-			:name="t('dataforms', 'Add field')"
+			:name="editingField ? t('dataforms', 'Edit field') : t('dataforms', 'Add field')"
 			size="normal"
 			:can-close="!saving"
 			@closing="showAdd = false">
@@ -70,7 +82,11 @@
 						:reduce="(o) => o.id"
 						label="label"
 						:clearable="false"
+						:disabled="!!editingField"
 						:input-label="t('dataforms', 'Type')" />
+					<p v-if="editingField" class="block-hint">
+						{{ t('dataforms', 'Type and machine name “{name}” cannot change.', { name: editingField.machineName }) }}
+					</p>
 				</div>
 
 				<div v-if="needsOptions" class="field-block">
@@ -120,8 +136,8 @@
 				<NcButton
 					type="primary"
 					:disabled="saving || draft.label.trim() === '' || (draft.type === 'relation' && !draft.target)"
-					@click="submitAdd">
-					{{ t('dataforms', 'Add field') }}
+					@click="submit">
+					{{ editingField ? t('dataforms', 'Save') : t('dataforms', 'Add field') }}
 				</NcButton>
 			</template>
 		</NcDialog>
@@ -144,10 +160,13 @@ import NcTextArea from '@nextcloud/vue/components/NcTextArea'
 import NcTextField from '@nextcloud/vue/components/NcTextField'
 
 import PlusIcon from 'vue-material-design-icons/Plus.vue'
+import PencilIcon from 'vue-material-design-icons/Pencil.vue'
 import DeleteIcon from 'vue-material-design-icons/Delete.vue'
+import ChevronUpIcon from 'vue-material-design-icons/ChevronUp.vue'
+import ChevronDownIcon from 'vue-material-design-icons/ChevronDown.vue'
 import TableColumnIcon from 'vue-material-design-icons/TableColumn.vue'
 
-import { listFields, createField, deleteField, FIELD_TYPES, typeLabel } from '../api/fields.js'
+import { listFields, createField, updateField, deleteField, reorderFields, FIELD_TYPES, typeLabel } from '../api/fields.js'
 import { listRegisters } from '../api/registers.js'
 
 const emptyDraft = () => ({
@@ -177,7 +196,10 @@ export default {
 		NcTextArea,
 		NcTextField,
 		PlusIcon,
+		PencilIcon,
 		DeleteIcon,
+		ChevronUpIcon,
+		ChevronDownIcon,
 		TableColumnIcon,
 	},
 	props: {
@@ -191,6 +213,7 @@ export default {
 			fields: [],
 			loading: true,
 			showAdd: false,
+			editingField: null,
 			saving: false,
 			draft: emptyDraft(),
 			typeOptions: FIELD_TYPES,
@@ -249,8 +272,29 @@ export default {
 			}
 		},
 		openAdd() {
+			this.editingField = null
 			this.draft = emptyDraft()
 			this.showAdd = true
+		},
+		openEdit(field) {
+			this.editingField = field
+			const cfg = field.config ?? {}
+			this.draft = {
+				label: field.label,
+				type: field.type,
+				optionsText: (cfg.options ?? []).join('\n'),
+				min: cfg.min ?? '',
+				max: cfg.max ?? '',
+				decimals: cfg.decimals ?? '',
+				target: cfg.targetRegisterId ?? null,
+				displayField: cfg.displayField ?? null,
+				mandatory: field.mandatory,
+				unique: field.unique,
+			}
+			this.showAdd = true
+		},
+		submit() {
+			return this.editingField ? this.submitEdit() : this.submitAdd()
 		},
 		buildConfig() {
 			const config = {}
@@ -291,6 +335,45 @@ export default {
 				console.error(e)
 			} finally {
 				this.saving = false
+			}
+		},
+		async submitEdit() {
+			if (this.draft.label.trim() === '' || this.saving) {
+				return
+			}
+			this.saving = true
+			try {
+				const updated = await updateField(this.editingField.id, {
+					label: this.draft.label.trim(),
+					config: this.buildConfig(),
+					mandatory: this.draft.mandatory,
+					unique: this.draft.unique,
+				})
+				const i = this.fields.findIndex((f) => f.id === updated.id)
+				if (i !== -1) this.fields.splice(i, 1, updated)
+				this.showAdd = false
+			} catch (e) {
+				showError(e.response?.data?.ocs?.data?.message ?? t('dataforms', 'Could not save the field'))
+				console.error(e)
+			} finally {
+				this.saving = false
+			}
+		},
+		async move(index, delta) {
+			const target = index + delta
+			if (target < 0 || target >= this.fields.length) {
+				return
+			}
+			const reordered = [...this.fields]
+			const [moved] = reordered.splice(index, 1)
+			reordered.splice(target, 0, moved)
+			this.fields = reordered // optimistic
+			try {
+				this.fields = await reorderFields(this.registerId, reordered.map((f) => f.id))
+			} catch (e) {
+				showError(t('dataforms', 'Could not reorder fields'))
+				this.load()
+				console.error(e)
 			}
 		},
 		async remove(field) {
@@ -403,6 +486,12 @@ export default {
 	font-weight: 600;
 	font-size: 0.9em;
 	margin-bottom: 4px;
+}
+
+.block-hint {
+	color: var(--color-text-maxcontrast);
+	font-size: 0.8em;
+	margin: 6px 0 0;
 }
 
 .number-config {

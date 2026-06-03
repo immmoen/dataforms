@@ -8,7 +8,7 @@ import { generateOcsUrl, generateUrl } from '@nextcloud/router'
 
 // Build the path literally — a {placeholder} would percent-encode slashes.
 const url = (path) => generateOcsUrl('apps/dataforms/api/v1/' + path)
-const config = { headers: { 'OCS-APIRequest': 'true', Accept: 'application/json' } }
+const config = { timeout: 30000, headers: { 'OCS-APIRequest': 'true', Accept: 'application/json' } }
 const unwrap = (response) => response.data.ocs.data
 
 /**
