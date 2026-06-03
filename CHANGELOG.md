@@ -7,6 +7,18 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.7.2] - Data-entry form fixes (regression + UX)
+
+### Fixed
+- **Labels were duplicated/tripled in the data-entry form** (a regression: the
+  parent and each widget both rendered a label). FieldInput now renders only the
+  control with an accessible aria-label; the single visible label comes from the
+  form. Verified in-browser: one label per field.
+- **Required errors showed before any input.** Validation errors now appear only
+  after a save is attempted (server errors still always show).
+- Boolean fields default to false instead of null, so a required Yes/No field is
+  not wrongly flagged empty.
+
 ## [0.7.0] - Feedback fixes: rules editing, uploads, links, import help
 
 ### Added

@@ -1,29 +1,38 @@
 <!-- SPDX-License-Identifier: AGPL-3.0-or-later -->
-<!-- Renders the right input widget for a field type and emits its value. -->
+<!--
+	Renders the input control for a field. The VISIBLE label is rendered once by
+	the parent (RecordForm); these controls carry only an accessible aria-label
+	(except the boolean toggle, whose label is its visible text), so a field's
+	label is never shown more than once.
+-->
 <template>
 	<div class="field-input">
-		<NcTextField
+		<input
 			v-if="['text', 'email', 'url', 'phone'].includes(field.type)"
-			:model-value="String(modelValue ?? '')"
 			:type="htmlType"
+			:value="modelValue ?? ''"
 			:disabled="disabled"
-			:label="label"
-			@update:model-value="emit($event)" />
+			:aria-label="label"
+			class="native-input"
+			@input="emit($event.target.value)">
 
-		<NcTextArea
+		<textarea
 			v-else-if="field.type === 'longtext'"
-			:model-value="String(modelValue ?? '')"
+			:value="modelValue ?? ''"
 			:disabled="disabled"
-			:label="label"
-			@update:model-value="emit($event)" />
+			:aria-label="label"
+			rows="3"
+			class="native-input native-textarea"
+			@input="emit($event.target.value)" />
 
-		<NcTextField
+		<input
 			v-else-if="['number', 'currency', 'percentage'].includes(field.type)"
-			:model-value="String(modelValue ?? '')"
 			type="number"
+			:value="modelValue ?? ''"
 			:disabled="disabled"
-			:label="label"
-			@update:model-value="emit($event === '' ? null : Number($event))" />
+			:aria-label="label"
+			class="native-input"
+			@input="emit($event.target.value === '' ? null : Number($event.target.value))">
 
 		<NcCheckboxRadioSwitch
 			v-else-if="field.type === 'boolean'"
@@ -33,54 +42,49 @@
 			{{ label }}
 		</NcCheckboxRadioSwitch>
 
-		<div v-else-if="['date', 'datetime', 'time'].includes(field.type)" class="native">
-			<label class="native-label">{{ label }}</label>
-			<input
-				:type="htmlType"
-				:value="modelValue ?? ''"
-				:disabled="disabled"
-				class="native-input"
-				@input="emit($event.target.value)">
-		</div>
+		<input
+			v-else-if="['date', 'datetime', 'time'].includes(field.type)"
+			:type="htmlType"
+			:value="modelValue ?? ''"
+			:disabled="disabled"
+			:aria-label="label"
+			class="native-input"
+			@input="emit($event.target.value)">
 
-		<div v-else-if="field.type === 'select'" class="native">
-			<label class="native-label">{{ label }}</label>
-			<NcSelect
-				:model-value="modelValue"
-				:options="options"
-				:disabled="disabled"
-				:clearable="true"
-				:input-label="label"
-				@update:model-value="emit($event)" />
-		</div>
+		<NcSelect
+			v-else-if="field.type === 'select'"
+			:model-value="modelValue"
+			:options="options"
+			:disabled="disabled"
+			:clearable="true"
+			:aria-label="label"
+			:placeholder="t('dataforms', 'Choose…')"
+			@update:model-value="emit($event)" />
 
-		<div v-else-if="field.type === 'multiselect'" class="native">
-			<label class="native-label">{{ label }}</label>
-			<NcSelect
-				:model-value="Array.isArray(modelValue) ? modelValue : []"
-				:options="options"
-				:multiple="true"
-				:disabled="disabled"
-				:input-label="label"
-				@update:model-value="emit($event)" />
-		</div>
+		<NcSelect
+			v-else-if="field.type === 'multiselect'"
+			:model-value="Array.isArray(modelValue) ? modelValue : []"
+			:options="options"
+			:multiple="true"
+			:disabled="disabled"
+			:aria-label="label"
+			:placeholder="t('dataforms', 'Choose…')"
+			@update:model-value="emit($event)" />
 
-		<div v-else-if="field.type === 'relation'" class="native">
-			<label class="native-label">{{ label }}</label>
-			<NcSelect
-				:model-value="modelValue"
-				:options="relationOptions"
-				label="label"
-				:clearable="true"
-				:loading="relLoading"
-				:disabled="disabled"
-				:input-label="label"
-				@search="onRelSearch"
-				@update:model-value="emit($event)" />
-		</div>
+		<NcSelect
+			v-else-if="field.type === 'relation'"
+			:model-value="modelValue"
+			:options="relationOptions"
+			label="label"
+			:clearable="true"
+			:loading="relLoading"
+			:disabled="disabled"
+			:aria-label="label"
+			:placeholder="t('dataforms', 'Choose a record…')"
+			@search="onRelSearch"
+			@update:model-value="emit($event)" />
 
-		<div v-else-if="field.type === 'file'" class="native">
-			<label class="native-label">{{ label }}</label>
+		<div v-else-if="field.type === 'file'" class="file-field">
 			<div class="file-row">
 				<a v-if="modelValue && modelValue.id" :href="fileUrl(modelValue.id)" target="_blank" rel="noopener noreferrer" class="file-link">
 					📎 {{ modelValue.name }}
@@ -104,12 +108,15 @@
 			</div>
 		</div>
 
-		<NcTextField
+		<input
 			v-else
-			:model-value="String(modelValue ?? '')"
+			type="text"
+			:value="modelValue ?? ''"
 			:disabled="disabled"
-			:label="label + (['user', 'group'].includes(field.type) ? ' (id)' : '')"
-			@update:model-value="emit($event)" />
+			:aria-label="label"
+			:placeholder="['user', 'group'].includes(field.type) ? t('dataforms', 'Enter an id') : ''"
+			class="native-input"
+			@input="emit($event.target.value)">
 	</div>
 </template>
 
@@ -122,8 +129,6 @@ import NcButton from '@nextcloud/vue/components/NcButton'
 import NcCheckboxRadioSwitch from '@nextcloud/vue/components/NcCheckboxRadioSwitch'
 import NcLoadingIcon from '@nextcloud/vue/components/NcLoadingIcon'
 import NcSelect from '@nextcloud/vue/components/NcSelect'
-import NcTextArea from '@nextcloud/vue/components/NcTextArea'
-import NcTextField from '@nextcloud/vue/components/NcTextField'
 
 import UploadIcon from 'vue-material-design-icons/Upload.vue'
 import FolderIcon from 'vue-material-design-icons/Folder.vue'
@@ -132,7 +137,7 @@ import { listOptions, resolveFile, uploadLocalFile } from '../api/records.js'
 
 export default {
 	name: 'FieldInput',
-	components: { NcButton, NcCheckboxRadioSwitch, NcLoadingIcon, NcSelect, NcTextArea, NcTextField, UploadIcon, FolderIcon },
+	components: { NcButton, NcCheckboxRadioSwitch, NcLoadingIcon, NcSelect, UploadIcon, FolderIcon },
 	props: {
 		field: { type: Object, required: true },
 		modelValue: { type: [String, Number, Boolean, Array, Object, null], default: null },
@@ -148,15 +153,6 @@ export default {
 			uploading: false,
 		}
 	},
-	mounted() {
-		if (this.field.type === 'relation') {
-			// Seed with the current value so it displays, then load choices.
-			if (this.modelValue && typeof this.modelValue === 'object') {
-				this.relationOptions = [this.modelValue]
-			}
-			this.loadRelations('')
-		}
-	},
 	computed: {
 		htmlType() {
 			return {
@@ -167,6 +163,14 @@ export default {
 		options() {
 			return this.field.config?.options ?? []
 		},
+	},
+	mounted() {
+		if (this.field.type === 'relation') {
+			if (this.modelValue && typeof this.modelValue === 'object') {
+				this.relationOptions = [this.modelValue]
+			}
+			this.loadRelations('')
+		}
 	},
 	methods: {
 		t,
@@ -181,7 +185,7 @@ export default {
 		},
 		async onLocalFile(event) {
 			const file = event.target.files?.[0]
-			event.target.value = '' // allow re-picking the same file
+			event.target.value = ''
 			if (!file) {
 				return
 			}
@@ -209,7 +213,7 @@ export default {
 				const file = await resolveFile(path)
 				this.emit(file)
 			} catch (e) {
-				if (e) { // pick() rejects on cancel
+				if (e) {
 					showError(t('dataforms', 'Could not attach the file'))
 					console.error(e)
 				}
@@ -227,7 +231,6 @@ export default {
 			this.relLoading = true
 			try {
 				const opts = await listOptions(target, { display: this.field.config?.displayField ?? '', search })
-				// Keep the current value present so it stays displayed.
 				const current = this.modelValue && typeof this.modelValue === 'object' ? [this.modelValue] : []
 				const seen = new Set(opts.map((o) => o.id))
 				this.relationOptions = [...opts, ...current.filter((c) => !seen.has(c.id))]
@@ -246,21 +249,38 @@ export default {
 	width: 100%;
 }
 
-.native-label {
-	display: block;
-	font-weight: 600;
-	font-size: 0.9em;
-	margin-bottom: 4px;
-}
-
 .native-input {
 	width: 100%;
 	min-height: 40px;
-	padding: 6px 10px;
+	padding: 7px 12px;
 	border: 2px solid var(--color-border-maxcontrast);
 	border-radius: var(--border-radius-large, 8px);
 	background: var(--color-main-background);
 	color: var(--color-main-text);
+	font-size: inherit;
+	font-family: inherit;
+}
+
+.native-input:focus,
+.native-input:focus-visible {
+	border-color: var(--color-primary-element);
+	outline: none;
+}
+
+.native-input:disabled {
+	background: var(--color-background-dark);
+	color: var(--color-text-maxcontrast);
+}
+
+.native-textarea {
+	resize: vertical;
+	min-height: 72px;
+}
+
+.file-field {
+	display: flex;
+	flex-direction: column;
+	gap: 8px;
 }
 
 .file-row {

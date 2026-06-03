@@ -73,6 +73,7 @@ export default {
 		return {
 			values: this.initValues(),
 			serverErrors: {},
+			attempted: false,
 			saving: false,
 		}
 	},
@@ -87,7 +88,9 @@ export default {
 			return new Set(this.rules.filter((r) => r.effect === 'compute').map((r) => r.target))
 		},
 		allErrors() {
-			return { ...this.evaluation.errors, ...this.serverErrors }
+			// Only surface validation errors once the user has tried to save;
+			// server errors (from an actual save) always show.
+			return { ...(this.attempted ? this.evaluation.errors : {}), ...this.serverErrors }
 		},
 	},
 	methods: {
@@ -97,6 +100,8 @@ export default {
 			for (const f of this.fields) {
 				if (this.record) {
 					values[f.machineName] = this.record.values[f.machineName] ?? null
+				} else if (f.type === 'boolean') {
+					values[f.machineName] = f.default === 'true' || f.default === true
 				} else {
 					values[f.machineName] = f.default ?? (f.type === 'multiselect' ? [] : null)
 				}
@@ -119,6 +124,7 @@ export default {
 			}
 		},
 		async save() {
+			this.attempted = true
 			const ev = this.evaluation
 			if (Object.keys(ev.errors).length > 0) {
 				showError(t('dataforms', 'Please fix the highlighted fields'))
