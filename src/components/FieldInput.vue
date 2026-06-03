@@ -65,6 +65,20 @@
 				@update:model-value="emit($event)" />
 		</div>
 
+		<div v-else-if="field.type === 'relation'" class="native">
+			<label class="native-label">{{ label }}</label>
+			<NcSelect
+				:model-value="modelValue"
+				:options="relationOptions"
+				label="label"
+				:clearable="true"
+				:loading="relLoading"
+				:disabled="disabled"
+				:input-label="label"
+				@search="onRelSearch"
+				@update:model-value="emit($event)" />
+		</div>
+
 		<NcTextField
 			v-else
 			:model-value="String(modelValue ?? '')"
@@ -80,16 +94,34 @@ import NcSelect from '@nextcloud/vue/components/NcSelect'
 import NcTextArea from '@nextcloud/vue/components/NcTextArea'
 import NcTextField from '@nextcloud/vue/components/NcTextField'
 
+import { listOptions } from '../api/records.js'
+
 export default {
 	name: 'FieldInput',
 	components: { NcCheckboxRadioSwitch, NcSelect, NcTextArea, NcTextField },
 	props: {
 		field: { type: Object, required: true },
-		modelValue: { type: [String, Number, Boolean, Array, null], default: null },
+		modelValue: { type: [String, Number, Boolean, Array, Object, null], default: null },
 		label: { type: String, default: '' },
 		disabled: { type: Boolean, default: false },
 	},
 	emits: ['update:modelValue'],
+	data() {
+		return {
+			relationOptions: [],
+			relLoading: false,
+			relTimer: null,
+		}
+	},
+	mounted() {
+		if (this.field.type === 'relation') {
+			// Seed with the current value so it displays, then load choices.
+			if (this.modelValue && typeof this.modelValue === 'object') {
+				this.relationOptions = [this.modelValue]
+			}
+			this.loadRelations('')
+		}
+	},
 	computed: {
 		htmlType() {
 			return {
@@ -104,6 +136,28 @@ export default {
 	methods: {
 		emit(value) {
 			this.$emit('update:modelValue', value)
+		},
+		onRelSearch(query) {
+			clearTimeout(this.relTimer)
+			this.relTimer = setTimeout(() => this.loadRelations(query), 250)
+		},
+		async loadRelations(search) {
+			const target = this.field.config?.targetRegisterId
+			if (!target) {
+				return
+			}
+			this.relLoading = true
+			try {
+				const opts = await listOptions(target, { display: this.field.config?.displayField ?? '', search })
+				// Keep the current value present so it stays displayed.
+				const current = this.modelValue && typeof this.modelValue === 'object' ? [this.modelValue] : []
+				const seen = new Set(opts.map((o) => o.id))
+				this.relationOptions = [...opts, ...current.filter((c) => !seen.has(c.id))]
+			} catch (e) {
+				console.error(e)
+			} finally {
+				this.relLoading = false
+			}
 		},
 	},
 }

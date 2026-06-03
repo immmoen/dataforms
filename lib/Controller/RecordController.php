@@ -10,6 +10,7 @@ use OCA\Dataforms\AppInfo\Application;
 use OCA\Dataforms\Exception\ForbiddenException;
 use OCA\Dataforms\Exception\NotFoundException;
 use OCA\Dataforms\Exception\ValidationException;
+use OCA\Dataforms\Service\ImportService;
 use OCA\Dataforms\Service\RecordService;
 use OCP\AppFramework\Http;
 use OCP\AppFramework\Http\Attribute\NoAdminRequired;
@@ -27,6 +28,7 @@ class RecordController extends OCSController {
 	public function __construct(
 		IRequest $request,
 		private RecordService $service,
+		private ImportService $importService,
 		private IUserSession $userSession,
 	) {
 		parent::__construct(Application::APP_ID, $request);
@@ -41,6 +43,18 @@ class RecordController extends OCSController {
 	public function index(int $registerId, int $limit = 50, int $offset = 0, string $sort = 'updated', string $direction = 'DESC', string $search = ''): DataResponse {
 		try {
 			return new DataResponse($this->service->list($this->userId(), $registerId, $limit, $offset, $sort, $direction, $search));
+		} catch (NotFoundException $e) {
+			return new DataResponse(['message' => $e->getMessage()], Http::STATUS_NOT_FOUND);
+		}
+	}
+
+	/**
+	 * Pickable options for a relation target register (id + display label).
+	 */
+	#[NoAdminRequired]
+	public function options(int $registerId, string $display = '', string $search = ''): DataResponse {
+		try {
+			return new DataResponse($this->service->options($this->userId(), $registerId, $display, $search));
 		} catch (NotFoundException $e) {
 			return new DataResponse(['message' => $e->getMessage()], Http::STATUS_NOT_FOUND);
 		}
@@ -80,6 +94,19 @@ class RecordController extends OCSController {
 			return new DataResponse($this->service->update($this->userId(), $id, $values));
 		} catch (ValidationException $e) {
 			return new DataResponse(['message' => $e->getMessage(), 'errors' => $e->getErrors()], Http::STATUS_BAD_REQUEST);
+		} catch (NotFoundException $e) {
+			return new DataResponse(['message' => $e->getMessage()], Http::STATUS_NOT_FOUND);
+		} catch (ForbiddenException $e) {
+			return new DataResponse(['message' => $e->getMessage()], Http::STATUS_FORBIDDEN);
+		}
+	}
+
+	#[NoAdminRequired]
+	public function import(int $registerId, string $csv = ''): DataResponse {
+		try {
+			return new DataResponse($this->importService->importCsv($this->userId(), $registerId, $csv));
+		} catch (ValidationException $e) {
+			return new DataResponse(['message' => $e->getMessage()], Http::STATUS_BAD_REQUEST);
 		} catch (NotFoundException $e) {
 			return new DataResponse(['message' => $e->getMessage()], Http::STATUS_NOT_FOUND);
 		} catch (ForbiddenException $e) {

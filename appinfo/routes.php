@@ -30,6 +30,8 @@ return [
 		// Records (data)
 		['name' => 'record#index', 'url' => '/api/v1/registers/{registerId}/records', 'verb' => 'GET', 'requirements' => ['registerId' => '\d+']],
 		['name' => 'record#create', 'url' => '/api/v1/registers/{registerId}/records', 'verb' => 'POST', 'requirements' => ['registerId' => '\d+']],
+		['name' => 'record#options', 'url' => '/api/v1/registers/{registerId}/options', 'verb' => 'GET', 'requirements' => ['registerId' => '\d+']],
+		['name' => 'record#import', 'url' => '/api/v1/registers/{registerId}/import', 'verb' => 'POST', 'requirements' => ['registerId' => '\d+']],
 		['name' => 'record#show', 'url' => '/api/v1/records/{id}', 'verb' => 'GET', 'requirements' => ['id' => '\d+']],
 		['name' => 'record#update', 'url' => '/api/v1/records/{id}', 'verb' => 'PUT', 'requirements' => ['id' => '\d+']],
 		['name' => 'record#destroy', 'url' => '/api/v1/records/{id}', 'verb' => 'DELETE', 'requirements' => ['id' => '\d+']],

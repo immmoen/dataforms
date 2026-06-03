@@ -7,6 +7,21 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.5.0] - Phase 3: relations, record detail, CSV import
+
+### Added
+- **Relation fields**: link a record to a record in another register. Stored by
+  target record id (`value_ref_record_id`); the display label is resolved from a
+  configurable display field. Schema editor picks the target register + display
+  field; the data-entry form offers a searchable record picker
+  (`registers/{id}/options` endpoint).
+- **Record detail view**: read-only modal showing every field (incl. relations),
+  opened by clicking a table row; edit from there.
+- **CSV import** (`ImportService`): upload a CSV, columns matched to fields by
+  header (label or machine name); each row created through the normal
+  validation/computed pipeline, with a per-row error summary. Round-trips with
+  the existing CSV export.
+
 ## [0.4.0] - Sharing (ACL) + rule-engine tests
 
 ### Added

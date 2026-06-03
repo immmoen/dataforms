@@ -10,6 +10,13 @@
 				type="search"
 				@update:model-value="onSearch" />
 			<span class="spacer" />
+			<input ref="importInput" type="file" accept=".csv,text/csv" class="hidden-file" @change="onImportFile">
+			<NcButton :disabled="fields.length === 0 || importing" @click="$refs.importInput.click()">
+				<template #icon>
+					<UploadIcon :size="20" />
+				</template>
+				{{ importing ? t('dataforms', 'Importing…') : t('dataforms', 'Import CSV') }}
+			</NcButton>
 			<NcButton :disabled="fields.length === 0" @click="exportCsv">
 				<template #icon>
 					<DownloadIcon :size="20" />
@@ -54,7 +61,7 @@
 						</tr>
 					</thead>
 					<tbody>
-						<tr v-for="record in records" :key="record.id" @click="openEdit(record)">
+						<tr v-for="record in records" :key="record.id" @click="openDetail(record)">
 							<td v-for="field in columns" :key="field.id">
 								{{ format(field, record.values[field.machineName]) }}
 							</td>
@@ -94,12 +101,19 @@
 			:record="editing"
 			@saved="onSaved"
 			@close="showForm = false" />
+
+		<RecordDetail
+			v-if="showDetail"
+			:fields="fields"
+			:record="detailRecord"
+			@edit="onDetailEdit"
+			@close="showDetail = false" />
 	</div>
 </template>
 
 <script>
 import { translate as t } from '@nextcloud/l10n'
-import { showError } from '@nextcloud/dialogs'
+import { showError, showSuccess, showWarning } from '@nextcloud/dialogs'
 
 import NcActions from '@nextcloud/vue/components/NcActions'
 import NcActionButton from '@nextcloud/vue/components/NcActionButton'
@@ -112,17 +126,19 @@ import PlusIcon from 'vue-material-design-icons/Plus.vue'
 import PencilIcon from 'vue-material-design-icons/Pencil.vue'
 import DeleteIcon from 'vue-material-design-icons/Delete.vue'
 import DownloadIcon from 'vue-material-design-icons/Download.vue'
+import UploadIcon from 'vue-material-design-icons/Upload.vue'
 import TableIcon from 'vue-material-design-icons/Table.vue'
 
 import RecordForm from './RecordForm.vue'
-import { listRecords, deleteRecord, csvExportUrl } from '../api/records.js'
+import RecordDetail from './RecordDetail.vue'
+import { listRecords, deleteRecord, csvExportUrl, importCsv } from '../api/records.js'
 import { listRules } from '../api/rules.js'
 
 export default {
 	name: 'RecordsView',
 	components: {
 		NcActions, NcActionButton, NcButton, NcEmptyContent, NcLoadingIcon, NcTextField,
-		PlusIcon, PencilIcon, DeleteIcon, DownloadIcon, TableIcon, RecordForm,
+		PlusIcon, PencilIcon, DeleteIcon, DownloadIcon, UploadIcon, TableIcon, RecordForm, RecordDetail,
 	},
 	props: {
 		registerId: { type: Number, required: true },
@@ -139,6 +155,9 @@ export default {
 			limit: 25,
 			showForm: false,
 			editing: null,
+			showDetail: false,
+			detailRecord: null,
+			importing: false,
 			searchTimer: null,
 		}
 	},
@@ -199,6 +218,7 @@ export default {
 			if (value === null || value === undefined) return ''
 			if (Array.isArray(value)) return value.join(', ')
 			if (typeof value === 'boolean') return value ? t('dataforms', 'Yes') : t('dataforms', 'No')
+			if (typeof value === 'object' && 'label' in value) return value.label // relation
 			return String(value)
 		},
 		openNew() {
@@ -206,12 +226,41 @@ export default {
 			this.showForm = true
 		},
 		openEdit(record) {
+			this.showDetail = false
 			this.editing = record
 			this.showForm = true
+		},
+		openDetail(record) {
+			this.detailRecord = record
+			this.showDetail = true
+		},
+		onDetailEdit(record) {
+			this.openEdit(record)
 		},
 		onSaved() {
 			this.showForm = false
 			this.load()
+		},
+		async onImportFile(event) {
+			const file = event.target.files?.[0]
+			event.target.value = '' // allow re-selecting the same file
+			if (!file) return
+			this.importing = true
+			try {
+				const csv = await file.text()
+				const result = await importCsv(this.registerId, csv)
+				if (result.failed > 0) {
+					showWarning(t('dataforms', 'Imported {ok}, {failed} row(s) failed', { ok: result.imported, failed: result.failed }))
+				} else {
+					showSuccess(t('dataforms', 'Imported {ok} record(s)', { ok: result.imported }))
+				}
+				this.load()
+			} catch (e) {
+				showError(e.response?.data?.ocs?.data?.message ?? t('dataforms', 'Could not import the CSV'))
+				console.error(e)
+			} finally {
+				this.importing = false
+			}
 		},
 		async remove(record) {
 			if (!window.confirm(t('dataforms', 'Delete this record?'))) return
@@ -250,6 +299,10 @@ export default {
 
 .search {
 	max-width: 320px;
+}
+
+.hidden-file {
+	display: none;
 }
 
 .spacer {

@@ -50,12 +50,31 @@ class RecordService {
 		foreach ($records as $record) {
 			$dtos[] = $this->toDto($record, $fields, $valuesByRecord[$record->getId()] ?? []);
 		}
+		$dtos = $this->resolveRelations($fields, $dtos);
 
 		return [
 			'records' => $dtos,
 			'total' => $this->recordMapper->countByRegister($registerId, $search),
 			'fields' => array_map(static fn (Field $f) => $f->jsonSerialize(), $fields),
 		];
+	}
+
+	/**
+	 * Pickable options (id + label) for a relation target register.
+	 *
+	 * @return array<int,array{id:int,label:string}>
+	 * @throws NotFoundException
+	 */
+	public function options(string $userId, int $registerId, string $displayField, string $search): array {
+		$this->registerService->find($userId, $registerId); // read gate
+		$records = $this->recordMapper->findByRegister($registerId, 50, 0, 'updated', 'DESC', $search);
+		$ids = array_map(static fn (Record $r) => $r->getId(), $records);
+		$labels = $this->labelsForRecords($registerId, $ids, $displayField);
+		$out = [];
+		foreach ($records as $record) {
+			$out[] = ['id' => $record->getId(), 'label' => $labels[$record->getId()] ?? ('#' . $record->getId())];
+		}
+		return $out;
 	}
 
 	/**
@@ -66,7 +85,8 @@ class RecordService {
 		$record = $this->findReadable($userId, $recordId);
 		$fields = $this->fieldMapper->findByRegister($record->getRegisterId());
 		$values = $this->valueMapper->findByRecordIds([$record->getId()]);
-		return $this->toDto($record, $fields, $values[$record->getId()] ?? []);
+		$dto = $this->toDto($record, $fields, $values[$record->getId()] ?? []);
+		return $this->resolveRelations($fields, [$dto])[0];
 	}
 
 	/**
@@ -198,5 +218,93 @@ class RecordService {
 			'updated' => $record->getUpdated(),
 			'values' => $values,
 		];
+	}
+
+	/**
+	 * Replace raw relation target ids in DTOs with {id, label} objects.
+	 *
+	 * @param Field[] $fields
+	 * @param array<int,array<string,mixed>> $dtos
+	 * @return array<int,array<string,mixed>>
+	 */
+	private function resolveRelations(array $fields, array $dtos): array {
+		foreach ($fields as $field) {
+			if ($field->getType() !== 'relation') {
+				continue;
+			}
+			$cfg = json_decode($field->getConfig() ?? '{}', true) ?: [];
+			$targetReg = (int)($cfg['targetRegisterId'] ?? 0);
+			$mn = $field->getMachineName();
+			if ($targetReg <= 0) {
+				continue;
+			}
+			$ids = [];
+			foreach ($dtos as $dto) {
+				$v = $dto['values'][$mn] ?? null;
+				if (is_int($v) && $v > 0) {
+					$ids[] = $v;
+				}
+			}
+			$labels = $this->labelsForRecords($targetReg, array_values(array_unique($ids)), (string)($cfg['displayField'] ?? ''));
+			foreach ($dtos as &$dto) {
+				$v = $dto['values'][$mn] ?? null;
+				$dto['values'][$mn] = (is_int($v) && $v > 0)
+					? ['id' => $v, 'label' => $labels[$v] ?? ('#' . $v)]
+					: null;
+			}
+			unset($dto);
+		}
+		return $dtos;
+	}
+
+	/**
+	 * Resolve display labels for a set of records in a register.
+	 *
+	 * @param int[] $recordIds
+	 * @return array<int,string> recordId => label
+	 */
+	private function labelsForRecords(int $registerId, array $recordIds, string $displayField): array {
+		if (count($recordIds) === 0) {
+			return [];
+		}
+		$targetFields = $this->fieldMapper->findByRegister($registerId);
+		$display = null;
+		foreach ($targetFields as $f) {
+			if ($displayField !== '' && $f->getMachineName() === $displayField) {
+				$display = $f;
+				break;
+			}
+		}
+		if ($display === null) {
+			foreach ($targetFields as $f) {
+				if (in_array($f->getType(), ['text', 'longtext', 'email', 'select'], true)) {
+					$display = $f;
+					break;
+				}
+			}
+			if ($display === null) {
+				$display = $targetFields[0] ?? null;
+			}
+		}
+		$out = [];
+		foreach ($recordIds as $id) {
+			$out[$id] = '#' . $id;
+		}
+		if ($display === null) {
+			return $out;
+		}
+		$valuesByRecord = $this->valueMapper->findByRecordIds($recordIds);
+		foreach ($recordIds as $id) {
+			foreach (($valuesByRecord[$id] ?? []) as $row) {
+				if ((int)$row['field_id'] === $display->getId()) {
+					$v = FieldValue::fromStorage($display->getType(), $row);
+					if ($v !== null && $v !== '') {
+						$out[$id] = is_array($v) ? implode(', ', $v) : (string)$v;
+					}
+					break;
+				}
+			}
+		}
+		return $out;
 	}
 }

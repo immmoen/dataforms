@@ -24,6 +24,7 @@ class FieldValue {
 			'number', 'currency', 'percentage' => 'value_number',
 			'boolean' => 'value_bool',
 			'date', 'datetime' => 'value_datetime',
+			'relation' => 'value_ref_record_id',
 			default => 'value_string',
 		};
 	}
@@ -43,6 +44,7 @@ class FieldValue {
 			'number', 'currency', 'percentage' => (float)$value,
 			'boolean' => self::asBool($value) ? 1 : 0,
 			'date', 'datetime' => self::toEpoch((string)$value),
+			'relation' => (int)(is_array($value) ? ($value['id'] ?? 0) : $value),
 			'multiselect' => json_encode(array_values((array)$value), JSON_THROW_ON_ERROR),
 			default => (string)$value,
 		};
@@ -67,6 +69,9 @@ class FieldValue {
 				return $row['value_datetime'] === null ? null : gmdate('Y-m-d', (int)$row['value_datetime']);
 			case 'datetime':
 				return $row['value_datetime'] === null ? null : gmdate('Y-m-d\TH:i', (int)$row['value_datetime']);
+			case 'relation':
+				// Returns the raw target id; RecordService resolves the label.
+				return $row['value_ref_record_id'] === null ? null : (int)$row['value_ref_record_id'];
 			case 'multiselect':
 				$raw = $row['value_string'];
 				if ($raw === null || $raw === '') {

@@ -26,7 +26,7 @@ class FieldService {
 	public const TYPES = [
 		'text', 'longtext', 'number', 'currency', 'percentage', 'boolean',
 		'date', 'datetime', 'time', 'select', 'multiselect',
-		'email', 'url', 'phone', 'user', 'group',
+		'email', 'url', 'phone', 'user', 'group', 'relation',
 	];
 
 	public function __construct(
@@ -227,6 +227,15 @@ class FieldService {
 
 		if (in_array($type, ['text', 'longtext'], true) && isset($config['maxLength']) && $config['maxLength'] !== '') {
 			$clean['maxLength'] = max(1, (int)$config['maxLength']);
+		}
+
+		if ($type === 'relation') {
+			$target = (int)($config['targetRegisterId'] ?? 0);
+			if ($target <= 0) {
+				throw new ValidationException('A relation field needs a target register');
+			}
+			$clean['targetRegisterId'] = $target;
+			$clean['displayField'] = trim((string)($config['displayField'] ?? ''));
 		}
 
 		return json_encode($clean, JSON_THROW_ON_ERROR);

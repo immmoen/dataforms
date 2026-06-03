@@ -46,6 +46,28 @@ export async function deleteRecord(id) {
 }
 
 /**
+ * Pickable options for a relation target register.
+ *
+ * @param {number} registerId target register id
+ * @param {object} params {display, search}
+ * @return {Promise<{id:number,label:string}[]>}
+ */
+export async function listOptions(registerId, params = {}) {
+	return unwrap(await axios.get(url(`registers/${registerId}/options`), { ...config, params }))
+}
+
+/**
+ * Import CSV text into a register.
+ *
+ * @param {number} registerId register id
+ * @param {string} csv raw CSV text
+ * @return {Promise<{imported:number,failed:number,errors:string[]}>}
+ */
+export async function importCsv(registerId, csv) {
+	return unwrap(await axios.post(url(`registers/${registerId}/import`), { csv }, config))
+}
+
+/**
  * Direct download URL for the CSV export (normal route, not OCS).
  *
  * @param {number} registerId register id

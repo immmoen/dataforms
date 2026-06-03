@@ -86,6 +86,25 @@
 					<NcTextField v-model="draft.decimals" type="number" :label="t('dataforms', 'Decimals')" />
 				</div>
 
+				<div v-if="draft.type === 'relation'" class="field-block">
+					<label class="block-label">{{ t('dataforms', 'Linked register') }}</label>
+					<NcSelect
+						v-model="draft.target"
+						:options="registerOptions"
+						:reduce="(o) => o.id"
+						label="label"
+						:clearable="false"
+						:placeholder="t('dataforms', 'Pick a register to link to')" />
+					<label class="block-label" style="margin-top:12px">{{ t('dataforms', 'Display field') }}</label>
+					<NcSelect
+						v-model="draft.displayField"
+						:options="targetFieldOptions"
+						:reduce="(o) => o.id"
+						label="label"
+						:clearable="true"
+						:placeholder="t('dataforms', 'Which field to show (defaults to the first)')" />
+				</div>
+
 				<NcCheckboxRadioSwitch v-model="draft.mandatory">
 					{{ t('dataforms', 'Required') }}
 				</NcCheckboxRadioSwitch>
@@ -100,7 +119,7 @@
 				</NcButton>
 				<NcButton
 					type="primary"
-					:disabled="saving || draft.label.trim() === ''"
+					:disabled="saving || draft.label.trim() === '' || (draft.type === 'relation' && !draft.target)"
 					@click="submitAdd">
 					{{ t('dataforms', 'Add field') }}
 				</NcButton>
@@ -129,6 +148,7 @@ import DeleteIcon from 'vue-material-design-icons/Delete.vue'
 import TableColumnIcon from 'vue-material-design-icons/TableColumn.vue'
 
 import { listFields, createField, deleteField, FIELD_TYPES, typeLabel } from '../api/fields.js'
+import { listRegisters } from '../api/registers.js'
 
 const emptyDraft = () => ({
 	label: '',
@@ -137,6 +157,8 @@ const emptyDraft = () => ({
 	min: '',
 	max: '',
 	decimals: '',
+	target: null,
+	displayField: null,
 	mandatory: false,
 	unique: false,
 })
@@ -172,6 +194,8 @@ export default {
 			saving: false,
 			draft: emptyDraft(),
 			typeOptions: FIELD_TYPES,
+			registers: [],
+			targetFields: [],
 		}
 	},
 	computed: {
@@ -181,14 +205,30 @@ export default {
 		needsNumberConfig() {
 			return ['number', 'currency', 'percentage'].includes(this.draft.type)
 		},
+		registerOptions() {
+			return this.registers
+				.filter((r) => r.id !== this.registerId)
+				.map((r) => ({ id: r.id, label: r.title }))
+		},
+		targetFieldOptions() {
+			return this.targetFields.map((f) => ({ id: f.machineName, label: f.label }))
+		},
 	},
 	watch: {
 		registerId() {
 			this.load()
 		},
+		'draft.target'(target) {
+			this.targetFields = []
+			this.draft.displayField = null
+			if (target) {
+				listFields(target).then((f) => { this.targetFields = f }).catch(() => {})
+			}
+		},
 	},
 	mounted() {
 		this.load()
+		listRegisters().then((r) => { this.registers = r }).catch(() => {})
 	},
 	methods: {
 		t,
@@ -224,6 +264,10 @@ export default {
 				if (this.draft.min !== '') config.min = Number(this.draft.min)
 				if (this.draft.max !== '') config.max = Number(this.draft.max)
 				if (this.draft.decimals !== '') config.decimals = Number(this.draft.decimals)
+			}
+			if (this.draft.type === 'relation') {
+				config.targetRegisterId = this.draft.target
+				config.displayField = this.draft.displayField ?? ''
 			}
 			return config
 		},
