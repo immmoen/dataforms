@@ -8,6 +8,7 @@ namespace OCA\Dataforms\Service;
 
 use OCA\Dataforms\Db\Field;
 use OCA\Dataforms\Db\FieldMapper;
+use OCA\Dataforms\Db\RecordValueMapper;
 use OCA\Dataforms\Exception\NotFoundException;
 use OCA\Dataforms\Exception\ValidationException;
 use OCP\AppFramework\Db\DoesNotExistException;
@@ -31,6 +32,7 @@ class FieldService {
 	public function __construct(
 		private FieldMapper $mapper,
 		private RegisterService $registerService,
+		private RecordValueMapper $valueMapper,
 	) {
 	}
 
@@ -119,8 +121,7 @@ class FieldService {
 	 */
 	public function delete(string $userId, int $fieldId): void {
 		$field = $this->findOwned($userId, $fieldId, manage: true);
-		// Note: stored values for this field are cleaned up once the records
-		// slice (df_record_values) lands; no record data exists yet.
+		$this->valueMapper->deleteByField($fieldId); // clean up stored values
 		$this->mapper->delete($field);
 	}
 

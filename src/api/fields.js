@@ -6,7 +6,8 @@
 import axios from '@nextcloud/axios'
 import { generateOcsUrl } from '@nextcloud/router'
 
-const url = (path) => generateOcsUrl('apps/dataforms/api/v1/{path}', { path })
+// Build the path literally — a {placeholder} would percent-encode slashes.
+const url = (path) => generateOcsUrl('apps/dataforms/api/v1/' + path)
 
 const config = {
 	headers: {

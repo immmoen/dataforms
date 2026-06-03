@@ -7,6 +7,26 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.3.2] - Phase 1+2: records, conditional rules engine
+
+### Added
+- **Records**: `Record` entity, `RecordMapper` (pagination + full-text search),
+  `RecordValueMapper` (typed EAV value store), `RecordService` (validation +
+  computed-field evaluation), OCS `RecordController`, CSV export.
+- **Conditional rules engine** (the differentiator): `df_rules` table, `Rule`
+  domain, and a **sandboxed expression evaluator** (`ExpressionEvaluator`) plus
+  `RuleEvaluator` — no `eval`, whitelisted function set. Mirrored exactly in JS
+  (`src/rules/`) so the live form and server agree on one rule definition.
+- Effects: show/hide, require-if, set-default, validate (regex/range/expr),
+  compute. Conditions with and/or groups and 10 operators.
+- **Frontend**: register pane tabs (Records · Fields · Rules); `RecordsView`
+  (table, search, pagination, CSV); `RecordForm` (live conditional data entry —
+  fields show/hide, become required, recompute as you type); `RuleBuilder`.
+
+### Fixed
+- OCS client built nested URLs via a `{path}` placeholder, which percent-encoded
+  the slashes (`registers%2F1%2Ffields` → 404). Build paths literally.
+
 ## [0.2.0] - Phase 1 (in progress): registers
 
 ### Added

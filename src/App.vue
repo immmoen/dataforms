@@ -64,11 +64,22 @@
 					<p v-if="selected.description" class="description">
 						{{ selected.description }}
 					</p>
-					<p class="meta">
-						{{ t('dataforms', 'Owner: {owner}', { owner: selected.owner }) }}
-					</p>
 				</div>
-				<SchemaEditor :key="selected.id" :register-id="selected.id" />
+
+				<div class="tabs">
+					<button
+						v-for="tab in tabs"
+						:key="tab.id"
+						class="tab"
+						:class="{ active: activeTab === tab.id }"
+						@click="activeTab = tab.id">
+						{{ tab.label }}
+					</button>
+				</div>
+
+				<RecordsView v-if="activeTab === 'records'" :key="'rec-' + selected.id" :register-id="selected.id" />
+				<SchemaEditor v-else-if="activeTab === 'fields'" :key="'fld-' + selected.id" :register-id="selected.id" />
+				<RuleBuilder v-else :key="'rul-' + selected.id" :register-id="selected.id" />
 			</div>
 		</NcAppContent>
 
@@ -127,6 +138,8 @@ import PlusIcon from 'vue-material-design-icons/Plus.vue'
 import DeleteIcon from 'vue-material-design-icons/Delete.vue'
 
 import SchemaEditor from './components/SchemaEditor.vue'
+import RecordsView from './components/RecordsView.vue'
+import RuleBuilder from './components/RuleBuilder.vue'
 import { listRegisters, createRegister, deleteRegister } from './api/registers.js'
 
 export default {
@@ -145,6 +158,8 @@ export default {
 		NcTextArea,
 		NcTextField,
 		SchemaEditor,
+		RecordsView,
+		RuleBuilder,
 		FolderTableIcon,
 		PlusIcon,
 		DeleteIcon,
@@ -154,6 +169,7 @@ export default {
 			registers: [],
 			loading: true,
 			selectedId: null,
+			activeTab: 'records',
 			showCreate: false,
 			saving: false,
 			draft: { title: '', description: '' },
@@ -162,6 +178,13 @@ export default {
 	computed: {
 		selected() {
 			return this.registers.find((r) => r.id === this.selectedId) ?? null
+		},
+		tabs() {
+			return [
+				{ id: 'records', label: t('dataforms', 'Records') },
+				{ id: 'fields', label: t('dataforms', 'Fields') },
+				{ id: 'rules', label: t('dataforms', 'Rules') },
+			]
 		},
 	},
 	async mounted() {
@@ -181,6 +204,7 @@ export default {
 		},
 		select(id) {
 			this.selectedId = id
+			this.activeTab = 'records'
 		},
 		openCreate() {
 			this.draft = { title: '', description: '' }
@@ -233,13 +257,45 @@ export default {
 }
 
 .register-detail {
-	max-width: 720px;
+	max-width: 920px;
 	margin: 0 auto;
-	padding: 24px;
+}
+
+.register-head {
+	padding: 24px 24px 0;
 }
 
 .register-detail h2 {
 	margin-bottom: 4px;
+}
+
+.tabs {
+	display: flex;
+	gap: 2px;
+	border-bottom: 1px solid var(--color-border);
+	padding: 0 24px;
+	margin-top: 12px;
+}
+
+.tab {
+	background: none;
+	border: none;
+	border-bottom: 2px solid transparent;
+	padding: 10px 16px;
+	margin-bottom: -1px;
+	font-weight: 500;
+	color: var(--color-text-maxcontrast);
+	cursor: pointer;
+}
+
+.tab:hover {
+	color: var(--color-main-text);
+}
+
+.tab.active {
+	color: var(--color-primary-element);
+	border-bottom-color: var(--color-primary-element);
+	font-weight: 600;
 }
 
 .register-detail .description {

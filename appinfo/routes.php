@@ -9,6 +9,10 @@ declare(strict_types=1);
  * #[FrontpageRoute] attribute on PageController.
  */
 return [
+	'routes' => [
+		// CSV export (normal route so it can return a file download).
+		['name' => 'export#csv', 'url' => '/registers/{registerId}/export/csv', 'verb' => 'GET', 'requirements' => ['registerId' => '\d+']],
+	],
 	'ocs' => [
 		['name' => 'register#index', 'url' => '/api/v1/registers', 'verb' => 'GET'],
 		['name' => 'register#create', 'url' => '/api/v1/registers', 'verb' => 'POST'],
@@ -22,5 +26,18 @@ return [
 		['name' => 'field#reorder', 'url' => '/api/v1/registers/{registerId}/fields/reorder', 'verb' => 'POST', 'requirements' => ['registerId' => '\d+']],
 		['name' => 'field#update', 'url' => '/api/v1/fields/{id}', 'verb' => 'PUT', 'requirements' => ['id' => '\d+']],
 		['name' => 'field#destroy', 'url' => '/api/v1/fields/{id}', 'verb' => 'DELETE', 'requirements' => ['id' => '\d+']],
+
+		// Records (data)
+		['name' => 'record#index', 'url' => '/api/v1/registers/{registerId}/records', 'verb' => 'GET', 'requirements' => ['registerId' => '\d+']],
+		['name' => 'record#create', 'url' => '/api/v1/registers/{registerId}/records', 'verb' => 'POST', 'requirements' => ['registerId' => '\d+']],
+		['name' => 'record#show', 'url' => '/api/v1/records/{id}', 'verb' => 'GET', 'requirements' => ['id' => '\d+']],
+		['name' => 'record#update', 'url' => '/api/v1/records/{id}', 'verb' => 'PUT', 'requirements' => ['id' => '\d+']],
+		['name' => 'record#destroy', 'url' => '/api/v1/records/{id}', 'verb' => 'DELETE', 'requirements' => ['id' => '\d+']],
+
+		// Rules (conditional logic)
+		['name' => 'rule#index', 'url' => '/api/v1/registers/{registerId}/rules', 'verb' => 'GET', 'requirements' => ['registerId' => '\d+']],
+		['name' => 'rule#create', 'url' => '/api/v1/registers/{registerId}/rules', 'verb' => 'POST', 'requirements' => ['registerId' => '\d+']],
+		['name' => 'rule#update', 'url' => '/api/v1/rules/{id}', 'verb' => 'PUT', 'requirements' => ['id' => '\d+']],
+		['name' => 'rule#destroy', 'url' => '/api/v1/rules/{id}', 'verb' => 'DELETE', 'requirements' => ['id' => '\d+']],
 	],
 ];

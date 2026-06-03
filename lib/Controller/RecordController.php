@@ -1,0 +1,101 @@
+<?php
+
+declare(strict_types=1);
+
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
+namespace OCA\Dataforms\Controller;
+
+use OCA\Dataforms\AppInfo\Application;
+use OCA\Dataforms\Exception\ForbiddenException;
+use OCA\Dataforms\Exception\NotFoundException;
+use OCA\Dataforms\Exception\ValidationException;
+use OCA\Dataforms\Service\RecordService;
+use OCP\AppFramework\Http;
+use OCP\AppFramework\Http\Attribute\NoAdminRequired;
+use OCP\AppFramework\Http\DataResponse;
+use OCP\AppFramework\OCSController;
+use OCP\IRequest;
+use OCP\IUserSession;
+
+/**
+ * REST surface for records, under
+ * /ocs/v2.php/apps/dataforms/api/v1/registers/{registerId}/records and
+ * /ocs/v2.php/apps/dataforms/api/v1/records/{id}.
+ */
+class RecordController extends OCSController {
+	public function __construct(
+		IRequest $request,
+		private RecordService $service,
+		private IUserSession $userSession,
+	) {
+		parent::__construct(Application::APP_ID, $request);
+	}
+
+	private function userId(): string {
+		$user = $this->userSession->getUser();
+		return $user !== null ? $user->getUID() : '';
+	}
+
+	#[NoAdminRequired]
+	public function index(int $registerId, int $limit = 50, int $offset = 0, string $sort = 'updated', string $direction = 'DESC', string $search = ''): DataResponse {
+		try {
+			return new DataResponse($this->service->list($this->userId(), $registerId, $limit, $offset, $sort, $direction, $search));
+		} catch (NotFoundException $e) {
+			return new DataResponse(['message' => $e->getMessage()], Http::STATUS_NOT_FOUND);
+		}
+	}
+
+	#[NoAdminRequired]
+	public function show(int $id): DataResponse {
+		try {
+			return new DataResponse($this->service->get($this->userId(), $id));
+		} catch (NotFoundException $e) {
+			return new DataResponse(['message' => $e->getMessage()], Http::STATUS_NOT_FOUND);
+		}
+	}
+
+	/**
+	 * @param array<string,mixed> $values
+	 */
+	#[NoAdminRequired]
+	public function create(int $registerId, array $values = []): DataResponse {
+		try {
+			return new DataResponse($this->service->create($this->userId(), $registerId, $values), Http::STATUS_CREATED);
+		} catch (ValidationException $e) {
+			return new DataResponse(['message' => $e->getMessage(), 'errors' => $e->getErrors()], Http::STATUS_BAD_REQUEST);
+		} catch (NotFoundException $e) {
+			return new DataResponse(['message' => $e->getMessage()], Http::STATUS_NOT_FOUND);
+		} catch (ForbiddenException $e) {
+			return new DataResponse(['message' => $e->getMessage()], Http::STATUS_FORBIDDEN);
+		}
+	}
+
+	/**
+	 * @param array<string,mixed> $values
+	 */
+	#[NoAdminRequired]
+	public function update(int $id, array $values = []): DataResponse {
+		try {
+			return new DataResponse($this->service->update($this->userId(), $id, $values));
+		} catch (ValidationException $e) {
+			return new DataResponse(['message' => $e->getMessage(), 'errors' => $e->getErrors()], Http::STATUS_BAD_REQUEST);
+		} catch (NotFoundException $e) {
+			return new DataResponse(['message' => $e->getMessage()], Http::STATUS_NOT_FOUND);
+		} catch (ForbiddenException $e) {
+			return new DataResponse(['message' => $e->getMessage()], Http::STATUS_FORBIDDEN);
+		}
+	}
+
+	#[NoAdminRequired]
+	public function destroy(int $id): DataResponse {
+		try {
+			$this->service->delete($this->userId(), $id);
+			return new DataResponse([]);
+		} catch (NotFoundException $e) {
+			return new DataResponse(['message' => $e->getMessage()], Http::STATUS_NOT_FOUND);
+		} catch (ForbiddenException $e) {
+			return new DataResponse(['message' => $e->getMessage()], Http::STATUS_FORBIDDEN);
+		}
+	}
+}
