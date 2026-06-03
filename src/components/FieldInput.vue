@@ -34,13 +34,26 @@
 			class="native-input"
 			@input="emit($event.target.value === '' ? null : Number($event.target.value))">
 
-		<NcCheckboxRadioSwitch
-			v-else-if="field.type === 'boolean'"
-			:model-value="!!modelValue"
-			:disabled="disabled"
-			@update:model-value="emit($event)">
-			{{ label }}
-		</NcCheckboxRadioSwitch>
+		<div v-else-if="field.type === 'boolean'" class="bool-group">
+			<NcCheckboxRadioSwitch
+				:model-value="boolChoice"
+				value="yes"
+				:name="radioName"
+				type="radio"
+				:disabled="disabled"
+				@update:model-value="emit(true)">
+				{{ t('dataforms', 'Yes') }}
+			</NcCheckboxRadioSwitch>
+			<NcCheckboxRadioSwitch
+				:model-value="boolChoice"
+				value="no"
+				:name="radioName"
+				type="radio"
+				:disabled="disabled"
+				@update:model-value="emit(false)">
+				{{ t('dataforms', 'No') }}
+			</NcCheckboxRadioSwitch>
+		</div>
 
 		<input
 			v-else-if="['date', 'datetime', 'time'].includes(field.type)"
@@ -163,6 +176,18 @@ export default {
 		options() {
 			return this.field.config?.options ?? []
 		},
+		boolChoice() {
+			if (this.modelValue === true) {
+				return 'yes'
+			}
+			if (this.modelValue === false) {
+				return 'no'
+			}
+			return ''
+		},
+		radioName() {
+			return 'df-bool-' + (this.field.machineName ?? this.field.id)
+		},
 	},
 	mounted() {
 		if (this.field.type === 'relation') {
@@ -275,6 +300,12 @@ export default {
 .native-textarea {
 	resize: vertical;
 	min-height: 72px;
+}
+
+.bool-group {
+	display: flex;
+	gap: 18px;
+	align-items: center;
 }
 
 .file-field {

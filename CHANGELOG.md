@@ -7,6 +7,14 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.7.3] - Yes/No fields render as Yes/No
+
+### Fixed
+- Boolean fields rendered as a single checkbox labelled with the field name
+  (so only one state was visible). They now render as clear **Yes / No** radio
+  buttons with the field label above; they start unselected unless a default is
+  set. Verified in-browser: label + Yes/No options, selecting Yes works.
+
 ## [0.7.2] - Data-entry form fixes (regression + UX)
 
 ### Fixed

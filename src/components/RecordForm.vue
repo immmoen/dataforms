@@ -16,7 +16,7 @@
 
 			<template v-else>
 				<div v-for="field in visibleFields" :key="field.id" class="form-field">
-					<div v-if="field.type !== 'boolean'" class="label-row">
+					<div class="label-row">
 						<span class="lbl">{{ field.label }}</span>
 						<span v-if="evaluation.required[field.machineName]" class="req">*</span>
 						<span v-if="computedTargets.has(field.machineName)" class="computed-tag">
@@ -101,7 +101,10 @@ export default {
 				if (this.record) {
 					values[f.machineName] = this.record.values[f.machineName] ?? null
 				} else if (f.type === 'boolean') {
-					values[f.machineName] = f.default === 'true' || f.default === true
+					// Start unselected (neither Yes nor No) unless a default is set.
+					values[f.machineName] = (f.default === 'true' || f.default === true)
+						? true
+						: ((f.default === 'false' || f.default === false) ? false : null)
 				} else {
 					values[f.machineName] = f.default ?? (f.type === 'multiselect' ? [] : null)
 				}
