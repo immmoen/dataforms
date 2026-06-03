@@ -8,6 +8,7 @@ namespace OCA\Dataforms\Service;
 
 use OCA\Dataforms\Db\Field;
 use OCA\Dataforms\Db\FieldMapper;
+use OCA\Dataforms\Db\RecordFileMapper;
 use OCA\Dataforms\Db\RecordValueMapper;
 use OCA\Dataforms\Exception\NotFoundException;
 use OCA\Dataforms\Exception\ValidationException;
@@ -33,6 +34,7 @@ class FieldService {
 		private FieldMapper $mapper,
 		private RegisterService $registerService,
 		private RecordValueMapper $valueMapper,
+		private RecordFileMapper $fileMapper,
 	) {
 	}
 
@@ -122,6 +124,7 @@ class FieldService {
 	public function delete(string $userId, int $fieldId): void {
 		$field = $this->findOwned($userId, $fieldId, manage: true);
 		$this->valueMapper->deleteByField($fieldId); // clean up stored values
+		$this->fileMapper->deleteForField($fieldId); // and any attached-file refs
 		$this->mapper->delete($field);
 	}
 

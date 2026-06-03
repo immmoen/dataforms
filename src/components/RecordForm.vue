@@ -105,6 +105,8 @@ export default {
 					values[f.machineName] = (f.default === 'true' || f.default === true)
 						? true
 						: ((f.default === 'false' || f.default === false) ? false : null)
+				} else if (f.type === 'file') {
+					values[f.machineName] = []
 				} else {
 					values[f.machineName] = f.default ?? (f.type === 'multiselect' ? [] : null)
 				}

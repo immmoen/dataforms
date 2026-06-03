@@ -9,6 +9,7 @@ namespace OCA\Dataforms\Service;
 use OCA\Dataforms\Db\Field;
 use OCA\Dataforms\Db\FieldMapper;
 use OCA\Dataforms\Db\Record;
+use OCA\Dataforms\Db\RecordFileMapper;
 use OCA\Dataforms\Db\RecordMapper;
 use OCA\Dataforms\Db\RecordValueMapper;
 use OCA\Dataforms\Exception\NotFoundException;
@@ -27,6 +28,7 @@ class RecordService {
 	public function __construct(
 		private RecordMapper $recordMapper,
 		private RecordValueMapper $valueMapper,
+		private RecordFileMapper $fileMapper,
 		private FieldMapper $fieldMapper,
 		private RegisterService $registerService,
 		private RuleService $ruleService,
@@ -114,7 +116,9 @@ class RecordService {
 		$record = $this->recordMapper->insert($record);
 
 		$this->storeValues($record->getId(), $fields, $values);
-		return $this->toDto($record, $fields, $this->valueMapper->findByRecordIds([$record->getId()])[$record->getId()] ?? []);
+		$this->storeFiles($record->getId(), $fields, $values);
+		$dto = $this->toDto($record, $fields, $this->valueMapper->findByRecordIds([$record->getId()])[$record->getId()] ?? []);
+		return $this->resolveFiles($fields, [$dto], $userId)[0];
 	}
 
 	/**
@@ -134,7 +138,9 @@ class RecordService {
 
 		$this->valueMapper->deleteByRecord($record->getId());
 		$this->storeValues($record->getId(), $fields, $values);
-		return $this->toDto($record, $fields, $this->valueMapper->findByRecordIds([$record->getId()])[$record->getId()] ?? []);
+		$this->storeFiles($record->getId(), $fields, $values);
+		$dto = $this->toDto($record, $fields, $this->valueMapper->findByRecordIds([$record->getId()])[$record->getId()] ?? []);
+		return $this->resolveFiles($fields, [$dto], $userId)[0];
 	}
 
 	/**
@@ -197,10 +203,38 @@ class RecordService {
 	 */
 	private function storeValues(int $recordId, array $fields, array $values): void {
 		foreach ($fields as $field) {
+			if ($field->getType() === 'file') {
+				continue; // multi-valued, handled by storeFiles()
+			}
 			$logical = $values[$field->getMachineName()] ?? null;
 			$payload = FieldValue::toStorage($field->getType(), $logical);
 			if ($payload['column'] !== '') {
 				$this->valueMapper->insertValue($recordId, $field->getId(), $payload['column'], $payload['value']);
+			}
+		}
+	}
+
+	/**
+	 * Persist a file field's referenced file ids into the join table. The value
+	 * is an array of {id,...} objects or ids (one-or-more files).
+	 *
+	 * @param Field[] $fields
+	 * @param array<string,mixed> $values
+	 */
+	private function storeFiles(int $recordId, array $fields, array $values): void {
+		foreach ($fields as $field) {
+			if ($field->getType() !== 'file') {
+				continue;
+			}
+			$this->fileMapper->deleteForRecordField($recordId, $field->getId());
+			$value = $values[$field->getMachineName()] ?? null;
+			$list = is_array($value) && !isset($value['id']) ? $value : ($value === null || $value === '' ? [] : [$value]);
+			$position = 0;
+			foreach ($list as $item) {
+				$fileId = is_array($item) ? (int)($item['id'] ?? 0) : (int)$item;
+				if ($fileId > 0) {
+					$this->fileMapper->insertFile($recordId, $field->getId(), $fileId, $position++);
+				}
 			}
 		}
 	}
@@ -281,28 +315,39 @@ class RecordService {
 		if (count($fileFields) === 0) {
 			return $dtos;
 		}
+		$recordIds = array_map(static fn ($d) => $d['id'], $dtos);
+		$filesByRecord = $this->fileMapper->findByRecordIds($recordIds);
 		$userFolder = $this->rootFolder->getUserFolder($userId);
-		foreach ($fileFields as $field) {
-			$mn = $field->getMachineName();
-			foreach ($dtos as &$dto) {
-				$id = $dto['values'][$mn] ?? null;
-				if (!is_int($id) || $id <= 0) {
-					$dto['values'][$mn] = null;
-					continue;
-				}
-				$name = null;
-				try {
-					$nodes = $userFolder->getById($id);
-					if (count($nodes) > 0) {
-						$name = $nodes[0]->getName();
-					}
-				} catch (\Throwable) {
-					// fall through to placeholder
-				}
-				$dto['values'][$mn] = ['id' => $id, 'name' => $name ?? ('file #' . $id)];
+		$nameCache = [];
+		$nameOf = function (int $fileId) use ($userFolder, &$nameCache): string {
+			if (array_key_exists($fileId, $nameCache)) {
+				return $nameCache[$fileId];
 			}
-			unset($dto);
+			$name = 'file #' . $fileId;
+			try {
+				$nodes = $userFolder->getById($fileId);
+				if (count($nodes) > 0) {
+					$name = $nodes[0]->getName();
+				}
+			} catch (\Throwable) {
+				// keep placeholder
+			}
+			return $nameCache[$fileId] = $name;
+		};
+
+		foreach ($dtos as &$dto) {
+			$rows = $filesByRecord[$dto['id']] ?? [];
+			foreach ($fileFields as $field) {
+				$files = [];
+				foreach ($rows as $row) {
+					if ($row['field_id'] === $field->getId()) {
+						$files[] = ['id' => $row['file_id'], 'name' => $nameOf($row['file_id'])];
+					}
+				}
+				$dto['values'][$field->getMachineName()] = $files;
+			}
 		}
+		unset($dto);
 		return $dtos;
 	}
 

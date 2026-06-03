@@ -12,9 +12,14 @@
 					<span v-if="isRelation(field) && value(field)" class="relation">
 						{{ value(field).label }}
 					</span>
-					<a v-else-if="field.type === 'file' && value(field)" :href="fileUrl(value(field).id)" target="_blank" rel="noopener noreferrer">
-						📎 {{ value(field).name }}
-					</a>
+					<template v-else-if="field.type === 'file'">
+						<span v-if="fileItems(field).length === 0" class="empty">—</span>
+						<ul v-else class="file-list">
+							<li v-for="f in fileItems(field)" :key="f.id">
+								<a :href="fileUrl(f.id)" target="_blank" rel="noopener noreferrer">📎 {{ f.name }}</a>
+							</li>
+						</ul>
+					</template>
 					<span v-else-if="isEmpty(value(field))" class="empty">—</span>
 					<span v-else>{{ display(field, value(field)) }}</span>
 				</dd>
@@ -50,6 +55,11 @@ export default {
 		},
 		isRelation(field) {
 			return field.type === 'relation'
+		},
+		fileItems(field) {
+			const v = this.value(field)
+			if (Array.isArray(v)) return v
+			return v && v.id ? [v] : []
 		},
 		fileUrl(id) {
 			return generateUrl('/f/{id}', { id })
@@ -101,5 +111,10 @@ export default {
 
 .empty {
 	color: var(--color-text-maxcontrast);
+}
+.file-list {
+	display: flex;
+	flex-direction: column;
+	gap: 2px;
 }
 </style>

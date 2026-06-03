@@ -7,6 +7,20 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.8.0] - File attachments: multiple files, simpler UX
+
+### Changed
+- **File-attachment fields now hold one or more files** (per the spec), stored
+  in a join table and referenced by Nextcloud file id. The data-entry form shows
+  the attached files as a list with per-file remove buttons and a single
+  **Add file(s)** button.
+- **Removed the “Choose from Files” browser popup** (it was confusing and
+  unreliable). Attaching now uploads from your computer into a "Dataforms"
+  folder in your Nextcloud Files. The files are still referenced by id, never
+  duplicated into the app database.
+- Table shows “📎 N files”; the record detail lists every file with a link.
+  Deleting a field cleans up its file references.
+
 ## [0.7.3] - Yes/No fields render as Yes/No
 
 ### Fixed

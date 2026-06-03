@@ -98,26 +98,22 @@
 			@update:model-value="emit($event)" />
 
 		<div v-else-if="field.type === 'file'" class="file-field">
-			<div class="file-row">
-				<a v-if="modelValue && modelValue.id" :href="fileUrl(modelValue.id)" target="_blank" rel="noopener noreferrer" class="file-link">
-					📎 {{ modelValue.name }}
-				</a>
-				<span v-else class="no-file">{{ t('dataforms', 'No file attached') }}</span>
-			</div>
+			<ul v-if="fileList.length" class="attached-files">
+				<li v-for="f in fileList" :key="f.id" class="attached-file">
+					<a :href="fileUrl(f.id)" target="_blank" rel="noopener noreferrer" class="file-link">📎 {{ f.name }}</a>
+					<NcButton v-if="!disabled" type="tertiary-no-background" :aria-label="t('dataforms', 'Remove file')" @click.prevent="removeFile(f.id)">
+						<template #icon><CloseIcon :size="16" /></template>
+					</NcButton>
+				</li>
+			</ul>
+			<span v-else class="no-file">{{ t('dataforms', 'No files attached') }}</span>
 			<div v-if="!disabled" class="file-row">
 				<NcButton @click.prevent="triggerUpload">
 					<template #icon><UploadIcon :size="18" /></template>
-					{{ t('dataforms', 'Upload from computer') }}
-				</NcButton>
-				<NcButton type="tertiary" @click.prevent="pickFile">
-					<template #icon><FolderIcon :size="18" /></template>
-					{{ t('dataforms', 'Choose from Files') }}
-				</NcButton>
-				<NcButton v-if="modelValue" type="tertiary" @click.prevent="emit(null)">
-					{{ t('dataforms', 'Remove') }}
+					{{ t('dataforms', 'Add file(s)') }}
 				</NcButton>
 				<NcLoadingIcon v-if="uploading" :size="20" />
-				<input ref="fileInput" type="file" class="hidden-input" @change="onLocalFile">
+				<input ref="fileInput" type="file" multiple class="hidden-input" @change="onLocalFile">
 			</div>
 		</div>
 
@@ -135,7 +131,7 @@
 
 <script>
 import { translate as t } from '@nextcloud/l10n'
-import { getFilePickerBuilder, showError } from '@nextcloud/dialogs'
+import { showError } from '@nextcloud/dialogs'
 import { generateUrl } from '@nextcloud/router'
 
 import NcButton from '@nextcloud/vue/components/NcButton'
@@ -144,13 +140,13 @@ import NcLoadingIcon from '@nextcloud/vue/components/NcLoadingIcon'
 import NcSelect from '@nextcloud/vue/components/NcSelect'
 
 import UploadIcon from 'vue-material-design-icons/Upload.vue'
-import FolderIcon from 'vue-material-design-icons/Folder.vue'
+import CloseIcon from 'vue-material-design-icons/Close.vue'
 
-import { listOptions, resolveFile, uploadLocalFile } from '../api/records.js'
+import { listOptions, uploadLocalFile } from '../api/records.js'
 
 export default {
 	name: 'FieldInput',
-	components: { NcButton, NcCheckboxRadioSwitch, NcLoadingIcon, NcSelect, UploadIcon, FolderIcon },
+	components: { NcButton, NcCheckboxRadioSwitch, NcLoadingIcon, NcSelect, UploadIcon, CloseIcon },
 	props: {
 		field: { type: Object, required: true },
 		modelValue: { type: [String, Number, Boolean, Array, Object, null], default: null },
@@ -188,6 +184,13 @@ export default {
 		radioName() {
 			return 'df-bool-' + (this.field.machineName ?? this.field.id)
 		},
+		fileList() {
+			if (Array.isArray(this.modelValue)) {
+				return this.modelValue
+			}
+			// tolerate a legacy single {id,name}
+			return this.modelValue && this.modelValue.id ? [this.modelValue] : []
+		},
 	},
 	mounted() {
 		if (this.field.type === 'relation') {
@@ -209,40 +212,27 @@ export default {
 			this.$refs.fileInput?.click()
 		},
 		async onLocalFile(event) {
-			const file = event.target.files?.[0]
-			event.target.value = ''
-			if (!file) {
+			const files = [...(event.target.files || [])]
+			event.target.value = '' // allow re-picking the same file
+			if (files.length === 0) {
 				return
 			}
 			this.uploading = true
 			try {
-				const attached = await uploadLocalFile(file)
-				this.emit(attached)
+				const uploaded = []
+				for (const file of files) {
+					uploaded.push(await uploadLocalFile(file))
+				}
+				this.emit([...this.fileList, ...uploaded])
 			} catch (e) {
-				showError(t('dataforms', 'Could not upload the file'))
+				showError(t('dataforms', 'Could not upload the file(s)'))
 				console.error(e)
 			} finally {
 				this.uploading = false
 			}
 		},
-		async pickFile() {
-			try {
-				const picker = getFilePickerBuilder(t('dataforms', 'Choose a file'))
-					.allowDirectories(false)
-					.setMultiSelect(false)
-					.build()
-				const path = await picker.pick()
-				if (!path) {
-					return
-				}
-				const file = await resolveFile(path)
-				this.emit(file)
-			} catch (e) {
-				if (e) {
-					showError(t('dataforms', 'Could not attach the file'))
-					console.error(e)
-				}
-			}
+		removeFile(id) {
+			this.emit(this.fileList.filter((f) => f.id !== id))
 		},
 		onRelSearch(query) {
 			clearTimeout(this.relTimer)
@@ -312,6 +302,19 @@ export default {
 	display: flex;
 	flex-direction: column;
 	gap: 8px;
+}
+
+.attached-files {
+	display: flex;
+	flex-direction: column;
+	gap: 2px;
+}
+
+.attached-file {
+	display: flex;
+	align-items: center;
+	gap: 6px;
+	padding: 2px 0;
 }
 
 .file-row {

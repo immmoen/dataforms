@@ -250,10 +250,14 @@ export default {
 		},
 		format(field, value) {
 			if (value === null || value === undefined) return ''
-			if (Array.isArray(value)) return value.join(', ')
+			if (field.type === 'file') {
+				const list = Array.isArray(value) ? value : (value && value.id ? [value] : [])
+				if (list.length === 0) return ''
+				return list.length === 1 ? '📎 ' + list[0].name : '📎 ' + t('dataforms', '{n} files', { n: list.length })
+			}
+			if (Array.isArray(value)) return value.join(', ') // multiselect
 			if (typeof value === 'boolean') return value ? t('dataforms', 'Yes') : t('dataforms', 'No')
 			if (typeof value === 'object' && 'label' in value) return value.label // relation
-			if (typeof value === 'object' && 'name' in value) return '📎 ' + value.name // file
 			return String(value)
 		},
 		openNew() {
