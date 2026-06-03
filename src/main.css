@@ -1,0 +1,7 @@
+/* SPDX-License-Identifier: AGPL-3.0-or-later */
+/* App-level styles. Layout and theming mostly come from @nextcloud/vue and
+   Nextcloud's CSS variables; this file guarantees a dataforms-main.css entry
+   exists so PageController's Util::addStyle() resolves. */
+#dataforms {
+	height: 100%;
+}

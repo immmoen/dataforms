@@ -1,0 +1,60 @@
+<?xml version="1.0"?>
+<!--
+  SPDX-License-Identifier: AGPL-3.0-or-later
+  Dataforms — build registers, smart forms and views inside Nextcloud.
+-->
+<info xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+      xsi:noNamespaceSchemaLocation="https://apps.nextcloud.com/schema/apps/info.xsd">
+	<id>dataforms</id>
+	<name>Dataforms</name>
+	<summary>Build registers, smart forms and views — no code required.</summary>
+	<description><![CDATA[
+**Dataforms** lets you design **registers** — structured, typed data collections — and
+the **forms** that feed them, entirely from the browser, with no code.
+
+- Define a register's **schema** from a rich set of field types (text, number, currency,
+  date, single/multi select, email/URL, user/group reference, file attachment, relation,
+  computed and auto fields).
+- Build **data-entry forms** with sections, and attach **conditional rules**:
+  show/hide fields, require-if, set defaults, validate, and compute values — all from a
+  single rule definition that runs live in the browser and is re-checked on the server.
+- Browse stored records in **views** with pagination, multi-criteria filter, sort,
+  full-text search and CSV export.
+- Internal, authenticated use only. Per-register access control (Read / Write / Manage)
+  is enforced on every endpoint, server-side.
+
+Free and open source (AGPL-3.0-or-later). Development is funded by voluntary donations.
+	]]></description>
+	<version>0.1.0</version>
+	<licence>agpl</licence>
+	<author mail="">The Dataforms contributors</author>
+	<namespace>Dataforms</namespace>
+	<category>tools</category>
+	<category>organization</category>
+
+	<!-- Placeholders — fill before App Store submission. -->
+	<website>https://github.com/immmoen/dataforms</website>
+	<bugs>https://github.com/immmoen/dataforms/issues</bugs>
+	<repository type="git">https://github.com/immmoen/dataforms.git</repository>
+
+	<screenshot>https://raw.githubusercontent.com/immmoen/dataforms/main/img/screenshot1.png</screenshot>
+
+	<!-- Voluntary donations only — no paid/closed model. URLs are placeholders. -->
+	<donation title="Support development via Stripe" type="stripe">https://REPLACE_ME</donation>
+	<donation title="Donate via PayPal" type="paypal">https://REPLACE_ME</donation>
+
+	<dependencies>
+		<!-- Verify exact min/max against the maintained Nextcloud releases at build time. -->
+		<php min-version="8.1" max-version="8.3"/>
+		<nextcloud min-version="30" max-version="32"/>
+	</dependencies>
+
+	<navigations>
+		<navigation>
+			<name>Dataforms</name>
+			<route>dataforms.page.index</route>
+			<icon>app.svg</icon>
+			<order>80</order>
+		</navigation>
+	</navigations>
+</info>

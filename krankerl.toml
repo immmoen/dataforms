@@ -1,0 +1,35 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Reproducible packaging config for `krankerl package`.
+# https://github.com/ChristophWurst/krankerl
+
+[package]
+before_cmds = [
+    "composer install --no-dev --optimize-autoloader",
+    "npm ci",
+    "npm run build",
+]
+
+exclude = [
+    "/.git",
+    "/.github",
+    "/.tx",
+    "/build",
+    "/node_modules",
+    "/src",
+    "/tests",
+    "/vendor/bin",
+    "/.editorconfig",
+    "/.eslintrc.cjs",
+    "/.gitignore",
+    "/.php-cs-fixer.dist.php",
+    "/composer.json",
+    "/composer.lock",
+    "/krankerl.toml",
+    "/Makefile",
+    "/package.json",
+    "/package-lock.json",
+    "/psalm.xml",
+    "/stylelint.config.cjs",
+    "/tsconfig.json",
+    "/vite.config.js",
+]
