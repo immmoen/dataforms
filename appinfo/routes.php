@@ -15,5 +15,12 @@ return [
 		['name' => 'register#show', 'url' => '/api/v1/registers/{id}', 'verb' => 'GET', 'requirements' => ['id' => '\d+']],
 		['name' => 'register#update', 'url' => '/api/v1/registers/{id}', 'verb' => 'PUT', 'requirements' => ['id' => '\d+']],
 		['name' => 'register#destroy', 'url' => '/api/v1/registers/{id}', 'verb' => 'DELETE', 'requirements' => ['id' => '\d+']],
+
+		// Fields (a register's schema)
+		['name' => 'field#index', 'url' => '/api/v1/registers/{registerId}/fields', 'verb' => 'GET', 'requirements' => ['registerId' => '\d+']],
+		['name' => 'field#create', 'url' => '/api/v1/registers/{registerId}/fields', 'verb' => 'POST', 'requirements' => ['registerId' => '\d+']],
+		['name' => 'field#reorder', 'url' => '/api/v1/registers/{registerId}/fields/reorder', 'verb' => 'POST', 'requirements' => ['registerId' => '\d+']],
+		['name' => 'field#update', 'url' => '/api/v1/fields/{id}', 'verb' => 'PUT', 'requirements' => ['id' => '\d+']],
+		['name' => 'field#destroy', 'url' => '/api/v1/fields/{id}', 'verb' => 'DELETE', 'requirements' => ['id' => '\d+']],
 	],
 ];

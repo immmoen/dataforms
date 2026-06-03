@@ -71,9 +71,21 @@ class RegisterService {
 	 * @throws NotFoundException
 	 * @throws ForbiddenException
 	 */
-	public function update(string $userId, int $id, array $changes): Register {
+	/**
+	 * Find a register the user is allowed to manage (owner). Used by other
+	 * services (fields, records) to gate schema/data changes.
+	 *
+	 * @throws NotFoundException
+	 * @throws ForbiddenException
+	 */
+	public function findManageable(string $userId, int $id): Register {
 		$register = $this->find($userId, $id);
 		$this->requireManage($register, $userId);
+		return $register;
+	}
+
+	public function update(string $userId, int $id, array $changes): Register {
+		$register = $this->findManageable($userId, $id);
 
 		if (array_key_exists('title', $changes)) {
 			$register->setTitle($changes['title']);
@@ -98,8 +110,7 @@ class RegisterService {
 	 * @throws ForbiddenException
 	 */
 	public function delete(string $userId, int $id): void {
-		$register = $this->find($userId, $id);
-		$this->requireManage($register, $userId);
+		$register = $this->findManageable($userId, $id);
 		$register->setDeletedAt($this->time->getTime());
 		$this->mapper->update($register);
 	}

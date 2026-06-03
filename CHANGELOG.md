@@ -18,6 +18,11 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   `/ocs/v2.php/apps/dataforms/api/v1/registers`.
 - Frontend: register list in the navigation, create dialog and delete, wired
   to the OCS API via `@nextcloud/axios`.
+- Fields (schema): `Field` entity + `FieldMapper`, `FieldService` (16 field
+  types, machine-name generation/dedup, immutable machine names, type-specific
+  config validation, ordering), OCS `FieldController` and routes.
+- Frontend `SchemaEditor`: list/add/delete fields with a grouped type picker,
+  per-type config (select options, number min/max/decimals), required/unique.
 
 ### Notes
 - Booleans are nullable (Nextcloud portability rule: NOT NULL booleans cannot

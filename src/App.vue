@@ -59,20 +59,16 @@
 			</NcEmptyContent>
 
 			<div v-else class="register-detail">
-				<h2>{{ selected.title }}</h2>
-				<p class="description">
-					{{ selected.description || t('dataforms', 'No description.') }}
-				</p>
-				<p class="meta">
-					{{ t('dataforms', 'Owner: {owner}', { owner: selected.owner }) }}
-				</p>
-				<NcEmptyContent
-					:name="t('dataforms', 'Fields, forms and records are coming next')"
-					:description="t('dataforms', 'This register has no schema yet. The field editor and data-entry forms land in the next milestone.')">
-					<template #icon>
-						<TableIcon :size="20" />
-					</template>
-				</NcEmptyContent>
+				<div class="register-head">
+					<h2>{{ selected.title }}</h2>
+					<p v-if="selected.description" class="description">
+						{{ selected.description }}
+					</p>
+					<p class="meta">
+						{{ t('dataforms', 'Owner: {owner}', { owner: selected.owner }) }}
+					</p>
+				</div>
+				<SchemaEditor :key="selected.id" :register-id="selected.id" />
 			</div>
 		</NcAppContent>
 
@@ -127,10 +123,10 @@ import NcTextArea from '@nextcloud/vue/components/NcTextArea'
 import NcTextField from '@nextcloud/vue/components/NcTextField'
 
 import FolderTableIcon from 'vue-material-design-icons/FolderTable.vue'
-import TableIcon from 'vue-material-design-icons/Table.vue'
 import PlusIcon from 'vue-material-design-icons/Plus.vue'
 import DeleteIcon from 'vue-material-design-icons/Delete.vue'
 
+import SchemaEditor from './components/SchemaEditor.vue'
 import { listRegisters, createRegister, deleteRegister } from './api/registers.js'
 
 export default {
@@ -148,8 +144,8 @@ export default {
 		NcLoadingIcon,
 		NcTextArea,
 		NcTextField,
+		SchemaEditor,
 		FolderTableIcon,
-		TableIcon,
 		PlusIcon,
 		DeleteIcon,
 	},
