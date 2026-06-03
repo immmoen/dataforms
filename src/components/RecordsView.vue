@@ -219,6 +219,7 @@ export default {
 			if (Array.isArray(value)) return value.join(', ')
 			if (typeof value === 'boolean') return value ? t('dataforms', 'Yes') : t('dataforms', 'No')
 			if (typeof value === 'object' && 'label' in value) return value.label // relation
+			if (typeof value === 'object' && 'name' in value) return '📎 ' + value.name // file
 			return String(value)
 		},
 		openNew() {

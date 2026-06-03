@@ -25,7 +25,7 @@ the **forms** that feed them, entirely from the browser, with no code.
 
 Free and open source (AGPL-3.0-or-later). Development is funded by voluntary donations.
 	]]></description>
-	<version>0.5.1</version>
+	<version>0.6.0</version>
 	<licence>agpl</licence>
 	<author mail="">The Dataforms contributors</author>
 	<namespace>Dataforms</namespace>

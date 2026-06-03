@@ -26,7 +26,7 @@ class FieldService {
 	public const TYPES = [
 		'text', 'longtext', 'number', 'currency', 'percentage', 'boolean',
 		'date', 'datetime', 'time', 'select', 'multiselect',
-		'email', 'url', 'phone', 'user', 'group', 'relation',
+		'email', 'url', 'phone', 'user', 'group', 'relation', 'file',
 	];
 
 	public function __construct(

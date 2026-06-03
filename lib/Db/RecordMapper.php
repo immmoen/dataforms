@@ -74,13 +74,15 @@ class RecordMapper extends QBMapper {
 		if ($search === '') {
 			return;
 		}
+		// Portable across engines: restrict to records that have a matching
+		// value via an IN subquery (Nextcloud's expression builder has no
+		// exists()). The LIKE parameter is bound on the outer builder so its
+		// placeholder resolves when the combined query runs.
+		$param = $qb->createNamedParameter('%' . $this->db->escapeLikeParameter($search) . '%');
 		$sub = $this->db->getQueryBuilder();
 		$sub->select('rv.record_id')
 			->from('df_record_values', 'rv')
-			->where($sub->expr()->eq('rv.record_id', 'r.id'))
-			->andWhere($sub->expr()->iLike('rv.value_string', $qb->createNamedParameter(
-				'%' . $this->db->escapeLikeParameter($search) . '%'
-			)));
-		$qb->andWhere($qb->expr()->exists($sub->getSQL()));
+			->where($sub->expr()->iLike('rv.value_string', $param));
+		$qb->andWhere('r.id IN (' . $sub->getSQL() . ')');
 	}
 }

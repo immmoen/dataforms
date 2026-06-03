@@ -25,6 +25,7 @@ class FieldValue {
 			'boolean' => 'value_bool',
 			'date', 'datetime' => 'value_datetime',
 			'relation' => 'value_ref_record_id',
+			'file' => 'value_file_id',
 			default => 'value_string',
 		};
 	}
@@ -44,7 +45,7 @@ class FieldValue {
 			'number', 'currency', 'percentage' => (float)$value,
 			'boolean' => self::asBool($value) ? 1 : 0,
 			'date', 'datetime' => self::toEpoch((string)$value),
-			'relation' => (int)(is_array($value) ? ($value['id'] ?? 0) : $value),
+			'relation', 'file' => (int)(is_array($value) ? ($value['id'] ?? 0) : $value),
 			'multiselect' => json_encode(array_values((array)$value), JSON_THROW_ON_ERROR),
 			default => (string)$value,
 		};
@@ -72,6 +73,9 @@ class FieldValue {
 			case 'relation':
 				// Returns the raw target id; RecordService resolves the label.
 				return $row['value_ref_record_id'] === null ? null : (int)$row['value_ref_record_id'];
+			case 'file':
+				// Returns the raw file id; RecordService resolves name + link.
+				return $row['value_file_id'] === null ? null : (int)$row['value_file_id'];
 			case 'multiselect':
 				$raw = $row['value_string'];
 				if ($raw === null || $raw === '') {

@@ -82,6 +82,7 @@ export const FIELD_TYPES = [
 	{ id: 'user', label: 'User', group: 'People', config: [] },
 	{ id: 'group', label: 'Group', group: 'People', config: [] },
 	{ id: 'relation', label: 'Relation (link records)', group: 'Advanced', config: ['target'] },
+	{ id: 'file', label: 'File attachment', group: 'Advanced', config: [] },
 ]
 
 /**

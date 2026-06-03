@@ -12,6 +12,9 @@
 					<span v-if="isRelation(field) && value(field)" class="relation">
 						{{ value(field).label }}
 					</span>
+					<a v-else-if="field.type === 'file' && value(field)" :href="fileUrl(value(field).id)" target="_blank" rel="noopener noreferrer">
+						📎 {{ value(field).name }}
+					</a>
 					<span v-else-if="isEmpty(value(field))" class="empty">—</span>
 					<span v-else>{{ display(field, value(field)) }}</span>
 				</dd>
@@ -28,6 +31,7 @@
 
 <script>
 import { translate as t } from '@nextcloud/l10n'
+import { generateUrl } from '@nextcloud/router'
 import NcButton from '@nextcloud/vue/components/NcButton'
 import NcDialog from '@nextcloud/vue/components/NcDialog'
 
@@ -46,6 +50,9 @@ export default {
 		},
 		isRelation(field) {
 			return field.type === 'relation'
+		},
+		fileUrl(id) {
+			return generateUrl('/f/{id}', { id })
 		},
 		isEmpty(v) {
 			return v === null || v === undefined || v === '' || (Array.isArray(v) && v.length === 0)

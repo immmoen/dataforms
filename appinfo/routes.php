@@ -42,6 +42,9 @@ return [
 		['name' => 'rule#update', 'url' => '/api/v1/rules/{id}', 'verb' => 'PUT', 'requirements' => ['id' => '\d+']],
 		['name' => 'rule#destroy', 'url' => '/api/v1/rules/{id}', 'verb' => 'DELETE', 'requirements' => ['id' => '\d+']],
 
+		// File resolution (path -> id) for file-attachment fields
+		['name' => 'file#resolve', 'url' => '/api/v1/files/resolve', 'verb' => 'GET'],
+
 		// Shares (register ACL)
 		['name' => 'share#index', 'url' => '/api/v1/registers/{registerId}/shares', 'verb' => 'GET', 'requirements' => ['registerId' => '\d+']],
 		['name' => 'share#create', 'url' => '/api/v1/registers/{registerId}/shares', 'verb' => 'POST', 'requirements' => ['registerId' => '\d+']],

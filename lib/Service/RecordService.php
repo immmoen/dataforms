@@ -16,6 +16,7 @@ use OCA\Dataforms\Exception\ValidationException;
 use OCA\Dataforms\Rules\RuleEvaluator;
 use OCP\AppFramework\Db\DoesNotExistException;
 use OCP\AppFramework\Utility\ITimeFactory;
+use OCP\Files\IRootFolder;
 
 /**
  * Records and their EAV values. All validation and computed-field evaluation
@@ -30,6 +31,7 @@ class RecordService {
 		private RegisterService $registerService,
 		private RuleService $ruleService,
 		private RuleEvaluator $evaluator,
+		private IRootFolder $rootFolder,
 		private ITimeFactory $time,
 	) {
 	}
@@ -51,6 +53,7 @@ class RecordService {
 			$dtos[] = $this->toDto($record, $fields, $valuesByRecord[$record->getId()] ?? []);
 		}
 		$dtos = $this->resolveRelations($fields, $dtos);
+		$dtos = $this->resolveFiles($fields, $dtos, $userId);
 
 		return [
 			'records' => $dtos,
@@ -86,7 +89,8 @@ class RecordService {
 		$fields = $this->fieldMapper->findByRegister($record->getRegisterId());
 		$values = $this->valueMapper->findByRecordIds([$record->getId()]);
 		$dto = $this->toDto($record, $fields, $values[$record->getId()] ?? []);
-		return $this->resolveRelations($fields, [$dto])[0];
+		$dto = $this->resolveRelations($fields, [$dto])[0];
+		return $this->resolveFiles($fields, [$dto], $userId)[0];
 	}
 
 	/**
@@ -251,6 +255,45 @@ class RecordService {
 				$dto['values'][$mn] = (is_int($v) && $v > 0)
 					? ['id' => $v, 'label' => $labels[$v] ?? ('#' . $v)]
 					: null;
+			}
+			unset($dto);
+		}
+		return $dtos;
+	}
+
+	/**
+	 * Replace raw file ids in DTOs with {id, name} resolved via the Files API
+	 * (referenced by id, never stored as a blob). Inaccessible files degrade to
+	 * a placeholder name.
+	 *
+	 * @param Field[] $fields
+	 * @param array<int,array<string,mixed>> $dtos
+	 * @return array<int,array<string,mixed>>
+	 */
+	private function resolveFiles(array $fields, array $dtos, string $userId): array {
+		$fileFields = array_filter($fields, static fn (Field $f) => $f->getType() === 'file');
+		if (count($fileFields) === 0) {
+			return $dtos;
+		}
+		$userFolder = $this->rootFolder->getUserFolder($userId);
+		foreach ($fileFields as $field) {
+			$mn = $field->getMachineName();
+			foreach ($dtos as &$dto) {
+				$id = $dto['values'][$mn] ?? null;
+				if (!is_int($id) || $id <= 0) {
+					$dto['values'][$mn] = null;
+					continue;
+				}
+				$name = null;
+				try {
+					$nodes = $userFolder->getById($id);
+					if (count($nodes) > 0) {
+						$name = $nodes[0]->getName();
+					}
+				} catch (\Throwable) {
+					// fall through to placeholder
+				}
+				$dto['values'][$mn] = ['id' => $id, 'name' => $name ?? ('file #' . $id)];
 			}
 			unset($dto);
 		}

@@ -57,6 +57,16 @@ export async function listOptions(registerId, params = {}) {
 }
 
 /**
+ * Resolve a picked file path to its id and name.
+ *
+ * @param {string} path the file path from the file picker
+ * @return {Promise<{id:number,name:string}>}
+ */
+export async function resolveFile(path) {
+	return unwrap(await axios.get(url('files/resolve'), { ...config, params: { path } }))
+}
+
+/**
  * Import CSV text into a register.
  *
  * @param {number} registerId register id

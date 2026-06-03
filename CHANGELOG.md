@@ -7,11 +7,21 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.6.0] - Phase 3 complete: file attachments
+
+### Added
+- **File-attachment fields**: pick a file from Nextcloud Files; stored by file
+  id (never as a blob), resolved to {id, name} with a link on read. Path→id
+  resolution endpoint (`files/resolve`); the field renders a Files picker in the
+  data-entry form and a 📎 link in the table and detail view.
+
 ### Fixed
-- Read endpoints (records/fields/rules list, relation options) now release the
-  PHP session lock right after authenticating, so the SPA's concurrent reads no
-  longer serialise behind each other — or behind other apps' long-polling
-  requests on the shared session (which could otherwise stall a list load).
+- Record search used a non-existent `IExpressionBuilder::exists()`, causing a
+  500 whenever a search term was entered. Rewritten as a portable `IN` subquery.
+- Read endpoints (records/fields/rules list, relation options, file resolve)
+  release the PHP session lock right after authenticating, so the SPA's
+  concurrent reads no longer serialise behind each other — or behind other apps'
+  long-polling on the shared session (which could otherwise stall a list load).
 
 ## [0.5.0] - Phase 3: relations, record detail, CSV import
 

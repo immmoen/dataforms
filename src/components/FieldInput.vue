@@ -79,6 +79,22 @@
 				@update:model-value="emit($event)" />
 		</div>
 
+		<div v-else-if="field.type === 'file'" class="native">
+			<label class="native-label">{{ label }}</label>
+			<div class="file-row">
+				<a v-if="modelValue && modelValue.id" :href="fileUrl(modelValue.id)" target="_blank" rel="noopener noreferrer" class="file-link">
+					📎 {{ modelValue.name }}
+				</a>
+				<span v-else class="no-file">{{ t('dataforms', 'No file') }}</span>
+				<NcButton v-if="!disabled" @click="pickFile">
+					{{ modelValue ? t('dataforms', 'Change') : t('dataforms', 'Choose from Files') }}
+				</NcButton>
+				<NcButton v-if="modelValue && !disabled" type="tertiary" @click="emit(null)">
+					{{ t('dataforms', 'Remove') }}
+				</NcButton>
+			</div>
+		</div>
+
 		<NcTextField
 			v-else
 			:model-value="String(modelValue ?? '')"
@@ -89,16 +105,21 @@
 </template>
 
 <script>
+import { translate as t } from '@nextcloud/l10n'
+import { getFilePickerBuilder, showError } from '@nextcloud/dialogs'
+import { generateUrl } from '@nextcloud/router'
+
+import NcButton from '@nextcloud/vue/components/NcButton'
 import NcCheckboxRadioSwitch from '@nextcloud/vue/components/NcCheckboxRadioSwitch'
 import NcSelect from '@nextcloud/vue/components/NcSelect'
 import NcTextArea from '@nextcloud/vue/components/NcTextArea'
 import NcTextField from '@nextcloud/vue/components/NcTextField'
 
-import { listOptions } from '../api/records.js'
+import { listOptions, resolveFile } from '../api/records.js'
 
 export default {
 	name: 'FieldInput',
-	components: { NcCheckboxRadioSwitch, NcSelect, NcTextArea, NcTextField },
+	components: { NcButton, NcCheckboxRadioSwitch, NcSelect, NcTextArea, NcTextField },
 	props: {
 		field: { type: Object, required: true },
 		modelValue: { type: [String, Number, Boolean, Array, Object, null], default: null },
@@ -134,8 +155,31 @@ export default {
 		},
 	},
 	methods: {
+		t,
 		emit(value) {
 			this.$emit('update:modelValue', value)
+		},
+		fileUrl(id) {
+			return generateUrl('/f/{id}', { id })
+		},
+		async pickFile() {
+			try {
+				const picker = getFilePickerBuilder(t('dataforms', 'Choose a file'))
+					.allowDirectories(false)
+					.setMultiSelect(false)
+					.build()
+				const path = await picker.pick()
+				if (!path) {
+					return
+				}
+				const file = await resolveFile(path)
+				this.emit(file)
+			} catch (e) {
+				if (e) { // pick() rejects on cancel
+					showError(t('dataforms', 'Could not attach the file'))
+					console.error(e)
+				}
+			}
 		},
 		onRelSearch(query) {
 			clearTimeout(this.relTimer)
@@ -183,5 +227,20 @@ export default {
 	border-radius: var(--border-radius-large, 8px);
 	background: var(--color-main-background);
 	color: var(--color-main-text);
+}
+
+.file-row {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+	flex-wrap: wrap;
+}
+
+.file-link {
+	font-weight: 500;
+}
+
+.no-file {
+	color: var(--color-text-maxcontrast);
 }
 </style>
