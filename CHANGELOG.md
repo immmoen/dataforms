@@ -7,6 +7,23 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.2.0] - Phase 1 (in progress): registers
+
+### Added
+- EAV-with-typed-columns schema (migration): `df_registers`, `df_fields`,
+  `df_records`, `df_record_values`, `df_shares`, with indexes for filter/sort.
+- Register domain: `Register` entity, `RegisterMapper` (owner + shared
+  visibility), `RegisterService` (server-side access control).
+- OCS REST API for registers (list/create/show/update/soft-delete) under
+  `/ocs/v2.php/apps/dataforms/api/v1/registers`.
+- Frontend: register list in the navigation, create dialog and delete, wired
+  to the OCS API via `@nextcloud/axios`.
+
+### Notes
+- Booleans are nullable (Nextcloud portability rule: NOT NULL booleans cannot
+  default to false on Oracle).
+- Fields, records, the schema editor and list views are the next slices.
+
 ## [0.1.0] - Phase 0 skeleton
 
 ### Added
