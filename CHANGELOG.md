@@ -7,6 +7,13 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.9.2] - Field help text & default values
+
+### Added
+- Each field can have **help text** (shown under the field in the data-entry
+  form) and a **default value** (pre-filled on new records) — both editable in
+  the field dialog. Completes the §4.2 "common field config".
+
 ## [0.9.1] - Permissions, validation, filtering, sorting
 
 ### Added

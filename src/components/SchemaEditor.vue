@@ -122,6 +122,16 @@
 						:placeholder="t('dataforms', 'Which field to show (defaults to the first)')" />
 				</div>
 
+				<NcTextField
+					v-model="draft.help"
+					:label="t('dataforms', 'Help text (optional)')"
+					:placeholder="t('dataforms', 'Shown under the field in the form')" />
+
+				<NcTextField
+					v-if="!['boolean', 'file', 'relation', 'multiselect'].includes(draft.type)"
+					v-model="draft.default"
+					:label="t('dataforms', 'Default value (optional)')" />
+
 				<NcCheckboxRadioSwitch v-model="draft.mandatory">
 					{{ t('dataforms', 'Required') }}
 				</NcCheckboxRadioSwitch>
@@ -179,6 +189,8 @@ const emptyDraft = () => ({
 	decimals: '',
 	target: null,
 	displayField: null,
+	help: '',
+	default: '',
 	mandatory: false,
 	unique: false,
 })
@@ -293,6 +305,8 @@ export default {
 				decimals: cfg.decimals ?? '',
 				target: cfg.targetRegisterId ?? null,
 				displayField: cfg.displayField ?? null,
+				help: cfg.help ?? '',
+				default: field.default ?? '',
 				mandatory: field.mandatory,
 				unique: field.unique,
 			}
@@ -318,6 +332,9 @@ export default {
 				config.targetRegisterId = this.draft.target
 				config.displayField = this.draft.displayField ?? ''
 			}
+			if (this.draft.help && this.draft.help.trim() !== '') {
+				config.help = this.draft.help.trim()
+			}
 			return config
 		},
 		async submitAdd() {
@@ -332,6 +349,7 @@ export default {
 					config: this.buildConfig(),
 					mandatory: this.draft.mandatory,
 					unique: this.draft.unique,
+					default: this.draft.default ?? '',
 				})
 				this.fields.push(field)
 				this.showAdd = false
@@ -353,6 +371,7 @@ export default {
 					config: this.buildConfig(),
 					mandatory: this.draft.mandatory,
 					unique: this.draft.unique,
+					default: this.draft.default ?? '',
 				})
 				const i = this.fields.findIndex((f) => f.id === updated.id)
 				if (i !== -1) this.fields.splice(i, 1, updated)

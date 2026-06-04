@@ -29,6 +29,9 @@
 						:model-value="valueFor(field)"
 						:disabled="computedTargets.has(field.machineName)"
 						@update:model-value="onInput(field, $event)" />
+					<p v-if="field.config && field.config.help" class="field-help">
+						{{ field.config.help }}
+					</p>
 					<p v-if="allErrors[field.machineName]" class="err">
 						{{ allErrors[field.machineName] }}
 					</p>
@@ -201,6 +204,12 @@ export default {
 
 .lbl {
 	color: var(--color-main-text);
+}
+
+.field-help {
+	color: var(--color-text-maxcontrast);
+	font-size: 0.82em;
+	margin: 4px 0 0;
 }
 
 .err {

@@ -241,6 +241,12 @@ class FieldService {
 			$clean['displayField'] = trim((string)($config['displayField'] ?? ''));
 		}
 
+		// Optional help text, available on every field type.
+		$help = trim((string)($config['help'] ?? ''));
+		if ($help !== '') {
+			$clean['help'] = mb_substr($help, 0, 500);
+		}
+
 		return json_encode($clean, JSON_THROW_ON_ERROR);
 	}
 }
