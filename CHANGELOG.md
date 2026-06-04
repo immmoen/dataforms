@@ -7,6 +7,18 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.10.0] - Saved, shareable views + column selection
+
+### Added
+- **Saved views** (§4.6): save the current columns, filters, sort and search as
+  a named view per register; switch between views from a dropdown. A view can be
+  **private** or **shared** with everyone who can see the register. Owner or a
+  register manager can edit/delete; cleaned up when the register is deleted.
+  (`df_views` table, View domain, OCS API.)
+- **Column selection** for the records table (a "Columns" picker) — replaces the
+  previously hard-coded first-six-columns; the chosen columns are stored in the
+  view.
+
 ## [0.9.2] - Field help text & default values
 
 ### Added

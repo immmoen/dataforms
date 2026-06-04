@@ -35,6 +35,36 @@
 			</NcButton>
 		</div>
 
+		<div v-if="fields.length" class="views-bar">
+			<NcSelect
+				:model-value="activeView"
+				:options="viewOptions"
+				label="title"
+				:clearable="true"
+				:placeholder="t('dataforms', 'All records')"
+				class="view-select"
+				@update:model-value="onSelectView" />
+			<NcButton type="tertiary" @click="openSaveView">
+				<template #icon><ContentSaveIcon :size="18" /></template>
+				{{ t('dataforms', 'Save as view') }}
+			</NcButton>
+			<NcButton v-if="activeView && activeView.isOwner" type="tertiary" @click="removeActiveView">
+				<template #icon><DeleteIcon :size="18" /></template>
+				{{ t('dataforms', 'Delete view') }}
+			</NcButton>
+			<span class="spacer" />
+			<NcActions :menu-name="t('dataforms', 'Columns')" :primary="false">
+				<template #icon><TableColumnIcon :size="20" /></template>
+				<NcActionCheckbox
+					v-for="field in fields"
+					:key="field.id"
+					:model-value="isColumnVisible(field)"
+					@update:model-value="toggleColumn(field)">
+					{{ field.label }}
+				</NcActionCheckbox>
+			</NcActions>
+		</div>
+
 		<div v-if="showFilter" class="filter-bar">
 			<div v-for="(f, i) in draftFilters" :key="i" class="filter-row">
 				<NcSelect v-model="f.field" :options="filterFieldOptions" :reduce="(o) => o.id" label="label" :clearable="false" class="f-field" :placeholder="t('dataforms', 'Field')" />
@@ -144,6 +174,24 @@
 			@close="showDetail = false" />
 
 		<NcDialog
+			v-if="showSaveView"
+			:name="t('dataforms', 'Save as view')"
+			size="normal"
+			@closing="showSaveView = false">
+			<div class="save-view-form">
+				<NcTextField v-model="newView.title" :label="t('dataforms', 'View name')" :required="true" />
+				<p class="hint">{{ t('dataforms', 'Saves the current columns, filters, sort and search.') }}</p>
+				<NcCheckboxRadioSwitch v-model="newView.shared">
+					{{ t('dataforms', 'Share with everyone who can see this register') }}
+				</NcCheckboxRadioSwitch>
+			</div>
+			<template #actions>
+				<NcButton @click="showSaveView = false">{{ t('dataforms', 'Cancel') }}</NcButton>
+				<NcButton type="primary" :disabled="newView.title.trim() === ''" @click="saveView">{{ t('dataforms', 'Save') }}</NcButton>
+			</template>
+		</NcDialog>
+
+		<NcDialog
 			v-if="showImport"
 			:name="t('dataforms', 'Import records from CSV')"
 			size="normal"
@@ -183,7 +231,9 @@ import { showError, showSuccess, showWarning } from '@nextcloud/dialogs'
 
 import NcActions from '@nextcloud/vue/components/NcActions'
 import NcActionButton from '@nextcloud/vue/components/NcActionButton'
+import NcActionCheckbox from '@nextcloud/vue/components/NcActionCheckbox'
 import NcButton from '@nextcloud/vue/components/NcButton'
+import NcCheckboxRadioSwitch from '@nextcloud/vue/components/NcCheckboxRadioSwitch'
 import NcDialog from '@nextcloud/vue/components/NcDialog'
 import NcEmptyContent from '@nextcloud/vue/components/NcEmptyContent'
 import NcLoadingIcon from '@nextcloud/vue/components/NcLoadingIcon'
@@ -198,18 +248,21 @@ import DeleteIcon from 'vue-material-design-icons/Delete.vue'
 import DownloadIcon from 'vue-material-design-icons/Download.vue'
 import UploadIcon from 'vue-material-design-icons/Upload.vue'
 import TableIcon from 'vue-material-design-icons/Table.vue'
+import TableColumnIcon from 'vue-material-design-icons/TableColumn.vue'
+import ContentSaveIcon from 'vue-material-design-icons/ContentSave.vue'
 import EyeIcon from 'vue-material-design-icons/Eye.vue'
 
 import RecordForm from './RecordForm.vue'
 import RecordDetail from './RecordDetail.vue'
 import { listRecords, deleteRecord, csvExportUrl, importCsv } from '../api/records.js'
 import { listRules, FILTER_OPS } from '../api/rules.js'
+import { listViews, createView, deleteView } from '../api/views.js'
 
 export default {
 	name: 'RecordsView',
 	components: {
-		NcActions, NcActionButton, NcButton, NcDialog, NcEmptyContent, NcLoadingIcon, NcSelect, NcTextField,
-		PlusIcon, FilterIcon, CloseIcon, PencilIcon, DeleteIcon, DownloadIcon, UploadIcon, TableIcon, EyeIcon, RecordForm, RecordDetail,
+		NcActions, NcActionButton, NcActionCheckbox, NcButton, NcCheckboxRadioSwitch, NcDialog, NcEmptyContent, NcLoadingIcon, NcSelect, NcTextField,
+		PlusIcon, FilterIcon, CloseIcon, PencilIcon, DeleteIcon, DownloadIcon, UploadIcon, TableIcon, TableColumnIcon, ContentSaveIcon, EyeIcon, RecordForm, RecordDetail,
 	},
 	props: {
 		registerId: { type: Number, required: true },
@@ -241,11 +294,27 @@ export default {
 			draftFilters: [],
 			activeFilters: [],
 			filterOps: FILTER_OPS,
+			views: [],
+			activeViewId: null,
+			visibleColumns: [],
+			showSaveView: false,
+			newView: { title: '', shared: false },
 		}
 	},
 	computed: {
 		columns() {
+			if (this.visibleColumns.length) {
+				return this.visibleColumns
+					.map((mn) => this.fields.find((f) => f.machineName === mn))
+					.filter(Boolean)
+			}
 			return this.fields.slice(0, 6)
+		},
+		viewOptions() {
+			return this.views.map((v) => ({ id: v.id, title: v.title, isOwner: v.isOwner, definition: v.definition }))
+		},
+		activeView() {
+			return this.viewOptions.find((v) => v.id === this.activeViewId) ?? null
 		},
 		filterFieldOptions() {
 			return this.fields
@@ -268,11 +337,14 @@ export default {
 			this.showFilter = false
 			this.draftFilters = []
 			this.activeFilters = []
+			this.activeViewId = null
+			this.visibleColumns = []
 			this.reload()
 		},
 	},
 	async mounted() {
 		this.rules = await listRules(this.registerId).catch(() => [])
+		this.views = await listViews(this.registerId).catch(() => [])
 		await this.load()
 	},
 	methods: {
@@ -307,6 +379,82 @@ export default {
 				this.draftFilters = this.activeFilters.length
 					? this.activeFilters.map((f) => ({ ...f }))
 					: [{ field: this.filterFieldOptions[0]?.id ?? '', op: 'eq', value: '' }]
+			}
+		},
+		// ---- saved views ----
+		isColumnVisible(field) {
+			return this.visibleColumns.length
+				? this.visibleColumns.includes(field.machineName)
+				: this.fields.slice(0, 6).some((f) => f.id === field.id)
+		},
+		toggleColumn(field) {
+			const base = this.visibleColumns.length
+				? [...this.visibleColumns]
+				: this.fields.slice(0, 6).map((f) => f.machineName)
+			const i = base.indexOf(field.machineName)
+			if (i === -1) {
+				base.push(field.machineName)
+			} else {
+				base.splice(i, 1)
+			}
+			this.visibleColumns = base
+		},
+		onSelectView(view) {
+			if (!view) {
+				this.activeViewId = null
+				return
+			}
+			this.activeViewId = view.id
+			const d = view.definition ?? {}
+			this.visibleColumns = Array.isArray(d.columns) ? d.columns : []
+			this.activeFilters = Array.isArray(d.filters) ? d.filters : []
+			this.search = d.search ?? ''
+			this.sort = d.sort ?? 'updated'
+			this.direction = d.direction ?? 'DESC'
+			this.page = 0
+			this.load()
+		},
+		openSaveView() {
+			this.newView = { title: this.activeView?.title ?? '', shared: false }
+			this.showSaveView = true
+		},
+		async saveView() {
+			if (this.newView.title.trim() === '') {
+				return
+			}
+			try {
+				const view = await createView(this.registerId, {
+					title: this.newView.title.trim(),
+					shared: this.newView.shared,
+					definition: {
+						columns: this.columns.map((f) => f.machineName),
+						filters: this.activeFilters,
+						sort: this.sort,
+						direction: this.direction,
+						search: this.search,
+					},
+				})
+				this.views.push(view)
+				this.activeViewId = view.id
+				this.showSaveView = false
+				showSuccess(t('dataforms', 'View saved'))
+			} catch (e) {
+				showError(e.response?.data?.ocs?.data?.message ?? t('dataforms', 'Could not save the view'))
+				console.error(e)
+			}
+		},
+		async removeActiveView() {
+			if (!this.activeView || !window.confirm(t('dataforms', 'Delete this view?'))) {
+				return
+			}
+			const id = this.activeViewId
+			try {
+				await deleteView(id)
+				this.views = this.views.filter((v) => v.id !== id)
+				this.activeViewId = null
+			} catch (e) {
+				showError(t('dataforms', 'Could not delete the view'))
+				console.error(e)
 			}
 		},
 		addFilter() {
@@ -547,6 +695,36 @@ tbody tr:last-child td {
 .actions-col {
 	width: 50px;
 	text-align: right;
+}
+
+.views-bar {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	margin-bottom: 12px;
+	flex-wrap: wrap;
+}
+
+.views-bar .view-select {
+	min-width: 220px;
+}
+
+.views-bar .spacer {
+	flex: 1;
+}
+
+.save-view-form {
+	display: flex;
+	flex-direction: column;
+	gap: 12px;
+	min-width: min(440px, 82vw);
+	padding: 8px 0;
+}
+
+.save-view-form .hint {
+	color: var(--color-text-maxcontrast);
+	font-size: 0.85em;
+	margin: 0;
 }
 
 .filter-bar {

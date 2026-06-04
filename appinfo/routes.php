@@ -47,6 +47,12 @@ return [
 		// File resolution (path -> id) for file-attachment fields
 		['name' => 'file#resolve', 'url' => '/api/v1/files/resolve', 'verb' => 'GET'],
 
+		// Saved views
+		['name' => 'view#index', 'url' => '/api/v1/registers/{registerId}/views', 'verb' => 'GET', 'requirements' => ['registerId' => '\d+']],
+		['name' => 'view#create', 'url' => '/api/v1/registers/{registerId}/views', 'verb' => 'POST', 'requirements' => ['registerId' => '\d+']],
+		['name' => 'view#update', 'url' => '/api/v1/views/{id}', 'verb' => 'PUT', 'requirements' => ['id' => '\d+']],
+		['name' => 'view#destroy', 'url' => '/api/v1/views/{id}', 'verb' => 'DELETE', 'requirements' => ['id' => '\d+']],
+
 		// Shares (register ACL)
 		['name' => 'share#index', 'url' => '/api/v1/registers/{registerId}/shares', 'verb' => 'GET', 'requirements' => ['registerId' => '\d+']],
 		['name' => 'share#create', 'url' => '/api/v1/registers/{registerId}/shares', 'verb' => 'POST', 'requirements' => ['registerId' => '\d+']],

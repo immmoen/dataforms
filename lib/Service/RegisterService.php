@@ -10,6 +10,7 @@ use OCA\Dataforms\Db\Register;
 use OCA\Dataforms\Db\RegisterMapper;
 use OCA\Dataforms\Db\Share;
 use OCA\Dataforms\Db\ShareMapper;
+use OCA\Dataforms\Db\ViewMapper;
 use OCA\Dataforms\Exception\ForbiddenException;
 use OCA\Dataforms\Exception\NotFoundException;
 use OCP\AppFramework\Db\DoesNotExistException;
@@ -29,6 +30,7 @@ class RegisterService {
 	public function __construct(
 		private RegisterMapper $mapper,
 		private ShareMapper $shareMapper,
+		private ViewMapper $viewMapper,
 		private IGroupManager $groupManager,
 		private IUserManager $userManager,
 		private ITimeFactory $time,
@@ -147,6 +149,7 @@ class RegisterService {
 		$register->setDeletedAt($this->time->getTime());
 		$this->mapper->update($register);
 		$this->shareMapper->deleteByRegister($id);
+		$this->viewMapper->deleteByRegister($id);
 	}
 
 	// ---- access control --------------------------------------------------
