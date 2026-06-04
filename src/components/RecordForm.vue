@@ -134,6 +134,8 @@ export default {
 						: ((f.default === 'false' || f.default === false) ? false : null)
 				} else if (f.type === 'file') {
 					values[f.machineName] = []
+				} else if (f.type === 'relation' && f.config?.multiple) {
+					values[f.machineName] = []
 				} else {
 					values[f.machineName] = f.default ?? (f.type === 'multiselect' ? [] : null)
 				}

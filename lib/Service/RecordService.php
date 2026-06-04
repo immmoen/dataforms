@@ -11,6 +11,7 @@ use OCA\Dataforms\Db\FieldMapper;
 use OCA\Dataforms\Db\Record;
 use OCA\Dataforms\Db\RecordFileMapper;
 use OCA\Dataforms\Db\RecordMapper;
+use OCA\Dataforms\Db\RecordRefMapper;
 use OCA\Dataforms\Db\RecordValueMapper;
 use OCA\Dataforms\Db\Register;
 use OCA\Dataforms\Db\Share;
@@ -33,6 +34,7 @@ class RecordService {
 		private RecordMapper $recordMapper,
 		private RecordValueMapper $valueMapper,
 		private RecordFileMapper $fileMapper,
+		private RecordRefMapper $refMapper,
 		private FieldMapper $fieldMapper,
 		private RegisterService $registerService,
 		private RuleService $ruleService,
@@ -171,7 +173,9 @@ class RecordService {
 
 		$this->storeValues($record->getId(), $fields, $values);
 		$this->storeFiles($record->getId(), $fields, $values);
+		$this->storeRefs($record->getId(), $fields, $values);
 		$dto = $this->toDto($record, $fields, $this->valueMapper->findByRecordIds([$record->getId()])[$record->getId()] ?? []);
+		$dto = $this->resolveRelations($fields, [$dto])[0];
 		return $this->resolveFiles($fields, [$dto], $userId)[0];
 	}
 
@@ -194,7 +198,9 @@ class RecordService {
 		$this->valueMapper->deleteByRecord($record->getId());
 		$this->storeValues($record->getId(), $fields, $values);
 		$this->storeFiles($record->getId(), $fields, $values);
+		$this->storeRefs($record->getId(), $fields, $values);
 		$dto = $this->toDto($record, $fields, $this->valueMapper->findByRecordIds([$record->getId()])[$record->getId()] ?? []);
+		$dto = $this->resolveRelations($fields, [$dto])[0];
 		return $this->resolveFiles($fields, [$dto], $userId)[0];
 	}
 
@@ -206,8 +212,57 @@ class RecordService {
 		$record = $this->findReadable($userId, $recordId);
 		$register = $this->registerService->findWritable($userId, $record->getRegisterId());
 		$this->requireOwnOrManage($userId, $record, $register);
-		$record->setDeletedAt($this->time->getTime());
+
+		$this->enforceReferentialIntegrity($recordId);
+
+		$now = $this->time->getTime();
+		$record->setDeletedAt($now);
 		$this->recordMapper->update($record);
+		$this->refMapper->deleteForRecord($recordId); // remove this record's outgoing refs
+	}
+
+	/**
+	 * Apply each relation field's on-delete policy to references pointing at the
+	 * record being deleted: block (refuse), cascade (soft-delete the referencing
+	 * records) or null (drop the reference).
+	 *
+	 * @throws ValidationException when a 'block' policy forbids the deletion.
+	 */
+	private function enforceReferentialIntegrity(int $targetRecordId): void {
+		$refs = $this->refMapper->findReferencingTarget($targetRecordId);
+		if (count($refs) === 0) {
+			return;
+		}
+		$byField = [];
+		foreach ($refs as $ref) {
+			$byField[$ref['field_id']][] = $ref['record_id'];
+		}
+		foreach ($byField as $fieldId => $referencingRecordIds) {
+			try {
+				$cfg = json_decode($this->fieldMapper->find($fieldId)->getConfig() ?? '{}', true) ?: [];
+			} catch (DoesNotExistException) {
+				$cfg = [];
+			}
+			$policy = $cfg['onDelete'] ?? 'null';
+			if ($policy === 'block') {
+				throw new ValidationException('This record is referenced by other records and cannot be deleted');
+			}
+			if ($policy === 'cascade') {
+				$now = $this->time->getTime();
+				foreach (array_unique($referencingRecordIds) as $rid) {
+					try {
+						$ref = $this->recordMapper->find($rid);
+						$ref->setDeletedAt($now);
+						$this->recordMapper->update($ref);
+						$this->refMapper->deleteForRecord($rid);
+					} catch (DoesNotExistException) {
+						// already gone
+					}
+				}
+			}
+			// null + cascade both drop the dangling references to the target.
+			$this->refMapper->deleteRefsToTarget($targetRecordId, (int)$fieldId);
+		}
 	}
 
 	// ---- helpers ---------------------------------------------------------
@@ -299,8 +354,8 @@ class RecordService {
 	 */
 	private function storeValues(int $recordId, array $fields, array $values): void {
 		foreach ($fields as $field) {
-			if ($field->getType() === 'file') {
-				continue; // multi-valued, handled by storeFiles()
+			if (in_array($field->getType(), ['file', 'relation'], true)) {
+				continue; // multi-valued, handled by storeFiles()/storeRefs()
 			}
 			$logical = $values[$field->getMachineName()] ?? null;
 			$payload = FieldValue::toStorage($field->getType(), $logical);
@@ -330,6 +385,30 @@ class RecordService {
 				$fileId = is_array($item) ? (int)($item['id'] ?? 0) : (int)$item;
 				if ($fileId > 0) {
 					$this->fileMapper->insertFile($recordId, $field->getId(), $fileId, $position++);
+				}
+			}
+		}
+	}
+
+	/**
+	 * Persist a relation field's referenced record ids into the join table.
+	 *
+	 * @param Field[] $fields
+	 * @param array<string,mixed> $values
+	 */
+	private function storeRefs(int $recordId, array $fields, array $values): void {
+		foreach ($fields as $field) {
+			if ($field->getType() !== 'relation') {
+				continue;
+			}
+			$this->refMapper->deleteForRecordField($recordId, $field->getId());
+			$value = $values[$field->getMachineName()] ?? null;
+			$list = is_array($value) && !isset($value['id']) ? $value : ($value === null || $value === '' ? [] : [$value]);
+			$position = 0;
+			foreach ($list as $item) {
+				$targetId = is_array($item) ? (int)($item['id'] ?? 0) : (int)$item;
+				if ($targetId > 0) {
+					$this->refMapper->insertRef($recordId, $field->getId(), $targetId, $position++);
 				}
 			}
 		}
@@ -388,32 +467,47 @@ class RecordService {
 	 * @return array<int,array<string,mixed>>
 	 */
 	private function resolveRelations(array $fields, array $dtos): array {
-		foreach ($fields as $field) {
-			if ($field->getType() !== 'relation') {
-				continue;
+		$relationFields = array_filter($fields, static fn (Field $f) => $f->getType() === 'relation');
+		if (count($relationFields) === 0) {
+			return $dtos;
+		}
+		$recordIds = array_map(static fn ($d) => $d['id'], $dtos);
+		$refsByRecord = $this->refMapper->findByRecordIds($recordIds);
+
+		// Collect target ids per relation field to batch-resolve labels.
+		$targetIdsByField = [];
+		foreach ($refsByRecord as $rows) {
+			foreach ($rows as $row) {
+				$targetIdsByField[$row['field_id']][] = $row['target_record_id'];
 			}
+		}
+		$labelsByField = [];
+		foreach ($relationFields as $field) {
 			$cfg = json_decode($field->getConfig() ?? '{}', true) ?: [];
 			$targetReg = (int)($cfg['targetRegisterId'] ?? 0);
-			$mn = $field->getMachineName();
-			if ($targetReg <= 0) {
-				continue;
-			}
-			$ids = [];
-			foreach ($dtos as $dto) {
-				$v = $dto['values'][$mn] ?? null;
-				if (is_int($v) && $v > 0) {
-					$ids[] = $v;
-				}
-			}
-			$labels = $this->labelsForRecords($targetReg, array_values(array_unique($ids)), (string)($cfg['displayField'] ?? ''));
-			foreach ($dtos as &$dto) {
-				$v = $dto['values'][$mn] ?? null;
-				$dto['values'][$mn] = (is_int($v) && $v > 0)
-					? ['id' => $v, 'label' => $labels[$v] ?? ('#' . $v)]
-					: null;
-			}
-			unset($dto);
+			$ids = array_values(array_unique($targetIdsByField[$field->getId()] ?? []));
+			$labelsByField[$field->getId()] = $targetReg > 0
+				? $this->labelsForRecords($targetReg, $ids, (string)($cfg['displayField'] ?? ''))
+				: [];
 		}
+
+		foreach ($dtos as &$dto) {
+			$rows = $refsByRecord[$dto['id']] ?? [];
+			foreach ($relationFields as $field) {
+				$cfg = json_decode($field->getConfig() ?? '{}', true) ?: [];
+				$multiple = (bool)($cfg['multiple'] ?? false);
+				$items = [];
+				foreach ($rows as $row) {
+					if ($row['field_id'] === $field->getId()) {
+						$tid = $row['target_record_id'];
+						$items[] = ['id' => $tid, 'label' => $labelsByField[$field->getId()][$tid] ?? ('#' . $tid)];
+					}
+				}
+				// Single relation returns one object (or null); multi returns a list.
+				$dto['values'][$field->getMachineName()] = $multiple ? $items : ($items[0] ?? null);
+			}
+		}
+		unset($dto);
 		return $dtos;
 	}
 

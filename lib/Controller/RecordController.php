@@ -139,6 +139,8 @@ class RecordController extends OCSController {
 		try {
 			$this->service->delete($this->userId(), $id);
 			return new DataResponse([]);
+		} catch (ValidationException $e) {
+			return new DataResponse(['message' => $e->getMessage()], Http::STATUS_UNPROCESSABLE_ENTITY);
 		} catch (NotFoundException $e) {
 			return new DataResponse(['message' => $e->getMessage()], Http::STATUS_NOT_FOUND);
 		} catch (ForbiddenException $e) {

@@ -9,8 +9,8 @@
 			<template v-for="field in fields" :key="field.id">
 				<dt>{{ field.label }}</dt>
 				<dd>
-					<span v-if="isRelation(field) && value(field)" class="relation">
-						{{ value(field).label }}
+					<span v-if="isRelation(field) && !isEmpty(value(field))" class="relation">
+						{{ relationLabels(value(field)) }}
 					</span>
 					<template v-else-if="field.type === 'file'">
 						<span v-if="fileItems(field).length === 0" class="empty">—</span>
@@ -56,6 +56,10 @@ export default {
 		},
 		isRelation(field) {
 			return field.type === 'relation'
+		},
+		relationLabels(v) {
+			const list = Array.isArray(v) ? v : [v]
+			return list.filter(Boolean).map((r) => (r && typeof r === 'object' && 'label' in r) ? r.label : String(r)).join(', ')
 		},
 		fileItems(field) {
 			const v = this.value(field)

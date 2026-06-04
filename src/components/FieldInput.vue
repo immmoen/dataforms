@@ -86,10 +86,12 @@
 
 		<NcSelect
 			v-else-if="field.type === 'relation'"
-			:model-value="modelValue"
+			:model-value="relationModel"
 			:options="relationOptions"
 			label="label"
+			:multiple="!!field.config?.multiple"
 			:clearable="true"
+			:close-on-select="!field.config?.multiple"
 			:loading="relLoading"
 			:disabled="disabled"
 			:aria-label="label"
@@ -197,6 +199,12 @@ export default {
 			}
 			// tolerate a legacy single {id,name}
 			return this.modelValue && this.modelValue.id ? [this.modelValue] : []
+		},
+		relationModel() {
+			if (this.field.config?.multiple) {
+				return Array.isArray(this.modelValue) ? this.modelValue : (this.modelValue ? [this.modelValue] : [])
+			}
+			return this.modelValue
 		},
 	},
 	mounted() {

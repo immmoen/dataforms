@@ -7,7 +7,20 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
-## [0.12.0] - Computed/auto fields, favourites & a polished dashboard
+## [0.13.0] - Multi-value relations & referential integrity
+
+### Added
+- **Relation fields can link several records** — a "multiple" toggle on a
+  relation field turns the picker into a multi-select; values are stored in a
+  dedicated join table (`df_rec_refs`) keyed by (record, field, position).
+- **Referential integrity on delete** — each relation field declares what
+  happens when a linked record is deleted: **clear the link** (default),
+  **prevent the deletion** (block), or **also delete the referencing record**
+  (cascade). Enforced server-side; a blocked delete returns a clear error.
+
+### Changed
+- The records table and record detail now render multi-value relations as a
+  comma-separated list of labels.
 
 ### Added
 - **Computed field type** — a read-only field calculated from an expression over

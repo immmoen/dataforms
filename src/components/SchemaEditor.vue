@@ -134,6 +134,16 @@
 						label="label"
 						:clearable="true"
 						:placeholder="t('dataforms', 'Which field to show (defaults to the first)')" />
+					<NcCheckboxRadioSwitch v-model="draft.multiple" style="margin-top:12px">
+						{{ t('dataforms', 'Allow linking several records') }}
+					</NcCheckboxRadioSwitch>
+					<label class="block-label" style="margin-top:12px">{{ t('dataforms', 'When a linked record is deleted') }}</label>
+					<NcSelect
+						v-model="draft.onDelete"
+						:options="onDeleteOptions"
+						:reduce="(o) => o.id"
+						label="label"
+						:clearable="false" />
 				</div>
 
 				<NcTextField
@@ -203,6 +213,8 @@ const emptyDraft = () => ({
 	decimals: '',
 	target: null,
 	displayField: null,
+	multiple: false,
+	onDelete: 'null',
 	expression: '',
 	autoKind: 'created_at',
 	help: '',
@@ -275,6 +287,13 @@ export default {
 		targetFieldOptions() {
 			return this.targetFields.map((f) => ({ id: f.machineName, label: f.label }))
 		},
+		onDeleteOptions() {
+			return [
+				{ id: 'null', label: t('dataforms', 'Clear the link (keep this record)') },
+				{ id: 'block', label: t('dataforms', 'Prevent the deletion') },
+				{ id: 'cascade', label: t('dataforms', 'Also delete this record') },
+			]
+		},
 	},
 	watch: {
 		registerId() {
@@ -327,6 +346,8 @@ export default {
 				decimals: cfg.decimals ?? '',
 				target: cfg.targetRegisterId ?? null,
 				displayField: cfg.displayField ?? null,
+				multiple: cfg.multiple ?? false,
+				onDelete: cfg.onDelete ?? 'null',
 				expression: cfg.expression ?? '',
 				autoKind: cfg.kind ?? 'created_at',
 				help: cfg.help ?? '',
@@ -355,6 +376,8 @@ export default {
 			if (this.draft.type === 'relation') {
 				config.targetRegisterId = this.draft.target
 				config.displayField = this.draft.displayField ?? ''
+				config.multiple = this.draft.multiple
+				config.onDelete = this.draft.onDelete
 			}
 			if (this.draft.type === 'computed') {
 				config.expression = this.draft.expression

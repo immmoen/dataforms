@@ -520,6 +520,10 @@ export default {
 				if (list.length === 0) return ''
 				return list.length === 1 ? '📎 ' + list[0].name : '📎 ' + t('dataforms', '{n} files', { n: list.length })
 			}
+			if (field.type === 'relation') {
+				const list = Array.isArray(value) ? value : [value]
+				return list.filter(Boolean).map((v) => (v && typeof v === 'object' && 'label' in v) ? v.label : String(v)).join(', ')
+			}
 			if (Array.isArray(value)) return value.join(', ') // multiselect
 			if (typeof value === 'boolean') return value ? t('dataforms', 'Yes') : t('dataforms', 'No')
 			if (typeof value === 'object' && 'label' in value) return value.label // relation
@@ -594,7 +598,7 @@ export default {
 				await deleteRecord(record.id)
 				this.load()
 			} catch (e) {
-				showError(t('dataforms', 'Could not delete the record'))
+				showError(e.response?.data?.ocs?.data?.message ?? t('dataforms', 'Could not delete the record'))
 				console.error(e)
 			}
 		},
