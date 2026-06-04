@@ -20,6 +20,7 @@ return [
 		['name' => 'register#create', 'url' => '/api/v1/registers', 'verb' => 'POST'],
 		['name' => 'register#show', 'url' => '/api/v1/registers/{id}', 'verb' => 'GET', 'requirements' => ['id' => '\d+']],
 		['name' => 'register#update', 'url' => '/api/v1/registers/{id}', 'verb' => 'PUT', 'requirements' => ['id' => '\d+']],
+		['name' => 'register#favorite', 'url' => '/api/v1/registers/{id}/favorite', 'verb' => 'POST', 'requirements' => ['id' => '\d+']],
 		['name' => 'register#destroy', 'url' => '/api/v1/registers/{id}', 'verb' => 'DELETE', 'requirements' => ['id' => '\d+']],
 
 		// Fields (a register's schema)

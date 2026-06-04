@@ -84,6 +84,16 @@ export const FIELD_TYPES = [
 	{ id: 'group', label: 'Group', group: 'People', config: [] },
 	{ id: 'relation', label: 'Relation (link records)', group: 'Advanced', config: ['target'] },
 	{ id: 'file', label: 'File attachment', group: 'Advanced', config: [] },
+	{ id: 'computed', label: 'Computed (expression)', group: 'Advanced', config: ['expression'] },
+	{ id: 'auto', label: 'Automatic (created/updated/by)', group: 'Advanced', config: ['autoKind'] },
+]
+
+/** Auto-field kinds. */
+export const AUTO_KINDS = [
+	{ id: 'created_at', label: 'Created date/time' },
+	{ id: 'updated_at', label: 'Last updated date/time' },
+	{ id: 'created_by', label: 'Created by (user)' },
+	{ id: 'sequence', label: 'Sequence number' },
 ]
 
 /**

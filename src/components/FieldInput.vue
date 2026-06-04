@@ -117,6 +117,13 @@
 			</div>
 		</div>
 
+		<div v-else-if="['computed', 'auto'].includes(field.type)" class="readonly-value">
+			<span v-if="modelValue !== null && modelValue !== '' && modelValue !== undefined">{{ modelValue }}</span>
+			<span v-else class="placeholder">
+				{{ field.type === 'computed' ? t('dataforms', 'Calculated automatically on save') : t('dataforms', 'Set automatically') }}
+			</span>
+		</div>
+
 		<input
 			v-else
 			type="text"
@@ -334,5 +341,18 @@ export default {
 
 .hidden-input {
 	display: none;
+}
+
+.readonly-value {
+	min-height: 40px;
+	padding: 8px 12px;
+	border-radius: var(--border-radius-large, 8px);
+	background: var(--color-background-dark);
+	color: var(--color-main-text);
+}
+
+.readonly-value .placeholder {
+	color: var(--color-text-maxcontrast);
+	font-style: italic;
 }
 </style>

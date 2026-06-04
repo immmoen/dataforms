@@ -28,7 +28,10 @@ class FieldService {
 		'text', 'longtext', 'number', 'currency', 'percentage', 'boolean',
 		'date', 'datetime', 'time', 'select', 'multiselect',
 		'email', 'url', 'phone', 'user', 'group', 'relation', 'file',
+		'computed', 'auto',
 	];
+
+	public const AUTO_KINDS = ['created_at', 'updated_at', 'created_by', 'sequence'];
 
 	public function __construct(
 		private FieldMapper $mapper,
@@ -239,6 +242,19 @@ class FieldService {
 			}
 			$clean['targetRegisterId'] = $target;
 			$clean['displayField'] = trim((string)($config['displayField'] ?? ''));
+		}
+
+		if ($type === 'computed') {
+			$expr = trim((string)($config['expression'] ?? ''));
+			if ($expr === '') {
+				throw new ValidationException('A computed field needs an expression');
+			}
+			$clean['expression'] = $expr;
+		}
+
+		if ($type === 'auto') {
+			$kind = (string)($config['kind'] ?? 'created_at');
+			$clean['kind'] = in_array($kind, self::AUTO_KINDS, true) ? $kind : 'created_at';
 		}
 
 		// Optional help text, available on every field type.

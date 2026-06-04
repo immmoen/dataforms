@@ -7,6 +7,25 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.12.0] - Computed/auto fields, favourites & a polished dashboard
+
+### Added
+- **Computed field type** — a read-only field calculated from an expression over
+  other fields, evaluated server-side on save (e.g. `likelihood * impact`).
+- **Auto field types** — created date, last-updated date, created-by, and a
+  per-record sequence number, populated automatically.
+- **Favourite registers** — star a register; favourites appear in their own
+  navigation section. (Per-user, stored in user preferences.)
+- **Dashboard landing**: when no register is selected, a card grid of all
+  registers with colours, record counts and favourite stars.
+- **Register colours** shown as dots in the navigation and as card/detail
+  accents; a colour picker in the New register dialog. **Record counts** appear
+  as nav counters and on the dashboard cards.
+
+### Notes
+- App-level group restriction is supported via Nextcloud's built-in app
+  group-restriction (Settings → Apps → Limit to groups) — no extra config needed.
+
 ## [0.11.0] - Data-entry forms (§4.3)
 
 ### Added

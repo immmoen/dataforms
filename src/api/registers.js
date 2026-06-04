@@ -51,3 +51,18 @@ export async function updateRegister(id, data) {
 export async function deleteRegister(id) {
 	await axios.delete(url(`registers/${id}`), config)
 }
+
+/**
+ * Toggle a register as a favourite.
+ *
+ * @param {number} id register id
+ * @param {boolean} favorite on/off
+ * @return {Promise<object>} the updated register
+ */
+export async function favoriteRegister(id, favorite) {
+	return unwrap(await axios.post(url(`registers/${id}/favorite`), { favorite }, config))
+}
+
+/** Icon + colour choices offered when creating a register. */
+export const REGISTER_ICONS = ['table', 'clipboard', 'shield', 'database', 'cube', 'star', 'flag', 'chart']
+export const REGISTER_COLORS = ['#0082c9', '#9d3a3a', '#a06800', '#2d7d46', '#7c5ba6', '#3f7068', '#46637d', '#8a8a8a']

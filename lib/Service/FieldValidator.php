@@ -30,6 +30,10 @@ class FieldValidator {
 	public function validate(array $fields, array $values, int $excludeRecordId = 0): array {
 		$errors = [];
 		foreach ($fields as $field) {
+			// Computed and auto fields are derived server-side, not user input.
+			if (in_array($field->getType(), ['computed', 'auto'], true)) {
+				continue;
+			}
 			$value = $values[$field->getMachineName()] ?? null;
 			if ($this->isEmpty($value)) {
 				continue; // emptiness/required handled by the rule engine

@@ -103,6 +103,20 @@
 					<NcTextField v-model="draft.decimals" type="number" :label="t('dataforms', 'Decimals')" />
 				</div>
 
+				<div v-if="draft.type === 'computed'" class="field-block">
+					<NcTextField v-model="draft.expression" :label="t('dataforms', 'Expression')" :placeholder="t('dataforms', 'e.g. likelihood * impact')" />
+					<p class="block-hint">
+						{{ t('dataforms', 'Computed read-only from other fields on save. Functions: sum, round, if, concat, min, max, abs, len, lower, upper.') }}
+						<br>{{ t('dataforms', 'Fields:') }} <code>{{ machineNames }}</code>
+					</p>
+				</div>
+
+				<div v-if="draft.type === 'auto'" class="field-block">
+					<label class="block-label">{{ t('dataforms', 'Records') }}</label>
+					<NcSelect v-model="draft.autoKind" :options="autoKinds" :reduce="(o) => o.id" label="label" :clearable="false" />
+					<p class="block-hint">{{ t('dataforms', 'Filled automatically; read-only in the form.') }}</p>
+				</div>
+
 				<div v-if="draft.type === 'relation'" class="field-block">
 					<label class="block-label">{{ t('dataforms', 'Linked register') }}</label>
 					<NcSelect
@@ -128,7 +142,7 @@
 					:placeholder="t('dataforms', 'Shown under the field in the form')" />
 
 				<NcTextField
-					v-if="!['boolean', 'file', 'relation', 'multiselect'].includes(draft.type)"
+					v-if="!['boolean', 'file', 'relation', 'multiselect', 'computed', 'auto'].includes(draft.type)"
 					v-model="draft.default"
 					:label="t('dataforms', 'Default value (optional)')" />
 
@@ -177,7 +191,7 @@ import ChevronUpIcon from 'vue-material-design-icons/ChevronUp.vue'
 import ChevronDownIcon from 'vue-material-design-icons/ChevronDown.vue'
 import TableColumnIcon from 'vue-material-design-icons/TableColumn.vue'
 
-import { listFields, createField, updateField, deleteField, reorderFields, FIELD_TYPES, typeLabel } from '../api/fields.js'
+import { listFields, createField, updateField, deleteField, reorderFields, FIELD_TYPES, AUTO_KINDS, typeLabel } from '../api/fields.js'
 import { listRegisters } from '../api/registers.js'
 
 const emptyDraft = () => ({
@@ -189,6 +203,8 @@ const emptyDraft = () => ({
 	decimals: '',
 	target: null,
 	displayField: null,
+	expression: '',
+	autoKind: 'created_at',
 	help: '',
 	default: '',
 	mandatory: false,
@@ -244,6 +260,12 @@ export default {
 		},
 		needsNumberConfig() {
 			return ['number', 'currency', 'percentage'].includes(this.draft.type)
+		},
+		machineNames() {
+			return this.fields.map((f) => f.machineName).join(', ')
+		},
+		autoKinds() {
+			return AUTO_KINDS
 		},
 		registerOptions() {
 			return this.registers
@@ -305,6 +327,8 @@ export default {
 				decimals: cfg.decimals ?? '',
 				target: cfg.targetRegisterId ?? null,
 				displayField: cfg.displayField ?? null,
+				expression: cfg.expression ?? '',
+				autoKind: cfg.kind ?? 'created_at',
 				help: cfg.help ?? '',
 				default: field.default ?? '',
 				mandatory: field.mandatory,
@@ -331,6 +355,12 @@ export default {
 			if (this.draft.type === 'relation') {
 				config.targetRegisterId = this.draft.target
 				config.displayField = this.draft.displayField ?? ''
+			}
+			if (this.draft.type === 'computed') {
+				config.expression = this.draft.expression
+			}
+			if (this.draft.type === 'auto') {
+				config.kind = this.draft.autoKind
 			}
 			if (this.draft.help && this.draft.help.trim() !== '') {
 				config.help = this.draft.help.trim()

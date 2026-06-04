@@ -37,6 +37,10 @@ class FieldValue {
 	 * @return array{column:string,value:mixed} or column '' to skip (empty).
 	 */
 	public static function toStorage(string $type, $value): array {
+		// Auto fields derive from record metadata; never stored as values.
+		if ($type === 'auto') {
+			return ['column' => '', 'value' => null];
+		}
 		$column = self::column($type);
 		if ($value === null || $value === '' || (is_array($value) && count($value) === 0)) {
 			return ['column' => '', 'value' => null];

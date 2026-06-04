@@ -83,6 +83,15 @@ class RegisterController extends OCSController {
 	}
 
 	#[NoAdminRequired]
+	public function favorite(int $id, bool $favorite = true): DataResponse {
+		try {
+			return new DataResponse($this->service->setFavorite($this->userId(), $id, $favorite));
+		} catch (NotFoundException $e) {
+			return new DataResponse(['message' => $e->getMessage()], Http::STATUS_NOT_FOUND);
+		}
+	}
+
+	#[NoAdminRequired]
 	public function destroy(int $id): DataResponse {
 		try {
 			$this->service->delete($this->userId(), $id);

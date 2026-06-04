@@ -86,6 +86,32 @@ class RecordMapper extends QBMapper {
 		return $count;
 	}
 
+	/**
+	 * Non-deleted record counts for a set of registers, keyed by register id.
+	 *
+	 * @param int[] $registerIds
+	 * @return array<int,int>
+	 */
+	public function countsByRegisterIds(array $registerIds): array {
+		if (count($registerIds) === 0) {
+			return [];
+		}
+		$qb = $this->db->getQueryBuilder();
+		$qb->select('register_id')
+			->selectAlias($qb->func()->count('id'), 'cnt')
+			->from($this->getTableName())
+			->where($qb->expr()->in('register_id', $qb->createNamedParameter($registerIds, IQueryBuilder::PARAM_INT_ARRAY)))
+			->andWhere($qb->expr()->isNull('deleted_at'))
+			->groupBy('register_id');
+		$result = $qb->executeQuery();
+		$counts = [];
+		while ($row = $result->fetch()) {
+			$counts[(int)$row['register_id']] = (int)$row['cnt'];
+		}
+		$result->closeCursor();
+		return $counts;
+	}
+
 	private const FILTERABLE_COLUMNS = ['value_string', 'value_number', 'value_datetime', 'value_bool'];
 
 	/**

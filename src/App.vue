@@ -11,20 +11,47 @@
 					</template>
 				</NcAppNavigationNew>
 
+				<NcAppNavigationCaption v-if="favoriteRegisters.length" :name="t('dataforms', 'Favourites')" />
 				<NcAppNavigationItem
-					v-for="register in registers"
+					v-for="register in favoriteRegisters"
+					:key="'fav-' + register.id"
+					:name="register.title"
+					:active="register.id === selectedId"
+					:counter-number="register.recordCount"
+					@click="select(register.id)">
+					<template #icon>
+						<span class="reg-dot" :style="{ backgroundColor: register.color || 'var(--color-primary-element)' }" />
+					</template>
+					<template #actions>
+						<NcActionButton @click="toggleFavorite(register)">
+							<template #icon><StarIcon :size="20" /></template>
+							{{ t('dataforms', 'Remove from favourites') }}
+						</NcActionButton>
+						<NcActionButton v-if="register.canManage" @click="confirmDelete(register)">
+							<template #icon><DeleteIcon :size="20" /></template>
+							{{ t('dataforms', 'Delete') }}
+						</NcActionButton>
+					</template>
+				</NcAppNavigationItem>
+
+				<NcAppNavigationCaption v-if="favoriteRegisters.length" :name="t('dataforms', 'All registers')" />
+				<NcAppNavigationItem
+					v-for="register in otherRegisters"
 					:key="register.id"
 					:name="register.title"
 					:active="register.id === selectedId"
+					:counter-number="register.recordCount"
 					@click="select(register.id)">
 					<template #icon>
-						<FolderTableIcon :size="20" />
+						<span class="reg-dot" :style="{ backgroundColor: register.color || 'var(--color-primary-element)' }" />
 					</template>
 					<template #actions>
-						<NcActionButton @click="confirmDelete(register)">
-							<template #icon>
-								<DeleteIcon :size="20" />
-							</template>
+						<NcActionButton @click="toggleFavorite(register)">
+							<template #icon><StarOutlineIcon :size="20" /></template>
+							{{ t('dataforms', 'Add to favourites') }}
+						</NcActionButton>
+						<NcActionButton v-if="register.canManage" @click="confirmDelete(register)">
+							<template #icon><DeleteIcon :size="20" /></template>
 							{{ t('dataforms', 'Delete') }}
 						</NcActionButton>
 					</template>
@@ -49,14 +76,35 @@
 				</template>
 			</NcEmptyContent>
 
-			<NcEmptyContent
-				v-else-if="!selected"
-				:name="t('dataforms', 'Select a register')"
-				:description="t('dataforms', 'Pick a register from the list, or create a new one.')">
-				<template #icon>
-					<FolderTableIcon :size="20" />
-				</template>
-			</NcEmptyContent>
+			<div v-else-if="!selected" class="dashboard">
+				<div class="dash-head">
+					<h2>{{ t('dataforms', 'Registers') }}</h2>
+					<p class="dash-sub">{{ t('dataforms', 'Pick a register to view its records, or create a new one.') }}</p>
+				</div>
+				<div class="reg-grid">
+					<button
+						v-for="register in registers"
+						:key="register.id"
+						class="reg-card"
+						@click="select(register.id)">
+						<span class="reg-card-top">
+							<span class="reg-card-icon" :style="{ backgroundColor: register.color || 'var(--color-primary-element)' }">
+								<FolderTableIcon :size="20" />
+							</span>
+							<StarIcon v-if="register.favorite" :size="16" class="reg-card-star" />
+						</span>
+						<span class="reg-card-title">{{ register.title }}</span>
+						<span v-if="register.description" class="reg-card-desc">{{ register.description }}</span>
+						<span class="reg-card-meta">
+							{{ n('dataforms', '%n record', '%n records', register.recordCount || 0) }}
+						</span>
+					</button>
+					<button class="reg-card reg-card-new" @click="openCreate">
+						<PlusIcon :size="28" />
+						<span>{{ t('dataforms', 'New register') }}</span>
+					</button>
+				</div>
+			</div>
 
 			<div v-else class="register-detail">
 				<div class="register-head">
@@ -136,6 +184,19 @@
 					v-model="draft.description"
 					:label="t('dataforms', 'Description')"
 					:placeholder="t('dataforms', 'What does this register track?')" />
+				<div class="color-field">
+					<label class="color-label">{{ t('dataforms', 'Colour') }}</label>
+					<div class="swatches">
+						<button
+							v-for="c in colors"
+							:key="c"
+							class="swatch"
+							:class="{ selected: draft.color === c }"
+							:style="{ backgroundColor: c }"
+							:aria-label="c"
+							@click="draft.color = c" />
+					</div>
+				</div>
 			</div>
 			<template #actions>
 				<NcButton :disabled="saving" @click="showCreate = false">
@@ -153,13 +214,14 @@
 </template>
 
 <script>
-import { translate as t } from '@nextcloud/l10n'
+import { translate as t, translatePlural as n } from '@nextcloud/l10n'
 import { showError, showSuccess } from '@nextcloud/dialogs'
 
 import NcContent from '@nextcloud/vue/components/NcContent'
 import NcAppContent from '@nextcloud/vue/components/NcAppContent'
 import NcAppNavigation from '@nextcloud/vue/components/NcAppNavigation'
 import NcAppNavigationItem from '@nextcloud/vue/components/NcAppNavigationItem'
+import NcAppNavigationCaption from '@nextcloud/vue/components/NcAppNavigationCaption'
 import NcAppNavigationNew from '@nextcloud/vue/components/NcAppNavigationNew'
 import NcActionButton from '@nextcloud/vue/components/NcActionButton'
 import NcButton from '@nextcloud/vue/components/NcButton'
@@ -175,13 +237,15 @@ import DeleteIcon from 'vue-material-design-icons/Delete.vue'
 
 import ShareVariantIcon from 'vue-material-design-icons/ShareVariant.vue'
 import LinkIcon from 'vue-material-design-icons/LinkVariant.vue'
+import StarIcon from 'vue-material-design-icons/Star.vue'
+import StarOutlineIcon from 'vue-material-design-icons/StarOutline.vue'
 
 import SchemaEditor from './components/SchemaEditor.vue'
 import RecordsView from './components/RecordsView.vue'
 import RuleBuilder from './components/RuleBuilder.vue'
 import FormBuilder from './components/FormBuilder.vue'
 import ShareDialog from './components/ShareDialog.vue'
-import { listRegisters, createRegister, deleteRegister } from './api/registers.js'
+import { listRegisters, createRegister, deleteRegister, favoriteRegister, REGISTER_COLORS } from './api/registers.js'
 
 export default {
 	name: 'App',
@@ -190,6 +254,7 @@ export default {
 		NcAppContent,
 		NcAppNavigation,
 		NcAppNavigationItem,
+		NcAppNavigationCaption,
 		NcAppNavigationNew,
 		NcActionButton,
 		NcButton,
@@ -208,6 +273,8 @@ export default {
 		DeleteIcon,
 		ShareVariantIcon,
 		LinkIcon,
+		StarIcon,
+		StarOutlineIcon,
 	},
 	data() {
 		return {
@@ -218,12 +285,19 @@ export default {
 			showShare: false,
 			showCreate: false,
 			saving: false,
-			draft: { title: '', description: '' },
+			draft: { title: '', description: '', color: REGISTER_COLORS[0] },
+			colors: REGISTER_COLORS,
 		}
 	},
 	computed: {
 		selected() {
 			return this.registers.find((r) => r.id === this.selectedId) ?? null
+		},
+		favoriteRegisters() {
+			return this.registers.filter((r) => r.favorite)
+		},
+		otherRegisters() {
+			return this.favoriteRegisters.length ? this.registers.filter((r) => !r.favorite) : this.registers
 		},
 		tabs() {
 			return [
@@ -248,6 +322,18 @@ export default {
 		},
 	},
 	methods: {
+		n,
+		async toggleFavorite(register) {
+			const next = !register.favorite
+			try {
+				const updated = await favoriteRegister(register.id, next)
+				const i = this.registers.findIndex((r) => r.id === register.id)
+				if (i !== -1) this.registers.splice(i, 1, updated)
+			} catch (e) {
+				showError(t('dataforms', 'Could not update favourites'))
+				console.error(e)
+			}
+		},
 		async load() {
 			this.loading = true
 			try {
@@ -292,7 +378,7 @@ export default {
 			)
 		},
 		openCreate() {
-			this.draft = { title: '', description: '' }
+			this.draft = { title: '', description: '', color: REGISTER_COLORS[0] }
 			this.showCreate = true
 		},
 		async submitCreate() {
@@ -305,6 +391,8 @@ export default {
 				const register = await createRegister({
 					title,
 					description: this.draft.description.trim(),
+					color: this.draft.color,
+					icon: 'table',
 				})
 				this.registers.push(register)
 				this.registers.sort((a, b) => a.title.localeCompare(b.title))
@@ -339,6 +427,106 @@ export default {
 <style scoped>
 .centered {
 	margin: 30vh auto 0;
+}
+
+.reg-dot {
+	display: inline-block;
+	width: 14px;
+	height: 14px;
+	border-radius: 4px;
+}
+
+/* Dashboard landing */
+.dashboard {
+	max-width: 1100px;
+	margin: 0 auto;
+	padding: 28px 28px 60px;
+}
+
+.dash-head h2 {
+	margin: 0 0 2px;
+	font-size: 1.6em;
+}
+
+.dash-sub {
+	color: var(--color-text-maxcontrast);
+	margin: 0 0 20px;
+}
+
+.reg-grid {
+	display: grid;
+	grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+	gap: 16px;
+}
+
+.reg-card {
+	display: flex;
+	flex-direction: column;
+	gap: 6px;
+	text-align: left;
+	background: var(--color-main-background);
+	border: 1px solid var(--color-border);
+	border-radius: var(--border-radius-large, 12px);
+	padding: 16px;
+	cursor: pointer;
+	transition: box-shadow 0.12s ease, border-color 0.12s ease, transform 0.12s ease;
+}
+
+.reg-card:hover {
+	border-color: var(--color-primary-element);
+	box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+	transform: translateY(-1px);
+}
+
+.reg-card-top {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+}
+
+.reg-card-icon {
+	width: 40px;
+	height: 40px;
+	border-radius: 10px;
+	display: grid;
+	place-items: center;
+	color: #fff;
+}
+
+.reg-card-star {
+	color: var(--color-warning, #e0b400);
+}
+
+.reg-card-title {
+	font-weight: 600;
+	font-size: 1.05em;
+	margin-top: 6px;
+}
+
+.reg-card-desc {
+	color: var(--color-text-maxcontrast);
+	font-size: 0.9em;
+	flex: 1;
+	display: -webkit-box;
+	-webkit-line-clamp: 2;
+	-webkit-box-orient: vertical;
+	overflow: hidden;
+}
+
+.reg-card-meta {
+	color: var(--color-text-maxcontrast);
+	font-size: 0.82em;
+	margin-top: 8px;
+	padding-top: 8px;
+	border-top: 1px solid var(--color-border-dark, var(--color-border));
+}
+
+.reg-card-new {
+	align-items: center;
+	justify-content: center;
+	border-style: dashed;
+	color: var(--color-text-maxcontrast);
+	min-height: 140px;
 }
 
 .register-detail {
@@ -412,5 +600,32 @@ export default {
 	gap: 16px;
 	min-width: min(420px, 80vw);
 	padding: 8px 0;
+}
+
+.color-label {
+	display: block;
+	font-weight: 600;
+	font-size: 0.88em;
+	margin-bottom: 6px;
+}
+
+.swatches {
+	display: flex;
+	gap: 8px;
+	flex-wrap: wrap;
+}
+
+.swatch {
+	width: 28px;
+	height: 28px;
+	border-radius: 8px;
+	border: 2px solid transparent;
+	cursor: pointer;
+	padding: 0;
+}
+
+.swatch.selected {
+	border-color: var(--color-main-text);
+	box-shadow: 0 0 0 2px var(--color-main-background) inset;
 }
 </style>

@@ -17,6 +17,7 @@ use OCA\Dataforms\Db\Share;
 use OCA\Dataforms\Exception\ForbiddenException;
 use OCA\Dataforms\Exception\NotFoundException;
 use OCA\Dataforms\Exception\ValidationException;
+use OCA\Dataforms\Rules\ExpressionEvaluator;
 use OCA\Dataforms\Rules\RuleEvaluator;
 use OCP\AppFramework\Db\DoesNotExistException;
 use OCP\AppFramework\Utility\ITimeFactory;
@@ -36,6 +37,7 @@ class RecordService {
 		private RegisterService $registerService,
 		private RuleService $ruleService,
 		private RuleEvaluator $evaluator,
+		private ExpressionEvaluator $expr,
 		private FieldValidator $fieldValidator,
 		private IRootFolder $rootFolder,
 		private ITimeFactory $time,
@@ -262,6 +264,19 @@ class RecordService {
 			}
 		}
 
+		// Computed field types: evaluate their expression server-side (always,
+		// even if hidden) so the stored value is authoritative.
+		foreach ($fields as $field) {
+			if ($field->getType() === 'computed') {
+				$cfg = json_decode($field->getConfig() ?? '{}', true) ?: [];
+				try {
+					$result['values'][$field->getMachineName()] = $this->expr->evaluate((string)($cfg['expression'] ?? ''), $result['values']);
+				} catch (\Throwable) {
+					$result['values'][$field->getMachineName()] = null;
+				}
+			}
+		}
+
 		// Enforce each visible field's own config (format/range/length/options/
 		// uniqueness) on top of the rule-driven validations.
 		$visibleFields = array_filter(
@@ -321,6 +336,22 @@ class RecordService {
 	}
 
 	/**
+	 * Value of an auto field, derived from the record's metadata.
+	 *
+	 * @return string|null
+	 */
+	private function autoValue(Field $field, Record $record): ?string {
+		$cfg = json_decode($field->getConfig() ?? '{}', true) ?: [];
+		return match ($cfg['kind'] ?? 'created_at') {
+			'created_at' => $record->getCreated() ? gmdate('Y-m-d\TH:i', $record->getCreated()) : null,
+			'updated_at' => $record->getUpdated() ? gmdate('Y-m-d\TH:i', $record->getUpdated()) : null,
+			'created_by' => $record->getCreatedBy(),
+			'sequence' => '#' . $record->getId(),
+			default => null,
+		};
+	}
+
+	/**
 	 * @param Field[] $fields
 	 * @param array<int,array<string,mixed>> $valueRows
 	 * @return array<string,mixed>
@@ -332,6 +363,10 @@ class RecordService {
 		}
 		$values = [];
 		foreach ($fields as $field) {
+			if ($field->getType() === 'auto') {
+				$values[$field->getMachineName()] = $this->autoValue($field, $record);
+				continue;
+			}
 			$row = $byFieldId[$field->getId()] ?? null;
 			$values[$field->getMachineName()] = $row === null ? null : FieldValue::fromStorage($field->getType(), $row);
 		}
