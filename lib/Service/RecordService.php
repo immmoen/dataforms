@@ -12,6 +12,9 @@ use OCA\Dataforms\Db\Record;
 use OCA\Dataforms\Db\RecordFileMapper;
 use OCA\Dataforms\Db\RecordMapper;
 use OCA\Dataforms\Db\RecordValueMapper;
+use OCA\Dataforms\Db\Register;
+use OCA\Dataforms\Db\Share;
+use OCA\Dataforms\Exception\ForbiddenException;
 use OCA\Dataforms\Exception\NotFoundException;
 use OCA\Dataforms\Exception\ValidationException;
 use OCA\Dataforms\Rules\RuleEvaluator;
@@ -33,6 +36,7 @@ class RecordService {
 		private RegisterService $registerService,
 		private RuleService $ruleService,
 		private RuleEvaluator $evaluator,
+		private FieldValidator $fieldValidator,
 		private IRootFolder $rootFolder,
 		private ITimeFactory $time,
 	) {
@@ -42,10 +46,26 @@ class RecordService {
 	 * @return array{records:array<int,array<string,mixed>>,total:int,fields:array<int,array<string,mixed>>}
 	 * @throws NotFoundException
 	 */
-	public function list(string $userId, int $registerId, int $limit, int $offset, string $sort, string $direction, string $search): array {
+	/**
+	 * @param array<int,array{field:string,op:string,value?:mixed}> $filters
+	 * @return array{records:array<int,array<string,mixed>>,total:int,fields:array<int,array<string,mixed>>}
+	 * @throws NotFoundException
+	 */
+	public function list(string $userId, int $registerId, int $limit, int $offset, string $sort, string $direction, string $search, array $filters = []): array {
 		$this->registerService->find($userId, $registerId);
 		$fields = $this->fieldMapper->findByRegister($registerId);
-		$records = $this->recordMapper->findByRegister($registerId, $limit, $offset, $sort, $direction, $search);
+		$byName = [];
+		foreach ($fields as $f) {
+			$byName[$f->getMachineName()] = $f;
+		}
+
+		$resolvedFilters = $this->resolveFilters($filters, $byName);
+		$sortField = isset($byName[$sort]) ? [
+			'column' => FieldValue::column($byName[$sort]->getType()),
+			'fieldId' => $byName[$sort]->getId(),
+		] : null;
+
+		$records = $this->recordMapper->findByRegister($registerId, $limit, $offset, $sort, $direction, $search, $resolvedFilters, $sortField);
 
 		$ids = array_map(static fn (Record $r) => $r->getId(), $records);
 		$valuesByRecord = $this->valueMapper->findByRecordIds($ids);
@@ -59,9 +79,41 @@ class RecordService {
 
 		return [
 			'records' => $dtos,
-			'total' => $this->recordMapper->countByRegister($registerId, $search),
+			'total' => $this->recordMapper->countByRegister($registerId, $search, $resolvedFilters),
 			'fields' => array_map(static fn (Field $f) => $f->jsonSerialize(), $fields),
 		];
+	}
+
+	/**
+	 * Resolve client filter criteria (by field machine name) into typed-column
+	 * criteria for the mapper.
+	 *
+	 * @param array<int,array{field:string,op:string,value?:mixed}> $filters
+	 * @param array<string,Field> $byName
+	 * @return array<int,array{fieldId:int,column:string,op:string,value:mixed}>
+	 */
+	private function resolveFilters(array $filters, array $byName): array {
+		$out = [];
+		foreach ($filters as $filter) {
+			$name = (string)($filter['field'] ?? '');
+			if (!isset($byName[$name])) {
+				continue;
+			}
+			$field = $byName[$name];
+			$type = $field->getType();
+			if (in_array($type, ['file', 'relation'], true)) {
+				continue; // not filterable here
+			}
+			$op = (string)($filter['op'] ?? 'eq');
+			$column = FieldValue::column($type);
+			$value = null;
+			if (!in_array($op, ['isEmpty', 'isNotEmpty'], true)) {
+				$payload = FieldValue::toStorage($type, $filter['value'] ?? null);
+				$value = $payload['value'];
+			}
+			$out[] = ['fieldId' => $field->getId(), 'column' => $column, 'op' => $op, 'value' => $value];
+		}
+		return $out;
 	}
 
 	/**
@@ -104,7 +156,7 @@ class RecordService {
 	public function create(string $userId, int $registerId, array $values): array {
 		$this->registerService->findWritable($userId, $registerId);
 		$fields = $this->fieldMapper->findByRegister($registerId);
-		$values = $this->validateAndCompute($registerId, $fields, $values);
+		$values = $this->validateAndCompute($registerId, $fields, $values, 0);
 
 		$now = $this->time->getTime();
 		$record = new Record();
@@ -129,9 +181,10 @@ class RecordService {
 	 */
 	public function update(string $userId, int $recordId, array $values): array {
 		$record = $this->findReadable($userId, $recordId);
-		$this->registerService->findWritable($userId, $record->getRegisterId());
+		$register = $this->registerService->findWritable($userId, $record->getRegisterId());
+		$this->requireOwnOrManage($userId, $record, $register);
 		$fields = $this->fieldMapper->findByRegister($record->getRegisterId());
-		$values = $this->validateAndCompute($record->getRegisterId(), $fields, $values);
+		$values = $this->validateAndCompute($record->getRegisterId(), $fields, $values, $record->getId());
 
 		$record->setUpdated($this->time->getTime());
 		$this->recordMapper->update($record);
@@ -149,12 +202,29 @@ class RecordService {
 	 */
 	public function delete(string $userId, int $recordId): void {
 		$record = $this->findReadable($userId, $recordId);
-		$this->registerService->findWritable($userId, $record->getRegisterId());
+		$register = $this->registerService->findWritable($userId, $record->getRegisterId());
+		$this->requireOwnOrManage($userId, $record, $register);
 		$record->setDeletedAt($this->time->getTime());
 		$this->recordMapper->update($record);
 	}
 
 	// ---- helpers ---------------------------------------------------------
+
+	/**
+	 * A user may change a record if they created it, or if they manage the
+	 * register. (Anyone with write access may create new records.)
+	 *
+	 * @throws \OCA\Dataforms\Exception\ForbiddenException
+	 */
+	private function requireOwnOrManage(string $userId, Record $record, Register $register): void {
+		if ($record->getCreatedBy() === $userId) {
+			return;
+		}
+		if (($this->registerService->permissionsFor($register, $userId) & Share::PERMISSION_MANAGE) !== 0) {
+			return;
+		}
+		throw new ForbiddenException('You can only edit entries you created');
+	}
 
 	private function findReadable(string $userId, int $recordId): Record {
 		try {
@@ -175,7 +245,7 @@ class RecordService {
 	 * @return array<string,mixed>
 	 * @throws ValidationException
 	 */
-	private function validateAndCompute(int $registerId, array $fields, array $values): array {
+	private function validateAndCompute(int $registerId, array $fields, array $values, int $excludeRecordId): array {
 		$fieldDefs = array_map(static fn (Field $f) => [
 			'machineName' => $f->getMachineName(),
 			'type' => $f->getType(),
@@ -185,14 +255,25 @@ class RecordService {
 		$rules = $this->ruleService->definitionsForRegister($registerId);
 		$result = $this->evaluator->evaluate($fieldDefs, $rules, $values);
 
-		if (count($result['errors']) > 0) {
-			throw new ValidationException('Validation failed', $result['errors']);
-		}
 		// A hidden field's value must not be persisted (authoritative).
 		foreach ($result['visible'] as $machineName => $visible) {
 			if (!$visible) {
 				$result['values'][$machineName] = null;
 			}
+		}
+
+		// Enforce each visible field's own config (format/range/length/options/
+		// uniqueness) on top of the rule-driven validations.
+		$visibleFields = array_filter(
+			$fields,
+			static fn (Field $f) => ($result['visible'][$f->getMachineName()] ?? true)
+		);
+		$fieldErrors = $this->fieldValidator->validate($visibleFields, $result['values'], $excludeRecordId);
+
+		// Rule errors take precedence over generic field-config errors.
+		$errors = array_merge($fieldErrors, $result['errors']);
+		if (count($errors) > 0) {
+			throw new ValidationException('Validation failed', $errors);
 		}
 		return $result['values'];
 	}

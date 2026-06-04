@@ -7,6 +7,27 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.9.1] - Permissions, validation, filtering, sorting
+
+### Added
+- **Granular permissions** (as requested): only register **managers** can add/
+  edit fields and rules; users with **write** access can create records and
+  edit/delete **only the entries they created**; a manager can edit any entry.
+  Enforced server-side and reflected in the UI (action buttons hidden when not
+  permitted). Verified with a second user.
+- **Server-side field-config validation**: email/URL format, number min/max,
+  text max-length, select-option membership, and **unique-constraint
+  enforcement** are now checked before persisting (previously stored but inert).
+- **Multi-criteria filtering** on the records view (§4.6): a filter bar with
+  field/operator/value conditions (=, ≠, contains, >, <, ≥, ≤, is empty/not
+  empty), translated to portable SQL. Plus **sort by any column** (clickable
+  headers) and a sortable backend.
+- Rule builder gains the **`in` ("is one of")** operator the engines already
+  supported.
+
+### Fixed
+- README no longer claims "Phase 0"; reflects the current MVP scope.
+
 ## [0.8.0] - File attachments: multiple files, simpler UX
 
 ### Changed

@@ -48,6 +48,31 @@ class RecordValueMapper {
 		$qb->executeStatement();
 	}
 
+	/**
+	 * Whether another (non-deleted) record already has this value for a field.
+	 * Used to enforce a field's unique constraint.
+	 *
+	 * @param mixed $value
+	 */
+	public function valueExistsForField(int $fieldId, string $column, $value, int $excludeRecordId): bool {
+		if (!in_array($column, self::COLUMNS, true)) {
+			return false;
+		}
+		$qb = $this->db->getQueryBuilder();
+		$qb->select('rv.record_id')
+			->from('df_record_values', 'rv')
+			->innerJoin('rv', 'df_records', 'r', $qb->expr()->eq('r.id', 'rv.record_id'))
+			->where($qb->expr()->eq('rv.field_id', $qb->createNamedParameter($fieldId, IQueryBuilder::PARAM_INT)))
+			->andWhere($qb->expr()->eq('rv.' . $column, $qb->createNamedParameter($value)))
+			->andWhere($qb->expr()->isNull('r.deleted_at'))
+			->andWhere($qb->expr()->neq('rv.record_id', $qb->createNamedParameter($excludeRecordId, IQueryBuilder::PARAM_INT)))
+			->setMaxResults(1);
+		$result = $qb->executeQuery();
+		$exists = $result->fetchOne() !== false;
+		$result->closeCursor();
+		return $exists;
+	}
+
 	public function deleteByField(int $fieldId): void {
 		$qb = $this->db->getQueryBuilder();
 		$qb->delete('df_record_values')

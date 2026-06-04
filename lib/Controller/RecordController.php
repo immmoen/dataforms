@@ -53,9 +53,16 @@ class RecordController extends OCSController {
 	}
 
 	#[NoAdminRequired]
-	public function index(int $registerId, int $limit = 50, int $offset = 0, string $sort = 'updated', string $direction = 'DESC', string $search = ''): DataResponse {
+	public function index(int $registerId, int $limit = 50, int $offset = 0, string $sort = 'updated', string $direction = 'DESC', string $search = '', string $filter = ''): DataResponse {
+		$filters = [];
+		if ($filter !== '') {
+			$decoded = json_decode($filter, true);
+			if (is_array($decoded)) {
+				$filters = $decoded;
+			}
+		}
 		try {
-			return new DataResponse($this->service->list($this->readUserId(), $registerId, $limit, $offset, $sort, $direction, $search));
+			return new DataResponse($this->service->list($this->readUserId(), $registerId, $limit, $offset, $sort, $direction, $search, $filters));
 		} catch (NotFoundException $e) {
 			return new DataResponse(['message' => $e->getMessage()], Http::STATUS_NOT_FOUND);
 		}

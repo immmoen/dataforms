@@ -8,7 +8,7 @@
 					{{ t('dataforms', 'The typed fields this register stores. Machine names are generated once and never change.') }}
 				</p>
 			</div>
-			<NcButton type="primary" @click="openAdd">
+			<NcButton v-if="canManage" type="primary" @click="openAdd">
 				<template #icon>
 					<PlusIcon :size="20" />
 				</template>
@@ -38,26 +38,28 @@
 					{{ n('dataforms', '%n option', '%n options', optionCount(field)) }}
 				</span>
 				<span class="spacer" />
-				<NcButton type="tertiary-no-background" :disabled="index === 0" :aria-label="t('dataforms', 'Move up')" @click="move(index, -1)">
-					<template #icon><ChevronUpIcon :size="20" /></template>
-				</NcButton>
-				<NcButton type="tertiary-no-background" :disabled="index === fields.length - 1" :aria-label="t('dataforms', 'Move down')" @click="move(index, 1)">
-					<template #icon><ChevronDownIcon :size="20" /></template>
-				</NcButton>
-				<NcActions>
-					<NcActionButton @click="openEdit(field)">
-						<template #icon>
-							<PencilIcon :size="20" />
-						</template>
-						{{ t('dataforms', 'Edit') }}
-					</NcActionButton>
-					<NcActionButton @click="remove(field)">
-						<template #icon>
-							<DeleteIcon :size="20" />
-						</template>
-						{{ t('dataforms', 'Delete') }}
-					</NcActionButton>
-				</NcActions>
+				<template v-if="canManage">
+					<NcButton type="tertiary-no-background" :disabled="index === 0" :aria-label="t('dataforms', 'Move up')" @click="move(index, -1)">
+						<template #icon><ChevronUpIcon :size="20" /></template>
+					</NcButton>
+					<NcButton type="tertiary-no-background" :disabled="index === fields.length - 1" :aria-label="t('dataforms', 'Move down')" @click="move(index, 1)">
+						<template #icon><ChevronDownIcon :size="20" /></template>
+					</NcButton>
+					<NcActions>
+						<NcActionButton @click="openEdit(field)">
+							<template #icon>
+								<PencilIcon :size="20" />
+							</template>
+							{{ t('dataforms', 'Edit') }}
+						</NcActionButton>
+						<NcActionButton @click="remove(field)">
+							<template #icon>
+								<DeleteIcon :size="20" />
+							</template>
+							{{ t('dataforms', 'Delete') }}
+						</NcActionButton>
+					</NcActions>
+				</template>
 			</li>
 		</ul>
 
@@ -205,6 +207,10 @@ export default {
 		registerId: {
 			type: Number,
 			required: true,
+		},
+		canManage: {
+			type: Boolean,
+			default: false,
 		},
 	},
 	data() {

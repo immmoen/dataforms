@@ -62,7 +62,21 @@ export const CONDITION_OPS = [
 	{ id: 'gte', label: '≥' },
 	{ id: 'lte', label: '≤' },
 	{ id: 'contains', label: 'contains' },
+	{ id: 'in', label: 'is one of (comma-separated)' },
 	{ id: 'isEmpty', label: 'is empty' },
 	{ id: 'isNotEmpty', label: 'is not empty' },
 	{ id: 'matches', label: 'matches regex' },
+]
+
+/** Operators offered in the records filter bar (subset that maps to SQL). */
+export const FILTER_OPS = [
+	{ id: 'eq', label: '=' },
+	{ id: 'neq', label: '≠' },
+	{ id: 'contains', label: 'contains' },
+	{ id: 'gt', label: '>' },
+	{ id: 'lt', label: '<' },
+	{ id: 'gte', label: '≥' },
+	{ id: 'lte', label: '≤' },
+	{ id: 'isEmpty', label: 'is empty' },
+	{ id: 'isNotEmpty', label: 'is not empty' },
 ]

@@ -93,9 +93,22 @@
 					</button>
 				</div>
 
-				<RecordsView v-if="activeTab === 'records'" :key="'rec-' + selected.id" :register-id="selected.id" />
-				<SchemaEditor v-else-if="activeTab === 'fields'" :key="'fld-' + selected.id" :register-id="selected.id" />
-				<RuleBuilder v-else :key="'rul-' + selected.id" :register-id="selected.id" />
+				<RecordsView
+					v-if="activeTab === 'records'"
+					:key="'rec-' + selected.id"
+					:register-id="selected.id"
+					:can-write="selected.canWrite"
+					:can-manage="selected.canManage" />
+				<SchemaEditor
+					v-else-if="activeTab === 'fields'"
+					:key="'fld-' + selected.id"
+					:register-id="selected.id"
+					:can-manage="selected.canManage" />
+				<RuleBuilder
+					v-else
+					:key="'rul-' + selected.id"
+					:register-id="selected.id"
+					:can-manage="selected.canManage" />
 
 				<ShareDialog v-if="showShare" :register="selected" @close="showShare = false" />
 			</div>

@@ -9,9 +9,12 @@ collections), the **forms** that feed them — with conditional logic — and th
 a processing-activities register, a breach log, a risk register, an asset
 inventory, and so on.
 
-> **Status: Phase 0 (skeleton).** The app installs and shows its shell and
-> navigation entry. Register/field/form/record functionality lands in the
-> following phases — see the roadmap.
+> **Status: MVP (Phases 0–3 mostly complete).** Registers, an 18-type field
+> schema editor, records with live conditional rules, a table view with search/
+> filter/sort/pagination, CSV import & export, register sharing (read/write/
+> manage), relations and multi-file attachments are all implemented. Standalone
+> Forms, saved Views, and automation (triggers/actions) are the main remaining
+> items — see the roadmap and CHANGELOG.
 
 ## Highlights (target feature set)
 

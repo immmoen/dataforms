@@ -8,7 +8,7 @@
 					{{ t('dataforms', 'Show/hide fields, make them required, set defaults, validate, or compute values. Rules run live in the form and are re-checked on the server.') }}
 				</p>
 			</div>
-			<NcButton type="primary" :disabled="fields.length === 0" @click="openAdd">
+			<NcButton v-if="canManage" type="primary" :disabled="fields.length === 0" @click="openAdd">
 				<template #icon>
 					<PlusIcon :size="20" />
 				</template>
@@ -37,7 +37,7 @@
 				<span class="effect-badge" :class="'e-' + rule.effect">{{ effectLabel(rule.effect) }}</span>
 				<span class="summary">{{ ruleSummary(rule) }}</span>
 				<span class="spacer" />
-				<NcActions>
+				<NcActions v-if="canManage">
 					<NcActionButton @click="openEdit(rule)">
 						<template #icon><PencilIcon :size="20" /></template>
 						{{ t('dataforms', 'Edit') }}
@@ -176,6 +176,7 @@ export default {
 	},
 	props: {
 		registerId: { type: Number, required: true },
+		canManage: { type: Boolean, default: false },
 	},
 	data() {
 		return {
@@ -256,7 +257,12 @@ export default {
 					logic: d.logic,
 					rules: d.conditions
 						.filter((c) => c.field)
-						.map((c) => ({ field: c.field, op: c.op, value: c.value })),
+						.map((c) => ({
+							field: c.field,
+							op: c.op,
+							// "is one of" takes a comma-separated list -> array
+							value: c.op === 'in' ? String(c.value ?? '').split(',').map((s) => s.trim()).filter(Boolean) : c.value,
+						})),
 				}
 			}
 			if (d.effect === 'set_value') payload.value = d.value

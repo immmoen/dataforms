@@ -27,7 +27,7 @@
 		</dl>
 		<template #actions>
 			<NcButton @click="$emit('close')">{{ t('dataforms', 'Close') }}</NcButton>
-			<NcButton type="primary" @click="$emit('edit', record)">
+			<NcButton v-if="canEdit" type="primary" @click="$emit('edit', record)">
 				{{ t('dataforms', 'Edit') }}
 			</NcButton>
 		</template>
@@ -46,6 +46,7 @@ export default {
 	props: {
 		fields: { type: Array, required: true },
 		record: { type: Object, required: true },
+		canEdit: { type: Boolean, default: false },
 	},
 	emits: ['close', 'edit'],
 	methods: {

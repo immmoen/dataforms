@@ -9,9 +9,13 @@
 				label-visible
 				type="search"
 				@update:model-value="onSearch" />
+			<NcButton :type="activeFilters.length ? 'secondary' : 'tertiary'" @click="toggleFilterBar">
+				<template #icon><FilterIcon :size="20" /></template>
+				{{ activeFilters.length ? t('dataforms', 'Filter ({n})', { n: activeFilters.length }) : t('dataforms', 'Filter') }}
+			</NcButton>
 			<span class="spacer" />
 			<input ref="importInput" type="file" accept=".csv,text/csv" class="hidden-file" @change="onImportFile">
-			<NcButton :disabled="fields.length === 0 || importing" @click="showImport = true">
+			<NcButton v-if="canWrite" :disabled="fields.length === 0 || importing" @click="showImport = true">
 				<template #icon>
 					<UploadIcon :size="20" />
 				</template>
@@ -23,12 +27,32 @@
 				</template>
 				{{ t('dataforms', 'Export CSV') }}
 			</NcButton>
-			<NcButton type="primary" :disabled="fields.length === 0" @click="openNew">
+			<NcButton v-if="canWrite" type="primary" :disabled="fields.length === 0" @click="openNew">
 				<template #icon>
 					<PlusIcon :size="20" />
 				</template>
 				{{ t('dataforms', 'New record') }}
 			</NcButton>
+		</div>
+
+		<div v-if="showFilter" class="filter-bar">
+			<div v-for="(f, i) in draftFilters" :key="i" class="filter-row">
+				<NcSelect v-model="f.field" :options="filterFieldOptions" :reduce="(o) => o.id" label="label" :clearable="false" class="f-field" :placeholder="t('dataforms', 'Field')" />
+				<NcSelect v-model="f.op" :options="filterOps" :reduce="(o) => o.id" label="label" :clearable="false" class="f-op" />
+				<NcTextField v-if="!['isEmpty', 'isNotEmpty'].includes(f.op)" v-model="f.value" :label="t('dataforms', 'Value')" class="f-val" />
+				<NcButton type="tertiary" :aria-label="t('dataforms', 'Remove')" @click="draftFilters.splice(i, 1)">
+					<template #icon><CloseIcon :size="18" /></template>
+				</NcButton>
+			</div>
+			<div class="filter-actions">
+				<NcButton type="tertiary" @click="addFilter">
+					<template #icon><PlusIcon :size="18" /></template>
+					{{ t('dataforms', 'Add condition') }}
+				</NcButton>
+				<span class="spacer" />
+				<NcButton @click="clearFilters">{{ t('dataforms', 'Clear') }}</NcButton>
+				<NcButton type="primary" @click="applyFilters">{{ t('dataforms', 'Apply') }}</NcButton>
+			</div>
 		</div>
 
 		<NcLoadingIcon v-if="loading" class="centered" :size="32" />
@@ -56,7 +80,10 @@
 				<table>
 					<thead>
 						<tr>
-							<th v-for="field in columns" :key="field.id">{{ field.label }}</th>
+							<th v-for="field in columns" :key="field.id" class="sortable" @click="toggleSort(field)">
+								{{ field.label }}
+								<span v-if="sort === field.machineName" class="sort-ind">{{ direction === 'ASC' ? '▲' : '▼' }}</span>
+							</th>
 							<th class="actions-col" />
 						</tr>
 					</thead>
@@ -67,13 +94,19 @@
 							</td>
 							<td class="actions-col" @click.stop>
 								<NcActions>
-									<NcActionButton @click="openEdit(record)">
+									<NcActionButton @click="openDetail(record)">
+										<template #icon>
+											<EyeIcon :size="20" />
+										</template>
+										{{ t('dataforms', 'View details') }}
+									</NcActionButton>
+									<NcActionButton v-if="canModify(record)" @click="openEdit(record)">
 										<template #icon>
 											<PencilIcon :size="20" />
 										</template>
 										{{ t('dataforms', 'Edit') }}
 									</NcActionButton>
-									<NcActionButton @click="remove(record)">
+									<NcActionButton v-if="canModify(record)" @click="remove(record)">
 										<template #icon>
 											<DeleteIcon :size="20" />
 										</template>
@@ -106,6 +139,7 @@
 			v-if="showDetail"
 			:fields="fields"
 			:record="detailRecord"
+			:can-edit="canModify(detailRecord)"
 			@edit="onDetailEdit"
 			@close="showDetail = false" />
 
@@ -144,6 +178,7 @@
 
 <script>
 import { translate as t } from '@nextcloud/l10n'
+import { getCurrentUser } from '@nextcloud/auth'
 import { showError, showSuccess, showWarning } from '@nextcloud/dialogs'
 
 import NcActions from '@nextcloud/vue/components/NcActions'
@@ -152,31 +187,38 @@ import NcButton from '@nextcloud/vue/components/NcButton'
 import NcDialog from '@nextcloud/vue/components/NcDialog'
 import NcEmptyContent from '@nextcloud/vue/components/NcEmptyContent'
 import NcLoadingIcon from '@nextcloud/vue/components/NcLoadingIcon'
+import NcSelect from '@nextcloud/vue/components/NcSelect'
 import NcTextField from '@nextcloud/vue/components/NcTextField'
 
 import PlusIcon from 'vue-material-design-icons/Plus.vue'
+import FilterIcon from 'vue-material-design-icons/Filter.vue'
+import CloseIcon from 'vue-material-design-icons/Close.vue'
 import PencilIcon from 'vue-material-design-icons/Pencil.vue'
 import DeleteIcon from 'vue-material-design-icons/Delete.vue'
 import DownloadIcon from 'vue-material-design-icons/Download.vue'
 import UploadIcon from 'vue-material-design-icons/Upload.vue'
 import TableIcon from 'vue-material-design-icons/Table.vue'
+import EyeIcon from 'vue-material-design-icons/Eye.vue'
 
 import RecordForm from './RecordForm.vue'
 import RecordDetail from './RecordDetail.vue'
 import { listRecords, deleteRecord, csvExportUrl, importCsv } from '../api/records.js'
-import { listRules } from '../api/rules.js'
+import { listRules, FILTER_OPS } from '../api/rules.js'
 
 export default {
 	name: 'RecordsView',
 	components: {
-		NcActions, NcActionButton, NcButton, NcDialog, NcEmptyContent, NcLoadingIcon, NcTextField,
-		PlusIcon, PencilIcon, DeleteIcon, DownloadIcon, UploadIcon, TableIcon, RecordForm, RecordDetail,
+		NcActions, NcActionButton, NcButton, NcDialog, NcEmptyContent, NcLoadingIcon, NcSelect, NcTextField,
+		PlusIcon, FilterIcon, CloseIcon, PencilIcon, DeleteIcon, DownloadIcon, UploadIcon, TableIcon, EyeIcon, RecordForm, RecordDetail,
 	},
 	props: {
 		registerId: { type: Number, required: true },
+		canWrite: { type: Boolean, default: false },
+		canManage: { type: Boolean, default: false },
 	},
 	data() {
 		return {
+			currentUserId: getCurrentUser()?.uid ?? '',
 			records: [],
 			fields: [],
 			rules: [],
@@ -193,11 +235,22 @@ export default {
 			showImport: false,
 			importResult: null,
 			searchTimer: null,
+			sort: 'updated',
+			direction: 'DESC',
+			showFilter: false,
+			draftFilters: [],
+			activeFilters: [],
+			filterOps: FILTER_OPS,
 		}
 	},
 	computed: {
 		columns() {
 			return this.fields.slice(0, 6)
+		},
+		filterFieldOptions() {
+			return this.fields
+				.filter((f) => !['file', 'relation'].includes(f.type))
+				.map((f) => ({ id: f.machineName, label: f.label }))
 		},
 		rangeLabel() {
 			if (this.total === 0) return ''
@@ -210,6 +263,11 @@ export default {
 		registerId() {
 			this.page = 0
 			this.search = ''
+			this.sort = 'updated'
+			this.direction = 'DESC'
+			this.showFilter = false
+			this.draftFilters = []
+			this.activeFilters = []
 			this.reload()
 		},
 	},
@@ -222,11 +280,17 @@ export default {
 		async load() {
 			this.loading = true
 			try {
-				const data = await listRecords(this.registerId, {
+				const params = {
 					limit: this.limit,
 					offset: this.page * this.limit,
 					search: this.search,
-				})
+					sort: this.sort,
+					direction: this.direction,
+				}
+				if (this.activeFilters.length) {
+					params.filter = JSON.stringify(this.activeFilters)
+				}
+				const data = await listRecords(this.registerId, params)
 				this.records = data.records
 				this.fields = data.fields
 				this.total = data.total
@@ -236,6 +300,40 @@ export default {
 			} finally {
 				this.loading = false
 			}
+		},
+		toggleFilterBar() {
+			this.showFilter = !this.showFilter
+			if (this.showFilter && this.draftFilters.length === 0) {
+				this.draftFilters = this.activeFilters.length
+					? this.activeFilters.map((f) => ({ ...f }))
+					: [{ field: this.filterFieldOptions[0]?.id ?? '', op: 'eq', value: '' }]
+			}
+		},
+		addFilter() {
+			this.draftFilters.push({ field: this.filterFieldOptions[0]?.id ?? '', op: 'eq', value: '' })
+		},
+		applyFilters() {
+			this.activeFilters = this.draftFilters
+				.filter((f) => f.field)
+				.map((f) => ({ field: f.field, op: f.op, value: f.value }))
+			this.page = 0
+			this.load()
+		},
+		clearFilters() {
+			this.draftFilters = []
+			this.activeFilters = []
+			this.page = 0
+			this.load()
+		},
+		toggleSort(field) {
+			if (this.sort === field.machineName) {
+				this.direction = this.direction === 'ASC' ? 'DESC' : 'ASC'
+			} else {
+				this.sort = field.machineName
+				this.direction = 'ASC'
+			}
+			this.page = 0
+			this.load()
 		},
 		async reload() {
 			this.rules = await listRules(this.registerId).catch(() => [])
@@ -263,6 +361,11 @@ export default {
 		openNew() {
 			this.editing = null
 			this.showForm = true
+		},
+		canModify(record) {
+			// A user may edit/delete a record they created, or any record if
+			// they manage the register. Mirrors the server-side rule.
+			return this.canManage || record.createdBy === this.currentUserId
 		},
 		openEdit(record) {
 			this.showDetail = false
@@ -444,6 +547,49 @@ tbody tr:last-child td {
 .actions-col {
 	width: 50px;
 	text-align: right;
+}
+
+.filter-bar {
+	border: 1px solid var(--color-border);
+	border-radius: var(--border-radius-large, 8px);
+	padding: 12px 14px;
+	margin-bottom: 14px;
+	background: var(--color-background-hover);
+	display: flex;
+	flex-direction: column;
+	gap: 8px;
+}
+
+.filter-row {
+	display: grid;
+	grid-template-columns: 1.2fr 0.9fr 1.2fr auto;
+	gap: 8px;
+	align-items: center;
+}
+
+.filter-actions {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	margin-top: 4px;
+}
+
+.filter-actions .spacer {
+	flex: 1;
+}
+
+th.sortable {
+	cursor: pointer;
+	user-select: none;
+}
+
+th.sortable:hover {
+	color: var(--color-main-text);
+}
+
+.sort-ind {
+	font-size: 0.8em;
+	margin-left: 4px;
 }
 
 .pager {
