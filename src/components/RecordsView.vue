@@ -27,7 +27,20 @@
 				</template>
 				{{ t('dataforms', 'Export CSV') }}
 			</NcButton>
-			<NcButton v-if="canWrite" type="primary" :disabled="fields.length === 0" @click="openNew">
+			<NcActions
+				v-if="canWrite && forms.length"
+				type="primary"
+				:menu-name="t('dataforms', 'New record')"
+				:disabled="fields.length === 0">
+				<template #icon><PlusIcon :size="20" /></template>
+				<NcActionButton @click="openNew(null)">
+					{{ t('dataforms', 'Blank (all fields)') }}
+				</NcActionButton>
+				<NcActionButton v-for="f in forms" :key="f.id" @click="openNew(f)">
+					{{ f.title }}
+				</NcActionButton>
+			</NcActions>
+			<NcButton v-else-if="canWrite" type="primary" :disabled="fields.length === 0" @click="openNew(null)">
 				<template #icon>
 					<PlusIcon :size="20" />
 				</template>
@@ -162,6 +175,7 @@
 			:fields="fields"
 			:rules="rules"
 			:record="editing"
+			:form="activeForm"
 			@saved="onSaved"
 			@close="showForm = false" />
 
@@ -257,6 +271,7 @@ import RecordDetail from './RecordDetail.vue'
 import { listRecords, deleteRecord, csvExportUrl, importCsv } from '../api/records.js'
 import { listRules, FILTER_OPS } from '../api/rules.js'
 import { listViews, createView, deleteView } from '../api/views.js'
+import { listForms } from '../api/forms.js'
 
 export default {
 	name: 'RecordsView',
@@ -299,6 +314,8 @@ export default {
 			visibleColumns: [],
 			showSaveView: false,
 			newView: { title: '', shared: false },
+			forms: [],
+			activeForm: null,
 		}
 	},
 	computed: {
@@ -345,6 +362,7 @@ export default {
 	async mounted() {
 		this.rules = await listRules(this.registerId).catch(() => [])
 		this.views = await listViews(this.registerId).catch(() => [])
+		this.forms = await listForms(this.registerId).catch(() => [])
 		await this.load()
 	},
 	methods: {
@@ -485,6 +503,7 @@ export default {
 		},
 		async reload() {
 			this.rules = await listRules(this.registerId).catch(() => [])
+			this.forms = await listForms(this.registerId).catch(() => [])
 			await this.load()
 		},
 		onSearch() {
@@ -506,8 +525,9 @@ export default {
 			if (typeof value === 'object' && 'label' in value) return value.label // relation
 			return String(value)
 		},
-		openNew() {
+		openNew(form = null) {
 			this.editing = null
+			this.activeForm = form
 			this.showForm = true
 		},
 		canModify(record) {
@@ -518,6 +538,7 @@ export default {
 		openEdit(record) {
 			this.showDetail = false
 			this.editing = record
+			this.activeForm = null // edit shows all fields so nothing is uneditable
 			this.showForm = true
 		},
 		openDetail(record) {

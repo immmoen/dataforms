@@ -15,26 +15,29 @@
 				:description="t('dataforms', 'Add fields in the Fields tab first.')" />
 
 			<template v-else>
-				<div v-for="field in visibleFields" :key="field.id" class="form-field">
-					<div class="label-row">
-						<span class="lbl">{{ field.label }}</span>
-						<span v-if="evaluation.required[field.machineName]" class="req">*</span>
-						<span v-if="computedTargets.has(field.machineName)" class="computed-tag">
-							{{ t('dataforms', 'computed') }}
-						</span>
+				<div v-for="(section, si) in sections" :key="si" class="form-section">
+					<h3 v-if="section.title" class="section-title">{{ section.title }}</h3>
+					<div v-for="field in section.fields" :key="field.id" class="form-field">
+						<div class="label-row">
+							<span class="lbl">{{ field.label }}</span>
+							<span v-if="evaluation.required[field.machineName]" class="req">*</span>
+							<span v-if="computedTargets.has(field.machineName)" class="computed-tag">
+								{{ t('dataforms', 'computed') }}
+							</span>
+						</div>
+						<FieldInput
+							:field="field"
+							:label="field.label"
+							:model-value="valueFor(field)"
+							:disabled="computedTargets.has(field.machineName)"
+							@update:model-value="onInput(field, $event)" />
+						<p v-if="field.config && field.config.help" class="field-help">
+							{{ field.config.help }}
+						</p>
+						<p v-if="allErrors[field.machineName]" class="err">
+							{{ allErrors[field.machineName] }}
+						</p>
 					</div>
-					<FieldInput
-						:field="field"
-						:label="field.label"
-						:model-value="valueFor(field)"
-						:disabled="computedTargets.has(field.machineName)"
-						@update:model-value="onInput(field, $event)" />
-					<p v-if="field.config && field.config.help" class="field-help">
-						{{ field.config.help }}
-					</p>
-					<p v-if="allErrors[field.machineName]" class="err">
-						{{ allErrors[field.machineName] }}
-					</p>
 				</div>
 			</template>
 		</div>
@@ -70,6 +73,7 @@ export default {
 		fields: { type: Array, required: true },
 		rules: { type: Array, default: () => [] },
 		record: { type: Object, default: null },
+		form: { type: Object, default: null },
 	},
 	emits: ['saved', 'close'],
 	data() {
@@ -86,6 +90,26 @@ export default {
 		},
 		visibleFields() {
 			return this.fields.filter((f) => this.evaluation.visible[f.machineName] !== false)
+		},
+		sections() {
+			const visible = new Set(this.visibleFields.map((f) => f.machineName))
+			const byName = {}
+			for (const f of this.fields) {
+				byName[f.machineName] = f
+			}
+			const defSections = this.form?.definition?.sections ?? []
+			if (defSections.length) {
+				return defSections
+					.map((s) => ({
+						title: s.title || '',
+						fields: (s.fields || [])
+							.map((mn) => byName[mn])
+							.filter((f) => f && visible.has(f.machineName)),
+					}))
+					.filter((s) => s.fields.length > 0)
+			}
+			// No form: one implicit section with every visible field.
+			return [{ title: '', fields: this.visibleFields }]
 		},
 		computedTargets() {
 			return new Set(this.rules.filter((r) => r.effect === 'compute').map((r) => r.target))
@@ -204,6 +228,18 @@ export default {
 
 .lbl {
 	color: var(--color-main-text);
+}
+
+.form-section + .form-section {
+	margin-top: 10px;
+}
+
+.section-title {
+	font-size: 1.05em;
+	font-weight: 600;
+	margin: 8px 0 4px;
+	padding-bottom: 4px;
+	border-bottom: 1px solid var(--color-border);
 }
 
 .field-help {

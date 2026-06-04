@@ -7,6 +7,19 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.11.0] - Data-entry forms (§4.3)
+
+### Added
+- **Standalone forms**: a register can have one or more data-entry forms, each
+  choosing which fields appear, in what order, grouped into **sections**. Build
+  them in the new **Forms** tab (manager-only). (`df_forms` table, Form domain,
+  OCS API.)
+- The **New record** button becomes a menu when forms exist — pick "Blank (all
+  fields)" or any form. The data-entry renderer shows the chosen form's fields
+  under section headings, and the live conditional rules still apply (an empty
+  section, e.g. when its only field is conditionally hidden, disappears).
+- Forms are cleaned up when their register is deleted.
+
 ## [0.10.0] - Saved, shareable views + column selection
 
 ### Added

@@ -6,6 +6,7 @@ declare(strict_types=1);
 
 namespace OCA\Dataforms\Service;
 
+use OCA\Dataforms\Db\FormMapper;
 use OCA\Dataforms\Db\Register;
 use OCA\Dataforms\Db\RegisterMapper;
 use OCA\Dataforms\Db\Share;
@@ -31,6 +32,7 @@ class RegisterService {
 		private RegisterMapper $mapper,
 		private ShareMapper $shareMapper,
 		private ViewMapper $viewMapper,
+		private FormMapper $formMapper,
 		private IGroupManager $groupManager,
 		private IUserManager $userManager,
 		private ITimeFactory $time,
@@ -150,6 +152,7 @@ class RegisterService {
 		$this->mapper->update($register);
 		$this->shareMapper->deleteByRegister($id);
 		$this->viewMapper->deleteByRegister($id);
+		$this->formMapper->deleteByRegister($id);
 	}
 
 	// ---- access control --------------------------------------------------

@@ -104,6 +104,11 @@
 					:key="'fld-' + selected.id"
 					:register-id="selected.id"
 					:can-manage="selected.canManage" />
+				<FormBuilder
+					v-else-if="activeTab === 'forms'"
+					:key="'frm-' + selected.id"
+					:register-id="selected.id"
+					:can-manage="selected.canManage" />
 				<RuleBuilder
 					v-else
 					:key="'rul-' + selected.id"
@@ -174,6 +179,7 @@ import LinkIcon from 'vue-material-design-icons/LinkVariant.vue'
 import SchemaEditor from './components/SchemaEditor.vue'
 import RecordsView from './components/RecordsView.vue'
 import RuleBuilder from './components/RuleBuilder.vue'
+import FormBuilder from './components/FormBuilder.vue'
 import ShareDialog from './components/ShareDialog.vue'
 import { listRegisters, createRegister, deleteRegister } from './api/registers.js'
 
@@ -195,6 +201,7 @@ export default {
 		SchemaEditor,
 		RecordsView,
 		RuleBuilder,
+		FormBuilder,
 		ShareDialog,
 		FolderTableIcon,
 		PlusIcon,
@@ -222,6 +229,7 @@ export default {
 			return [
 				{ id: 'records', label: t('dataforms', 'Records') },
 				{ id: 'fields', label: t('dataforms', 'Fields') },
+				{ id: 'forms', label: t('dataforms', 'Forms') },
 				{ id: 'rules', label: t('dataforms', 'Rules') },
 			]
 		},

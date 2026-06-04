@@ -47,6 +47,12 @@ return [
 		// File resolution (path -> id) for file-attachment fields
 		['name' => 'file#resolve', 'url' => '/api/v1/files/resolve', 'verb' => 'GET'],
 
+		// Data-entry forms
+		['name' => 'form#index', 'url' => '/api/v1/registers/{registerId}/forms', 'verb' => 'GET', 'requirements' => ['registerId' => '\d+']],
+		['name' => 'form#create', 'url' => '/api/v1/registers/{registerId}/forms', 'verb' => 'POST', 'requirements' => ['registerId' => '\d+']],
+		['name' => 'form#update', 'url' => '/api/v1/forms/{id}', 'verb' => 'PUT', 'requirements' => ['id' => '\d+']],
+		['name' => 'form#destroy', 'url' => '/api/v1/forms/{id}', 'verb' => 'DELETE', 'requirements' => ['id' => '\d+']],
+
 		// Saved views
 		['name' => 'view#index', 'url' => '/api/v1/registers/{registerId}/views', 'verb' => 'GET', 'requirements' => ['registerId' => '\d+']],
 		['name' => 'view#create', 'url' => '/api/v1/registers/{registerId}/views', 'verb' => 'POST', 'requirements' => ['registerId' => '\d+']],
