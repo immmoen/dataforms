@@ -146,7 +146,9 @@
 					:key="'rec-' + selected.id"
 					:register-id="selected.id"
 					:can-write="selected.canWrite"
-					:can-manage="selected.canManage" />
+					:can-manage="selected.canManage"
+					:open-form-id="deepLinkFormId"
+					@form-consumed="deepLinkFormId = null" />
 				<SchemaEditor
 					v-else-if="activeTab === 'fields'"
 					:key="'fld-' + selected.id"
@@ -287,6 +289,7 @@ export default {
 			saving: false,
 			draft: { title: '', description: '', color: REGISTER_COLORS[0] },
 			colors: REGISTER_COLORS,
+			deepLinkFormId: null,
 		}
 	},
 	computed: {
@@ -315,6 +318,7 @@ export default {
 	},
 	async mounted() {
 		await this.load()
+		this.applyDeepLink() // ?register=&form= from the Smart Picker / a shared link
 		this.applyHash()
 		window.addEventListener('hashchange', this.applyHash)
 	},
@@ -374,6 +378,21 @@ export default {
 				this.selectedId = id
 				this.activeTab = this.tabs.some((tb) => tb.id === m[2]) ? m[2] : 'records'
 			}
+		},
+		// A ?register=&form= link (from the Smart Picker or a shared link) opens
+		// the register on Records and asks RecordsView to open that form's entry.
+		applyDeepLink() {
+			const params = new URLSearchParams(window.location.search)
+			const rid = Number(params.get('register'))
+			const fid = Number(params.get('form'))
+			if (!rid || !this.registers.some((r) => r.id === rid)) {
+				return
+			}
+			this.selectedId = rid
+			this.activeTab = 'records'
+			this.deepLinkFormId = fid || null
+			// Drop the query string so a reload doesn't re-trigger the form.
+			window.history.replaceState(null, '', window.location.pathname + `#/register/${rid}/records`)
 		},
 		copyLink() {
 			const url = window.location.origin + window.location.pathname + `#/register/${this.selectedId}/${this.activeTab}`

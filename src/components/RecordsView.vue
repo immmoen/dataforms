@@ -356,7 +356,9 @@ export default {
 		registerId: { type: Number, required: true },
 		canWrite: { type: Boolean, default: false },
 		canManage: { type: Boolean, default: false },
+		openFormId: { type: Number, default: null },
 	},
+	emits: ['form-consumed'],
 	data() {
 		return {
 			currentUserId: getCurrentUser()?.uid ?? '',
@@ -445,6 +447,14 @@ export default {
 		// Keep the list fresh when the user comes back to the tab/window.
 		document.addEventListener('visibilitychange', this.onVisible)
 		window.addEventListener('focus', this.onWindowFocus)
+		// A deep link (?form=) asks us to open that form's entry screen.
+		if (this.openFormId) {
+			const form = this.forms.find((f) => f.id === this.openFormId)
+			if (form && this.canWrite) {
+				this.openNew(form)
+			}
+			this.$emit('form-consumed')
+		}
 	},
 	beforeUnmount() {
 		document.removeEventListener('visibilitychange', this.onVisible)

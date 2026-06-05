@@ -7,6 +7,20 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.19.0] - Insert a form anywhere via the Smart Picker
+
+### Added
+- **Forms can be inserted into any rich-text field via Nextcloud's Smart Picker**
+  (the `/` menu in Text, Talk, Collectives, Deck, …). "Dataforms" appears in the
+  picker; search a form, pick it, and a link/card is inserted. Clicking it opens
+  the form's entry screen directly (`?register=&form=` deep link the SPA now
+  resolves). Inserted form links also render as **rich reference cards**
+  (form name + register). Internal/authenticated only — resolving a form
+  re-checks the user's read access.
+- New `FormSearchProvider` (unified search) and a searchable
+  `FormReferenceProvider`, registered in the app bootstrap. The records SPA opens
+  a deep-linked form automatically.
+
 ## [0.18.1] - Simpler records toolbar
 
 ### Changed

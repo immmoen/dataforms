@@ -6,17 +6,16 @@ declare(strict_types=1);
 
 namespace OCA\Dataforms\AppInfo;
 
+use OCA\Dataforms\Reference\FormReferenceProvider;
+use OCA\Dataforms\Search\FormSearchProvider;
 use OCP\AppFramework\App;
 use OCP\AppFramework\Bootstrap\IBootContext;
 use OCP\AppFramework\Bootstrap\IBootstrap;
 use OCP\AppFramework\Bootstrap\IRegistrationContext;
 
 /**
- * Application bootstrap.
- *
- * Phase 0: registers the app and its single page route. Services, event
- * listeners and capabilities are wired here via the DI container as later
- * phases land (RegisterService, FieldService, RuleEvaluatorService, ...).
+ * Application bootstrap. Most services are auto-wired by the DI container; here
+ * we register the cross-app integrations that have to be declared explicitly.
  */
 class Application extends App implements IBootstrap {
 	public const APP_ID = 'dataforms';
@@ -26,10 +25,10 @@ class Application extends App implements IBootstrap {
 	}
 
 	public function register(IRegistrationContext $context): void {
-		// Service registrations and event listeners are added in later phases.
-		// Example (Phase 1+):
-		// $context->registerService(RegisterService::class, ...);
-		// $context->registerEventListener(RecordCreatedEvent::class, NotifyListener::class);
+		// Smart Picker / unified search: lets a form be searched and inserted
+		// into a document, then rendered as a rich card.
+		$context->registerSearchProvider(FormSearchProvider::class);
+		$context->registerReferenceProvider(FormReferenceProvider::class);
 	}
 
 	public function boot(IBootContext $context): void {

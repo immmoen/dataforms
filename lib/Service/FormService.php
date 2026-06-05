@@ -37,6 +37,62 @@ class FormService {
 	}
 
 	/**
+	 * Forms across all registers the user can read, optionally filtered by a
+	 * search term (matches the form or register title). Used by the Smart Picker
+	 * / unified search so a form can be inserted into a document.
+	 *
+	 * @return array<int,array{formId:int,formTitle:string,registerId:int,registerTitle:string}>
+	 */
+	public function searchForPicker(string $userId, string $term = '', int $limit = 20): array {
+		$term = mb_strtolower(trim($term));
+		$out = [];
+		foreach ($this->registerService->findAll($userId) as $register) {
+			$registerTitle = (string)($register['title'] ?? '');
+			$registerMatches = $term === '' || str_contains(mb_strtolower($registerTitle), $term);
+			foreach ($this->mapper->findByRegister((int)$register['id']) as $form) {
+				$formTitle = $form->getTitle();
+				if ($term !== '' && !$registerMatches && !str_contains(mb_strtolower($formTitle), $term)) {
+					continue;
+				}
+				$out[] = [
+					'formId' => $form->getId(),
+					'formTitle' => $formTitle,
+					'registerId' => (int)$register['id'],
+					'registerTitle' => $registerTitle,
+				];
+				if (count($out) >= $limit) {
+					return $out;
+				}
+			}
+		}
+		return $out;
+	}
+
+	/**
+	 * Resolve a single form for the reference card, gated by register read access.
+	 *
+	 * @return array{formId:int,formTitle:string,registerId:int,registerTitle:string}|null
+	 */
+	public function pickerInfo(string $userId, int $formId): ?array {
+		try {
+			$form = $this->mapper->find($formId);
+		} catch (DoesNotExistException) {
+			return null;
+		}
+		try {
+			$register = $this->registerService->find($userId, $form->getRegisterId()); // read gate
+		} catch (NotFoundException) {
+			return null;
+		}
+		return [
+			'formId' => $form->getId(),
+			'formTitle' => $form->getTitle(),
+			'registerId' => $register->getId(),
+			'registerTitle' => $register->getTitle(),
+		];
+	}
+
+	/**
 	 * @param array<string,mixed> $definition
 	 * @throws NotFoundException
 	 * @throws \OCA\Dataforms\Exception\ForbiddenException
