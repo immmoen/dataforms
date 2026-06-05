@@ -13,7 +13,9 @@
 		"lint:fix": "eslint --ext .js,.ts,.vue src --fix",
 		"stylelint": "stylelint src/**/*.{css,scss,vue}",
 		"test": "vitest run",
-		"test:watch": "vitest"
+		"test:watch": "vitest",
+		"test:e2e": "playwright test",
+		"test:e2e:install": "playwright install --with-deps chromium"
 	},
 	"dependencies": {
 		"@nextcloud/auth": "^2.4.0",
@@ -30,6 +32,7 @@
 		"@nextcloud/eslint-config": "^8.4.1",
 		"@nextcloud/stylelint-config": "^3.0.1",
 		"@nextcloud/vite-config": "^2.3.0",
+		"@playwright/test": "^1.48.0",
 		"@vitejs/plugin-vue": "^5.1.0",
 		"ajv": "^8.17.1",
 		"eslint": "^8.57.0",
