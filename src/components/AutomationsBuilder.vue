@@ -62,23 +62,37 @@
 				<label class="block-label">{{ t('dataforms', 'Then') }}</label>
 				<NcSelect v-model="draft.actionType" :options="actionTypes" :reduce="(o) => o.id" label="label" :clearable="false" />
 
-				<label class="block-label">{{ t('dataforms', 'Recipients') }}</label>
-				<NcSelect
-					v-model="draft.recipients"
-					:options="recipientOptions"
-					:loading="searching"
-					:multiple="true"
-					:filterable="false"
-					label="label"
-					:placeholder="t('dataforms', 'Search users…')"
-					@search="onUserSearch" />
+				<template v-if="['notify', 'email'].includes(draft.actionType)">
+					<label class="block-label">{{ t('dataforms', 'Recipients') }}</label>
+					<NcSelect
+						v-model="draft.recipients"
+						:options="recipientOptions"
+						:loading="searching"
+						:multiple="true"
+						:filterable="false"
+						label="label"
+						:placeholder="t('dataforms', 'Search users…')"
+						@search="onUserSearch" />
+					<NcTextField v-if="draft.actionType === 'email'" v-model="draft.subject" :label="t('dataforms', 'Email subject')" />
+					<NcTextArea v-model="draft.message" :label="draft.actionType === 'email' ? t('dataforms', 'Email body') : t('dataforms', 'Message')" />
+				</template>
 
-				<NcTextField v-if="draft.actionType === 'email'" v-model="draft.subject" :label="t('dataforms', 'Email subject')" />
-				<NcTextArea v-model="draft.message" :label="draft.actionType === 'email' ? t('dataforms', 'Email body') : t('dataforms', 'Message')" />
+				<template v-else-if="draft.actionType === 'set_field'">
+					<label class="block-label">{{ t('dataforms', 'Field to set') }}</label>
+					<NcSelect v-model="draft.setField" :options="settableFields" :reduce="(o) => o.id" label="label" :clearable="false" :placeholder="t('dataforms', 'Field')" />
+					<NcTextField v-model="draft.setValue" :label="t('dataforms', 'Value')" />
+				</template>
+
+				<template v-else-if="draft.actionType === 'webhook'">
+					<label class="block-label">{{ t('dataforms', 'Webhook URL') }}</label>
+					<NcTextField v-model="draft.url" placeholder="https://example.org/hook" />
+					<NcTextField v-model="draft.secret" :label="t('dataforms', 'Shared secret (optional)')" />
+					<p class="hint">{{ t('dataforms', 'A POST with the record data is sent here. If a secret is set, the body is signed (HMAC-SHA256) in the X-DataForms-Signature header.') }}</p>
+				</template>
 			</div>
 			<template #actions>
 				<NcButton :disabled="saving" @click="showDialog = false">{{ t('dataforms', 'Cancel') }}</NcButton>
-				<NcButton type="primary" :disabled="saving || !draft.name.trim() || draft.recipients.length === 0" @click="submit">
+				<NcButton type="primary" :disabled="saving || !canSave" @click="submit">
 					{{ editing ? t('dataforms', 'Save') : t('dataforms', 'Add') }}
 				</NcButton>
 			</template>
@@ -112,7 +126,7 @@ import { listFields } from '../api/fields.js'
 import { searchSharees } from '../api/shares.js'
 import { FILTER_OPS } from '../api/rules.js'
 
-const blank = () => ({ name: '', trigger: 'create', conditions: [], actionType: 'notify', recipients: [], subject: '', message: '' })
+const blank = () => ({ name: '', trigger: 'create', conditions: [], actionType: 'notify', recipients: [], subject: '', message: '', setField: '', setValue: '', url: '', secret: '' })
 
 export default {
 	name: 'AutomationsBuilder',
@@ -146,6 +160,28 @@ export default {
 			return this.fields
 				.filter((f) => !['file', 'relation', 'auto'].includes(f.type))
 				.map((f) => ({ id: f.machineName, label: f.label }))
+		},
+		// Fields the set-field action can write (excludes join-table & derived types).
+		settableFields() {
+			return this.fields
+				.filter((f) => !['file', 'relation', 'auto', 'computed'].includes(f.type))
+				.map((f) => ({ id: f.machineName, label: f.label }))
+		},
+		canSave() {
+			if (!this.draft.name.trim()) {
+				return false
+			}
+			const a = this.draft.actionType
+			if (['notify', 'email'].includes(a)) {
+				return this.draft.recipients.length > 0
+			}
+			if (a === 'set_field') {
+				return !!this.draft.setField
+			}
+			if (a === 'webhook') {
+				return /^https?:\/\//i.test(this.draft.url.trim())
+			}
+			return false
 		},
 	},
 	watch: {
@@ -188,6 +224,10 @@ export default {
 				recipients,
 				subject: cfg.subject || '',
 				message: cfg.message || cfg.body || '',
+				setField: cfg.field || '',
+				setValue: cfg.value ?? '',
+				url: cfg.url || '',
+				secret: cfg.secret || '',
 			}
 			this.recipientOptions = recipients
 			this.showDialog = true
@@ -212,12 +252,15 @@ export default {
 		},
 		payload() {
 			const conditions = this.draft.conditions.filter((c) => c.field)
-			const config = { users: this.draft.recipients.map((r) => r.id) }
+			let config = {}
 			if (this.draft.actionType === 'email') {
-				config.subject = this.draft.subject
-				config.body = this.draft.message
-			} else {
-				config.message = this.draft.message
+				config = { users: this.draft.recipients.map((r) => r.id), subject: this.draft.subject, body: this.draft.message }
+			} else if (this.draft.actionType === 'notify') {
+				config = { users: this.draft.recipients.map((r) => r.id), message: this.draft.message }
+			} else if (this.draft.actionType === 'set_field') {
+				config = { field: this.draft.setField, value: this.draft.setValue }
+			} else if (this.draft.actionType === 'webhook') {
+				config = { url: this.draft.url.trim(), secret: this.draft.secret }
 			}
 			return {
 				name: this.draft.name.trim(),

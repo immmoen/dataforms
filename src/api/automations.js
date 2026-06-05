@@ -19,6 +19,8 @@ export const TRIGGERS = [
 export const ACTION_TYPES = [
 	{ id: 'notify', label: 'Send a notification' },
 	{ id: 'email', label: 'Send an email' },
+	{ id: 'set_field', label: 'Set a field' },
+	{ id: 'webhook', label: 'Call a webhook' },
 ]
 
 export async function listAutomations(registerId) {

@@ -7,6 +7,22 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.25.0] - Set-field & webhook actions
+
+### Added
+- **Set‑field action** — an automation can set a field on the record to a value
+  (e.g. advance a status, stamp a flag). Writes the value directly, so it never
+  re‑fires automations (no loops); relation/file/auto/computed fields aren't
+  settable.
+- **Webhook action** — the first action that leaves the instance: a POST with the
+  record payload to a manager‑configured URL. http(s) only, time‑limited, logged;
+  an optional shared secret signs the body (HMAC‑SHA256, `X‑DataForms‑Signature`).
+- Both are exposed in the Automations builder (field+value picker for set‑field,
+  URL+secret for webhook). The engine was untouched — just two new action classes
+  in the registry.
+
+This completes the planned action set (notify · email · set‑field · webhook).
+
 ## [0.24.0] - Automations builder UI & email action
 
 ### Added

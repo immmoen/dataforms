@@ -41,6 +41,15 @@ class RecordValueMapper {
 		$qb->executeStatement();
 	}
 
+	/** Remove the stored value for one (record, field) — used by the set-field action. */
+	public function deleteForRecordField(int $recordId, int $fieldId): void {
+		$qb = $this->db->getQueryBuilder();
+		$qb->delete('df_record_values')
+			->where($qb->expr()->eq('record_id', $qb->createNamedParameter($recordId, IQueryBuilder::PARAM_INT)))
+			->andWhere($qb->expr()->eq('field_id', $qb->createNamedParameter($fieldId, IQueryBuilder::PARAM_INT)));
+		$qb->executeStatement();
+	}
+
 	public function deleteByRecord(int $recordId): void {
 		$qb = $this->db->getQueryBuilder();
 		$qb->delete('df_record_values')
