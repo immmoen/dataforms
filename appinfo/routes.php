@@ -67,5 +67,11 @@ return [
 		['name' => 'share#create', 'url' => '/api/v1/registers/{registerId}/shares', 'verb' => 'POST', 'requirements' => ['registerId' => '\d+']],
 		['name' => 'share#update', 'url' => '/api/v1/shares/{id}', 'verb' => 'PUT', 'requirements' => ['id' => '\d+']],
 		['name' => 'share#destroy', 'url' => '/api/v1/shares/{id}', 'verb' => 'DELETE', 'requirements' => ['id' => '\d+']],
+
+		// Workflow automations
+		['name' => 'automation#index', 'url' => '/api/v1/registers/{registerId}/automations', 'verb' => 'GET', 'requirements' => ['registerId' => '\d+']],
+		['name' => 'automation#create', 'url' => '/api/v1/registers/{registerId}/automations', 'verb' => 'POST', 'requirements' => ['registerId' => '\d+']],
+		['name' => 'automation#update', 'url' => '/api/v1/automations/{id}', 'verb' => 'PUT', 'requirements' => ['id' => '\d+']],
+		['name' => 'automation#destroy', 'url' => '/api/v1/automations/{id}', 'verb' => 'DELETE', 'requirements' => ['id' => '\d+']],
 	],
 ];

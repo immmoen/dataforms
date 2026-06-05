@@ -6,7 +6,12 @@ declare(strict_types=1);
 
 namespace OCA\Dataforms\AppInfo;
 
+use OCA\Dataforms\Event\RecordCreatedEvent;
+use OCA\Dataforms\Event\RecordDeletedEvent;
+use OCA\Dataforms\Event\RecordUpdatedEvent;
+use OCA\Dataforms\Listener\AutomationListener;
 use OCA\Dataforms\Listener\ReferenceListener;
+use OCA\Dataforms\Notification\Notifier;
 use OCA\Dataforms\Reference\FormReferenceProvider;
 use OCA\Dataforms\Search\FormSearchProvider;
 use OCP\AppFramework\App;
@@ -32,6 +37,13 @@ class Application extends App implements IBootstrap {
 		$context->registerSearchProvider(FormSearchProvider::class);
 		$context->registerReferenceProvider(FormReferenceProvider::class);
 		$context->registerEventListener(RenderReferenceEvent::class, ReferenceListener::class);
+
+		// Workflow: run automations when a record changes, and render the
+		// notifications they raise.
+		$context->registerEventListener(RecordCreatedEvent::class, AutomationListener::class);
+		$context->registerEventListener(RecordUpdatedEvent::class, AutomationListener::class);
+		$context->registerEventListener(RecordDeletedEvent::class, AutomationListener::class);
+		$context->registerNotifierService(Notifier::class);
 	}
 
 	public function boot(IBootContext $context): void {

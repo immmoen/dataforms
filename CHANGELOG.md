@@ -7,7 +7,21 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
-## [0.22.0] - Fill forms in place, picker icon, workflow foundation
+## [0.23.0] - Workflow automations (notify)
+
+### Added
+- **Automations** (workflow, the differentiator): on a record **create / update /
+  delete**, when an optional **condition** holds, run an **action**. The first
+  action is a **Nextcloud notification** to chosen users. Conditions reuse the
+  existing rule engine (no new logic language); actions are a registry (one class
+  per type), so adding an action doesn't touch the engine. Runs **server-side
+  only**, best-effort (a failing automation never breaks the record write).
+  (`df_automations` table, `Automation` domain, OCS CRUD under
+  `registers/{id}/automations`, `AutomationListener` on the typed record events,
+  and a notification `Notifier`.)
+
+This is workflow step 2 of `docs/WORKFLOW.md`; email / set-field / webhook
+actions and a builder UI follow.
 
 ### Added
 - **Fill a form without leaving the page.** The inserted form card now has a
