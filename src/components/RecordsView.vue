@@ -15,18 +15,20 @@
 			</NcButton>
 			<span class="spacer" />
 			<input ref="importInput" type="file" accept=".csv,text/csv" class="hidden-file" @change="onImportFile">
-			<NcButton v-if="canWrite" :disabled="fields.length === 0 || importing" @click="showImport = true">
-				<template #icon>
-					<UploadIcon :size="20" />
-				</template>
-				{{ importing ? t('dataforms', 'Importing…') : t('dataforms', 'Import CSV') }}
-			</NcButton>
-			<NcButton :disabled="fields.length === 0" @click="exportCsv">
-				<template #icon>
-					<DownloadIcon :size="20" />
-				</template>
-				{{ t('dataforms', 'Export CSV') }}
-			</NcButton>
+
+			<!-- Secondary, less-frequent actions live behind one tidy menu. -->
+			<NcActions :menu-name="t('dataforms', 'More')" :force-name="false">
+				<template #icon><DotsIcon :size="20" /></template>
+				<NcActionButton v-if="canWrite" :disabled="fields.length === 0 || importing" close-after-click @click="showImport = true">
+					<template #icon><UploadIcon :size="20" /></template>
+					{{ importing ? t('dataforms', 'Importing…') : t('dataforms', 'Import from CSV…') }}
+				</NcActionButton>
+				<NcActionButton :disabled="fields.length === 0 || records.length === 0" close-after-click @click="exportCsv">
+					<template #icon><DownloadIcon :size="20" /></template>
+					{{ t('dataforms', 'Export to CSV') }}
+				</NcActionButton>
+			</NcActions>
+
 			<NcActions
 				v-if="canWrite && forms.length"
 				type="primary"
@@ -265,6 +267,7 @@ import TableIcon from 'vue-material-design-icons/Table.vue'
 import TableColumnIcon from 'vue-material-design-icons/TableColumn.vue'
 import ContentSaveIcon from 'vue-material-design-icons/ContentSave.vue'
 import EyeIcon from 'vue-material-design-icons/Eye.vue'
+import DotsIcon from 'vue-material-design-icons/DotsHorizontal.vue'
 
 import RecordForm from './RecordForm.vue'
 import RecordDetail from './RecordDetail.vue'
@@ -277,7 +280,7 @@ export default {
 	name: 'RecordsView',
 	components: {
 		NcActions, NcActionButton, NcActionCheckbox, NcButton, NcCheckboxRadioSwitch, NcDialog, NcEmptyContent, NcLoadingIcon, NcSelect, NcTextField,
-		PlusIcon, FilterIcon, CloseIcon, PencilIcon, DeleteIcon, DownloadIcon, UploadIcon, TableIcon, TableColumnIcon, ContentSaveIcon, EyeIcon, RecordForm, RecordDetail,
+		PlusIcon, FilterIcon, CloseIcon, PencilIcon, DeleteIcon, DownloadIcon, UploadIcon, TableIcon, TableColumnIcon, ContentSaveIcon, EyeIcon, DotsIcon, RecordForm, RecordDetail,
 	},
 	props: {
 		registerId: { type: Number, required: true },
@@ -617,14 +620,15 @@ export default {
 
 <style scoped>
 .records-view {
-	padding: 16px 24px 40px;
+	padding: 12px 20px 32px;
 }
 
 .toolbar {
 	display: flex;
 	align-items: flex-end;
-	gap: 10px;
-	margin-bottom: 16px;
+	gap: 8px;
+	margin-bottom: 14px;
+	flex-wrap: wrap;
 }
 
 .search {
@@ -674,17 +678,25 @@ export default {
 }
 
 .table-wrap {
-	overflow-x: auto;
+	overflow: auto;
+	/* Tall viewport for many rows; the header stays pinned while scrolling. */
+	max-height: calc(100vh - 320px);
+	min-height: 200px;
 	border: 1px solid var(--color-border);
 	border-radius: var(--border-radius-large, 8px);
+	background: var(--color-main-background);
 }
 
 table {
 	width: 100%;
-	border-collapse: collapse;
+	border-collapse: separate;
+	border-spacing: 0;
 }
 
 thead th {
+	position: sticky;
+	top: 0;
+	z-index: 2;
 	text-align: left;
 	font-size: 0.78em;
 	text-transform: uppercase;
@@ -692,34 +704,57 @@ thead th {
 	color: var(--color-text-maxcontrast);
 	padding: 10px 14px;
 	border-bottom: 1px solid var(--color-border);
-	background: var(--color-background-hover);
+	background: var(--color-background-dark, var(--color-background-hover));
 	white-space: nowrap;
 }
 
 tbody td {
-	padding: 10px 14px;
+	padding: 9px 14px;
 	border-bottom: 1px solid var(--color-border);
-	max-width: 280px;
+	max-width: 360px;
 	overflow: hidden;
 	text-overflow: ellipsis;
 	white-space: nowrap;
+	font-variant-numeric: tabular-nums;
 }
 
 tbody tr {
 	cursor: pointer;
 }
 
-tbody tr:hover {
+/* Subtle zebra striping aids row-tracking across a wide table. */
+tbody tr:nth-child(even) td {
 	background: var(--color-background-hover);
+}
+
+tbody tr:hover td {
+	background: var(--color-primary-element-light, var(--color-background-dark));
 }
 
 tbody tr:last-child td {
 	border-bottom: none;
 }
 
+/* Keep the row actions reachable no matter how wide the table scrolls. */
 .actions-col {
-	width: 50px;
+	width: 44px;
 	text-align: right;
+	position: sticky;
+	right: 0;
+	background: var(--color-main-background);
+}
+
+thead th.actions-col {
+	z-index: 3;
+	background: var(--color-background-dark, var(--color-background-hover));
+}
+
+tbody tr:nth-child(even) td.actions-col {
+	background: var(--color-background-hover);
+}
+
+tbody tr:hover td.actions-col {
+	background: var(--color-primary-element-light, var(--color-background-dark));
 }
 
 .views-bar {

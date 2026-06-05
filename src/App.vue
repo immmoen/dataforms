@@ -106,7 +106,7 @@
 				</div>
 			</div>
 
-			<div v-else class="register-detail">
+			<div v-else class="register-detail" :class="{ 'is-records': activeTab === 'records' }">
 				<div class="register-head">
 					<div class="head-row">
 						<h2>{{ selected.title }}</h2>
@@ -537,6 +537,13 @@ export default {
 .register-detail {
 	max-width: 920px;
 	margin: 0 auto;
+	transition: max-width 0.15s ease;
+}
+
+/* The records tab holds wide tables, so let it use (almost) the full width.
+   Other tabs (fields/forms/rules) stay narrow and readable. */
+.register-detail.is-records {
+	max-width: min(1760px, 100%);
 }
 
 .register-head {

@@ -7,7 +7,25 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
-## [0.14.0] - Grouped option picker, per-register numbering & performance
+## [0.15.0] - Drag-and-drop form builder & roomier tables
+
+### Added
+- **Drag-and-drop form builder** (WYSIWYG): the Forms tab now opens a full
+  two-pane builder — a palette of available fields on the left, the form canvas
+  with sections on the right. Drag a field into a section, drag to reorder or
+  move between sections, drag back to the palette to remove. Each placed field
+  shows a live preview of its control (Yes/No, dropdown, text box, file button,
+  …). Sections can be renamed and reordered. Built on the native HTML5
+  drag-and-drop API (no added dependencies).
+
+### Changed
+- **Roomier records table.** The Records tab now uses (almost) the full window
+  width instead of a 920px column; the other tabs stay narrow and readable. The
+  table header stays pinned while scrolling, the row-actions column sticks to
+  the right edge on wide tables, more rows are visible at once, and subtle zebra
+  striping aids row tracking.
+- **Tidier toolbar.** Import/Export CSV moved into a single "More" overflow menu
+  so only Search, Filter and New record stay prominent.
 
 ### Added
 - **Grouped multi-select** for long option lists: a select/multi-select with

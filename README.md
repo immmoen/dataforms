@@ -21,9 +21,11 @@ inventory, and so on.
 - **Registers** with an owned, typed field schema (text, number, currency,
   date/time, single/multi select, email/URL, user/group, file attachment,
   relation, computed and auto fields).
-- **Smart forms** — sections, per-field widgets, and **conditional rules**
-  (show/hide, require-if, set-value, validation, computed) from a *single* rule
-  definition evaluated **both** in the browser and on the server.
+- **Smart forms** — a **drag-and-drop builder** (sections, field order) and
+  **conditional rules** (show/hide, require-if, set-value, validation, computed)
+  from a *single* rule definition evaluated **both** in the browser and on the
+  server. See **[docs/FORMS_AND_USAGE.md](docs/FORMS_AND_USAGE.md)** for a plain-
+  language guide to forms and how the app fits into Nextcloud.
 - **Views** — paginated list/table with multi-criteria filter, sort, full-text
   search and CSV export; saved, shareable views.
 - **Access control** — internal/authenticated only; per-register Read / Write /
