@@ -7,6 +7,20 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.16.0] - Inline editing & auto-refresh
+
+### Added
+- **Inline cell editing.** Double-click a cell in the records table to edit it in
+  place (text, number, currency/percentage, date/time, single-select and Yes/No);
+  Enter or click-away saves, Esc cancels. Multi-value/complex fields (relation,
+  files, multi-select) and read-only computed/auto fields open the full editor
+  instead. Editable cells show a dashed outline on hover. A single click still
+  opens the record detail (a short debounce distinguishes click from double-click).
+- **Auto-refresh.** The records list reloads when you return to the tab or window,
+  and a **Refresh** button sits in the toolbar — so the view no longer shows stale
+  data after an import or an edit made elsewhere. (It never interrupts an open
+  dialog or an in-progress inline edit.)
+
 ## [0.15.1] - Detail layout, sortable sequence & friendlier filters
 
 ### Fixed

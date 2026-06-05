@@ -13,6 +13,9 @@
 				<template #icon><FilterIcon :size="20" /></template>
 				{{ activeFilters.length ? t('dataforms', 'Filter ({n})', { n: activeFilters.length }) : t('dataforms', 'Filter') }}
 			</NcButton>
+			<NcButton type="tertiary" :aria-label="t('dataforms', 'Refresh')" :title="t('dataforms', 'Refresh')" @click="load()">
+				<template #icon><RefreshIcon :size="20" /></template>
+			</NcButton>
 			<span class="spacer" />
 			<input ref="importInput" type="file" accept=".csv,text/csv" class="hidden-file" @change="onImportFile">
 
@@ -145,9 +148,50 @@
 						</tr>
 					</thead>
 					<tbody>
-						<tr v-for="record in records" :key="record.id" @click="openDetail(record)">
-							<td v-for="field in columns" :key="field.id">
-								{{ format(field, record.values[field.machineName]) }}
+						<tr v-for="record in records" :key="record.id">
+							<td
+								v-for="field in columns"
+								:key="field.id"
+								:class="{ editable: canModify(record) && isInlineEditable(field), editing: isEditingCell(record, field) }"
+								@click="onCellClick(record, field)"
+								@dblclick="onCellDblClick(record, field)">
+								<template v-if="isEditingCell(record, field)">
+									<select
+										v-if="field.type === 'select'"
+										ref="inlineInput"
+										v-model="editValue"
+										class="inline-input"
+										@change="saveInline(record, field)"
+										@keydown.esc="cancelInline"
+										@blur="saveInline(record, field)">
+										<option value="" />
+										<option v-for="o in (field.config.options || [])" :key="o" :value="o">{{ o }}</option>
+									</select>
+									<select
+										v-else-if="field.type === 'boolean'"
+										ref="inlineInput"
+										v-model="editValue"
+										class="inline-input"
+										@change="saveInline(record, field)"
+										@keydown.esc="cancelInline"
+										@blur="saveInline(record, field)">
+										<option value="" />
+										<option value="true">{{ t('dataforms', 'Yes') }}</option>
+										<option value="false">{{ t('dataforms', 'No') }}</option>
+									</select>
+									<input
+										v-else
+										ref="inlineInput"
+										v-model="editValue"
+										:type="inlineInputType(field)"
+										class="inline-input"
+										@keydown.enter="saveInline(record, field)"
+										@keydown.esc="cancelInline"
+										@blur="saveInline(record, field)">
+								</template>
+								<template v-else>
+									{{ format(field, record.values[field.machineName]) }}
+								</template>
 							</td>
 							<td class="actions-col" @click.stop>
 								<NcActions>
@@ -280,10 +324,11 @@ import TableColumnIcon from 'vue-material-design-icons/TableColumn.vue'
 import ContentSaveIcon from 'vue-material-design-icons/ContentSave.vue'
 import EyeIcon from 'vue-material-design-icons/Eye.vue'
 import DotsIcon from 'vue-material-design-icons/DotsHorizontal.vue'
+import RefreshIcon from 'vue-material-design-icons/Refresh.vue'
 
 import RecordForm from './RecordForm.vue'
 import RecordDetail from './RecordDetail.vue'
-import { listRecords, deleteRecord, csvExportUrl, importCsv } from '../api/records.js'
+import { listRecords, deleteRecord, updateRecord, csvExportUrl, importCsv } from '../api/records.js'
 import { listRules, FILTER_OPS } from '../api/rules.js'
 import { listViews, createView, deleteView } from '../api/views.js'
 import { listForms } from '../api/forms.js'
@@ -292,7 +337,7 @@ export default {
 	name: 'RecordsView',
 	components: {
 		NcActions, NcActionButton, NcActionCheckbox, NcButton, NcCheckboxRadioSwitch, NcDialog, NcEmptyContent, NcLoadingIcon, NcSelect, NcTextField,
-		PlusIcon, FilterIcon, CloseIcon, PencilIcon, DeleteIcon, DownloadIcon, UploadIcon, TableIcon, TableColumnIcon, ContentSaveIcon, EyeIcon, DotsIcon, RecordForm, RecordDetail,
+		PlusIcon, FilterIcon, CloseIcon, PencilIcon, DeleteIcon, DownloadIcon, UploadIcon, TableIcon, TableColumnIcon, ContentSaveIcon, EyeIcon, DotsIcon, RefreshIcon, RecordForm, RecordDetail,
 	},
 	props: {
 		registerId: { type: Number, required: true },
@@ -331,6 +376,9 @@ export default {
 			newView: { title: '', shared: false },
 			forms: [],
 			activeForm: null,
+			editingCell: null,
+			editValue: '',
+			clickTimer: null,
 		}
 	},
 	computed: {
@@ -381,9 +429,32 @@ export default {
 		this.views = await listViews(this.registerId).catch(() => [])
 		this.forms = await listForms(this.registerId).catch(() => [])
 		await this.load()
+		// Keep the list fresh when the user comes back to the tab/window.
+		document.addEventListener('visibilitychange', this.onVisible)
+		window.addEventListener('focus', this.onWindowFocus)
+	},
+	beforeUnmount() {
+		document.removeEventListener('visibilitychange', this.onVisible)
+		window.removeEventListener('focus', this.onWindowFocus)
+		clearTimeout(this.clickTimer)
 	},
 	methods: {
 		t,
+		onVisible() {
+			if (document.visibilityState === 'visible') {
+				this.refreshIfIdle()
+			}
+		},
+		onWindowFocus() {
+			this.refreshIfIdle()
+		},
+		// Reload only when nothing is mid-interaction (no open dialog or inline edit).
+		refreshIfIdle() {
+			if (this.loading || this.showForm || this.showDetail || this.showImport || this.editingCell) {
+				return
+			}
+			this.load()
+		},
 		async load() {
 			this.loading = true
 			try {
@@ -591,6 +662,100 @@ export default {
 			this.detailRecord = record
 			this.showDetail = true
 		},
+		// ---- inline cell editing -----------------------------------------
+		// Simple, single-value types can be edited in place. Multi-value and
+		// resolved types (relation/file/multiselect) and read-only computed/auto
+		// fields fall back to the full edit dialog.
+		isInlineEditable(field) {
+			return ['text', 'email', 'url', 'phone', 'number', 'currency', 'percentage',
+				'date', 'datetime', 'time', 'select', 'boolean'].includes(field.type)
+		},
+		inlineInputType(field) {
+			return {
+				email: 'email', url: 'url', phone: 'tel',
+				number: 'number', currency: 'number', percentage: 'number',
+				date: 'date', datetime: 'datetime-local', time: 'time',
+			}[field.type] ?? 'text'
+		},
+		isEditingCell(record, field) {
+			return this.editingCell
+				&& this.editingCell.recordId === record.id
+				&& this.editingCell.machineName === field.machineName
+		},
+		onCellClick(record, field) {
+			if (this.editingCell) {
+				return
+			}
+			// Defer opening the detail so a double-click (edit) can cancel it.
+			clearTimeout(this.clickTimer)
+			this.clickTimer = setTimeout(() => this.openDetail(record), 220)
+		},
+		onCellDblClick(record, field) {
+			clearTimeout(this.clickTimer)
+			if (!this.canModify(record)) {
+				this.openDetail(record)
+				return
+			}
+			if (this.isInlineEditable(field)) {
+				this.startInline(record, field)
+			} else {
+				this.openEdit(record) // complex types: full editor
+			}
+		},
+		startInline(record, field) {
+			const raw = record.values[field.machineName]
+			let v = raw
+			if (field.type === 'boolean') {
+				v = raw === true ? 'true' : (raw === false ? 'false' : '')
+			} else if (raw === null || raw === undefined) {
+				v = ''
+			}
+			this.editValue = v
+			this.editingCell = { recordId: record.id, machineName: field.machineName }
+			this.$nextTick(() => {
+				const el = this.$refs.inlineInput
+				const node = Array.isArray(el) ? el[0] : el
+				node?.focus()
+				node?.select?.()
+			})
+		},
+		cancelInline() {
+			this.editingCell = null
+			this.editValue = ''
+		},
+		async saveInline(record, field) {
+			if (!this.editingCell) {
+				return
+			}
+			const mn = field.machineName
+			let next = this.editValue
+			if (field.type === 'boolean') {
+				next = next === 'true' ? true : (next === 'false' ? false : null)
+			} else if (['number', 'currency', 'percentage'].includes(field.type)) {
+				next = next === '' ? null : Number(next)
+			} else if (next === '') {
+				next = null
+			}
+			const prev = record.values[mn] ?? null
+			// No change → just close the editor.
+			if (next === prev) {
+				this.cancelInline()
+				return
+			}
+			const payload = { ...record.values, [mn]: next }
+			this.cancelInline()
+			try {
+				const updated = await updateRecord(record.id, payload)
+				const i = this.records.findIndex((r) => r.id === record.id)
+				if (i !== -1) {
+					this.records.splice(i, 1, updated)
+				}
+			} catch (e) {
+				showError(e.response?.data?.ocs?.data?.message ?? t('dataforms', 'Could not save the change'))
+				console.error(e)
+				this.load() // re-sync from the server on failure
+			}
+		},
 		onDetailEdit(record) {
 			this.openEdit(record)
 		},
@@ -759,6 +924,28 @@ tbody td {
 
 tbody tr {
 	cursor: pointer;
+}
+
+/* A subtle affordance that a cell can be edited in place (double-click). */
+td.editable:hover {
+	outline: 1px dashed var(--color-primary-element);
+	outline-offset: -2px;
+}
+
+td.editing {
+	padding: 2px 6px;
+}
+
+.inline-input {
+	width: 100%;
+	min-width: 80px;
+	box-sizing: border-box;
+	padding: 5px 8px;
+	border: 2px solid var(--color-primary-element);
+	border-radius: var(--border-radius, 6px);
+	background: var(--color-main-background);
+	color: var(--color-main-text);
+	font: inherit;
 }
 
 /* Subtle zebra striping aids row-tracking across a wide table. */
