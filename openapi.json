@@ -1,0 +1,119 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "DataForms API",
+    "version": "1.0.0",
+    "description": "Core REST surface for DataForms registers and records. Authenticate as a Nextcloud user with an app password (HTTP Basic) and send the header 'OCS-APIRequest: true'. All responses use the OCS envelope; payloads are under ocs.data.",
+    "license": { "name": "AGPL-3.0-or-later" }
+  },
+  "servers": [
+    { "url": "https://{host}/ocs/v2.php/apps/dataforms/api/v1", "variables": { "host": { "default": "cloud.example.org" } } }
+  ],
+  "security": [ { "basicAuth": [] } ],
+  "paths": {
+    "/registers": {
+      "get": {
+        "summary": "List registers the user can see",
+        "responses": { "200": { "description": "OK" } }
+      },
+      "post": {
+        "summary": "Create a register",
+        "requestBody": {
+          "required": true,
+          "content": { "application/json": { "schema": { "$ref": "#/components/schemas/RegisterCreate" } } }
+        },
+        "responses": { "200": { "description": "Created register" } }
+      }
+    },
+    "/registers/{id}/fields": {
+      "get": {
+        "summary": "List a register's fields (schema)",
+        "parameters": [ { "$ref": "#/components/parameters/id" } ],
+        "responses": { "200": { "description": "OK" } }
+      }
+    },
+    "/registers/{id}/records": {
+      "get": {
+        "summary": "List records",
+        "parameters": [
+          { "$ref": "#/components/parameters/id" },
+          { "name": "limit", "in": "query", "schema": { "type": "integer" } },
+          { "name": "offset", "in": "query", "schema": { "type": "integer" } },
+          { "name": "sort", "in": "query", "schema": { "type": "string" } },
+          { "name": "direction", "in": "query", "schema": { "type": "string", "enum": ["ASC", "DESC"] } },
+          { "name": "search", "in": "query", "schema": { "type": "string" } },
+          { "name": "filter", "in": "query", "schema": { "type": "string" }, "description": "JSON array of {field, op, value}" }
+        ],
+        "responses": { "200": { "description": "OK" } }
+      },
+      "post": {
+        "summary": "Create a record",
+        "parameters": [ { "$ref": "#/components/parameters/id" } ],
+        "requestBody": {
+          "required": true,
+          "content": { "application/json": { "schema": { "$ref": "#/components/schemas/RecordWrite" } } }
+        },
+        "responses": { "200": { "description": "Created record" }, "400": { "description": "Validation failed" } }
+      }
+    },
+    "/records/{id}": {
+      "get": {
+        "summary": "Get one record",
+        "parameters": [ { "$ref": "#/components/parameters/id" } ],
+        "responses": { "200": { "description": "OK" }, "404": { "description": "Not found" } }
+      },
+      "put": {
+        "summary": "Update a record (send the full value set)",
+        "parameters": [ { "$ref": "#/components/parameters/id" } ],
+        "requestBody": {
+          "required": true,
+          "content": { "application/json": { "schema": { "$ref": "#/components/schemas/RecordWrite" } } }
+        },
+        "responses": { "200": { "description": "Updated" } }
+      },
+      "delete": {
+        "summary": "Delete a record",
+        "parameters": [ { "$ref": "#/components/parameters/id" } ],
+        "responses": { "200": { "description": "Deleted" }, "422": { "description": "Blocked by a relation integrity rule" } }
+      }
+    },
+    "/records/{id}/history": {
+      "get": {
+        "summary": "Audit history for a record",
+        "parameters": [ { "$ref": "#/components/parameters/id" } ],
+        "responses": { "200": { "description": "OK" } }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "basicAuth": { "type": "http", "scheme": "basic", "description": "Nextcloud username + app password." }
+    },
+    "parameters": {
+      "id": { "name": "id", "in": "path", "required": true, "schema": { "type": "integer" } }
+    },
+    "schemas": {
+      "RegisterCreate": {
+        "type": "object",
+        "required": ["title"],
+        "properties": {
+          "title": { "type": "string" },
+          "description": { "type": "string" },
+          "color": { "type": "string" },
+          "icon": { "type": "string" }
+        }
+      },
+      "RecordWrite": {
+        "type": "object",
+        "required": ["values"],
+        "properties": {
+          "values": {
+            "type": "object",
+            "additionalProperties": true,
+            "description": "Map of field machineName -> value. Multi-value fields take arrays; select values must match configured options."
+          }
+        }
+      }
+    }
+  }
+}

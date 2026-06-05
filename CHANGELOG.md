@@ -7,6 +7,20 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.21.0] - API console & project vision
+
+### Added
+- **API console** under **Settings → Administration → DataForms**: the app is
+  API-first, and this page makes it discoverable — the base API URL, a
+  three-step app-password authentication walkthrough (links straight to
+  Nextcloud's Security settings), a copy-paste example, and pointers to the full
+  reference. It documents and links; it reinvents nothing (machine auth reuses
+  Nextcloud app passwords).
+- **Docs:** `VISION.md` (north star + the permanent no-list + engineering
+  principles — DataForms is a register/workflow workspace, **not** a survey
+  tool), `docs/DECISIONS.md` (decisions log), `docs/API.md` (full endpoint
+  reference) and `openapi.json` (machine-readable core spec).
+
 ## [0.20.0] - Interactive form card & icon fix
 
 ### Added
