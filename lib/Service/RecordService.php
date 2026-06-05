@@ -169,6 +169,8 @@ class RecordService {
 		$record->setCreatedBy($userId);
 		$record->setCreated($now);
 		$record->setUpdated($now);
+		// Per-register running number (1, 2, 3 …), stable across deletions.
+		$record->setSeq($this->recordMapper->maxSeqForRegister($registerId) + 1);
 		$record = $this->recordMapper->insert($record);
 
 		$this->storeValues($record->getId(), $fields, $values);
@@ -425,7 +427,9 @@ class RecordService {
 			'created_at' => $record->getCreated() ? gmdate('Y-m-d\TH:i', $record->getCreated()) : null,
 			'updated_at' => $record->getUpdated() ? gmdate('Y-m-d\TH:i', $record->getUpdated()) : null,
 			'created_by' => $record->getCreatedBy(),
-			'sequence' => '#' . $record->getId(),
+			// Per-register sequence; fall back to the row id for any record
+			// created before sequence numbers were introduced.
+			'sequence' => (string)($record->getSeq() ?? $record->getId()),
 			default => null,
 		};
 	}

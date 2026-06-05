@@ -74,6 +74,15 @@
 			:placeholder="t('dataforms', 'Choose…')"
 			@update:model-value="emit($event)" />
 
+		<GroupedMultiSelect
+			v-else-if="field.type === 'multiselect' && field.config?.groupPattern"
+			:model-value="Array.isArray(modelValue) ? modelValue : []"
+			:options="options"
+			:group-pattern="field.config.groupPattern"
+			:label="label"
+			:disabled="disabled"
+			@update:model-value="emit($event)" />
+
 		<NcSelect
 			v-else-if="field.type === 'multiselect'"
 			:model-value="Array.isArray(modelValue) ? modelValue : []"
@@ -151,11 +160,12 @@ import NcSelect from '@nextcloud/vue/components/NcSelect'
 import UploadIcon from 'vue-material-design-icons/Upload.vue'
 import CloseIcon from 'vue-material-design-icons/Close.vue'
 
+import GroupedMultiSelect from './GroupedMultiSelect.vue'
 import { listOptions, uploadLocalFile } from '../api/records.js'
 
 export default {
 	name: 'FieldInput',
-	components: { NcButton, NcCheckboxRadioSwitch, NcLoadingIcon, NcSelect, UploadIcon, CloseIcon },
+	components: { NcButton, NcCheckboxRadioSwitch, NcLoadingIcon, NcSelect, UploadIcon, CloseIcon, GroupedMultiSelect },
 	props: {
 		field: { type: Object, required: true },
 		modelValue: { type: [String, Number, Boolean, Array, Object, null], default: null },

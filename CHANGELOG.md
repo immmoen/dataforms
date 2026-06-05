@@ -7,6 +7,34 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.14.0] - Grouped option picker, per-register numbering & performance
+
+### Added
+- **Grouped multi-select** for long option lists: a select/multi-select with
+  many options can be shown as **collapsible groups** in the data-entry form,
+  with a search box, per-group select-all, and selection chips. Groups are
+  derived from the option text by a chosen preset ("by leading code", e.g.
+  `Art 6`; "by first word") or a custom pattern — so a 294-option list becomes
+  ~33 tidy Article groups. The stored values are a flat list, unchanged; this
+  is purely a data-entry aid (no record migration).
+- **Per-register sequence numbers.** The "Automatic → Sequence number" field now
+  counts **1, 2, 3 … within its register** (was the global row id). Numbers are
+  assigned at creation and never reused after a deletion; existing records are
+  backfilled in order. (`df_records.seq` column + index.)
+- **Index on the text value column** (`df_record_values.value_string`) so
+  filtering, sorting and search on text/select/email fields stay fast at scale
+  (the 100k-record target). Uses a 64-char prefix on MySQL/MariaDB to respect
+  the engine key-length limit; SQLite and PostgreSQL index the full value —
+  fully portable.
+
+### Changed
+- **Data-entry users now see only the Records tab.** The Fields, Forms and Rules
+  builders are manager-only, so people who just add and edit records get an
+  uncluttered view; the tab bar is hidden entirely when only Records is shown.
+- The **"Automatic" field type** is relabelled "Automatic value (sequence
+  number, dates, author)" and lists **Sequence number** first, so the auto-number
+  is easy to find (it is not a "Number"-type field).
+
 ## [0.13.0] - Multi-value relations & referential integrity
 
 ### Added

@@ -222,6 +222,14 @@ class FieldService {
 			}
 			$clean['options'] = array_values(array_unique($options));
 			$clean['allowOther'] = (bool)($config['allowOther'] ?? false);
+			// Optional grouping for long option lists: a JS-compatible regex
+			// source the data-entry picker uses to bucket options under
+			// collapsible parents. Stored opaquely (display concern only); the
+			// selected values remain a flat list.
+			$groupPattern = trim((string)($config['groupPattern'] ?? ''));
+			if ($groupPattern !== '') {
+				$clean['groupPattern'] = mb_substr($groupPattern, 0, 200);
+			}
 		}
 
 		if (in_array($type, ['number', 'currency', 'percentage'], true)) {

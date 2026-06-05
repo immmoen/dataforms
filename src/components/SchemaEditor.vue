@@ -97,6 +97,26 @@
 						:placeholder="t('dataforms', 'Consent\nContract\nLegal obligation')" />
 				</div>
 
+				<div v-if="needsOptions && optionLineCount > 12" class="field-block">
+					<label class="block-label">{{ t('dataforms', 'Group options in the form') }}</label>
+					<NcSelect
+						v-model="draft.groupPreset"
+						:options="groupPresets"
+						:reduce="(o) => o.id"
+						label="label"
+						:clearable="false" />
+					<NcTextField
+						v-if="draft.groupPreset === 'custom'"
+						v-model="draft.groupPatternCustom"
+						:label="t('dataforms', 'Custom pattern (regular expression)')"
+						placeholder="^Art\s*\d+" />
+					<p class="block-hint">
+						{{ t('dataforms', 'Long option lists are shown as collapsible groups in the data-entry form, with a search box and per-group select-all. The selected values are unchanged.') }}
+						<br>
+						<span v-if="effectiveGroupPattern">{{ t('dataforms', 'Preview:') }} <strong>{{ groupPreviewCount }}</strong> {{ t('dataforms', 'groups') }}</span>
+					</p>
+				</div>
+
 				<div v-if="needsNumberConfig" class="number-config">
 					<NcTextField v-model="draft.min" type="number" :label="t('dataforms', 'Min')" />
 					<NcTextField v-model="draft.max" type="number" :label="t('dataforms', 'Max')" />
@@ -201,7 +221,7 @@ import ChevronUpIcon from 'vue-material-design-icons/ChevronUp.vue'
 import ChevronDownIcon from 'vue-material-design-icons/ChevronDown.vue'
 import TableColumnIcon from 'vue-material-design-icons/TableColumn.vue'
 
-import { listFields, createField, updateField, deleteField, reorderFields, FIELD_TYPES, AUTO_KINDS, typeLabel } from '../api/fields.js'
+import { listFields, createField, updateField, deleteField, reorderFields, FIELD_TYPES, AUTO_KINDS, GROUP_PRESETS, groupForOption, typeLabel } from '../api/fields.js'
 import { listRegisters } from '../api/registers.js'
 
 const emptyDraft = () => ({
@@ -216,11 +236,13 @@ const emptyDraft = () => ({
 	multiple: false,
 	onDelete: 'null',
 	expression: '',
-	autoKind: 'created_at',
+	autoKind: 'sequence',
 	help: '',
 	default: '',
 	mandatory: false,
 	unique: false,
+	groupPreset: '',
+	groupPatternCustom: '',
 })
 
 export default {
@@ -278,6 +300,34 @@ export default {
 		},
 		autoKinds() {
 			return AUTO_KINDS
+		},
+		groupPresets() {
+			return GROUP_PRESETS
+		},
+		optionLines() {
+			return this.draft.optionsText.split('\n').map((s) => s.trim()).filter((s) => s !== '')
+		},
+		optionLineCount() {
+			return this.optionLines.length
+		},
+		// The regex source implied by the chosen preset (or the custom field).
+		effectiveGroupPattern() {
+			if (this.draft.groupPreset === 'custom') {
+				return this.draft.groupPatternCustom.trim()
+			}
+			const preset = GROUP_PRESETS.find((p) => p.id === this.draft.groupPreset)
+			return preset && preset.pattern ? preset.pattern : ''
+		},
+		groupPreviewCount() {
+			const pattern = this.effectiveGroupPattern
+			if (!pattern) {
+				return 0
+			}
+			const labels = new Set()
+			for (const opt of this.optionLines) {
+				labels.add(groupForOption(opt, pattern))
+			}
+			return labels.size
 		},
 		registerOptions() {
 			return this.registers
@@ -337,6 +387,10 @@ export default {
 		openEdit(field) {
 			this.editingField = field
 			const cfg = field.config ?? {}
+			// Map a stored group pattern back to a preset (or "custom").
+			const storedPattern = cfg.groupPattern ?? ''
+			const known = GROUP_PRESETS.find((p) => p.pattern && p.pattern === storedPattern)
+			const groupPreset = storedPattern === '' ? '' : (known ? known.id : 'custom')
 			this.draft = {
 				label: field.label,
 				type: field.type,
@@ -349,11 +403,13 @@ export default {
 				multiple: cfg.multiple ?? false,
 				onDelete: cfg.onDelete ?? 'null',
 				expression: cfg.expression ?? '',
-				autoKind: cfg.kind ?? 'created_at',
+				autoKind: cfg.kind ?? 'sequence',
 				help: cfg.help ?? '',
 				default: field.default ?? '',
 				mandatory: field.mandatory,
 				unique: field.unique,
+				groupPreset,
+				groupPatternCustom: groupPreset === 'custom' ? storedPattern : '',
 			}
 			this.showAdd = true
 		},
@@ -367,6 +423,9 @@ export default {
 					.split('\n')
 					.map((s) => s.trim())
 					.filter((s) => s !== '')
+				if (this.effectiveGroupPattern) {
+					config.groupPattern = this.effectiveGroupPattern
+				}
 			}
 			if (this.needsNumberConfig) {
 				if (this.draft.min !== '') config.min = Number(this.draft.min)

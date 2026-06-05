@@ -85,16 +85,46 @@ export const FIELD_TYPES = [
 	{ id: 'relation', label: 'Relation (link records)', group: 'Advanced', config: ['target'] },
 	{ id: 'file', label: 'File attachment', group: 'Advanced', config: [] },
 	{ id: 'computed', label: 'Computed (expression)', group: 'Advanced', config: ['expression'] },
-	{ id: 'auto', label: 'Automatic (created/updated/by)', group: 'Advanced', config: ['autoKind'] },
+	{ id: 'auto', label: 'Automatic value (sequence number, dates, author)', group: 'Advanced', config: ['autoKind'] },
 ]
 
 /** Auto-field kinds. */
 export const AUTO_KINDS = [
+	{ id: 'sequence', label: 'Sequence number (1, 2, 3 … per register)' },
 	{ id: 'created_at', label: 'Created date/time' },
 	{ id: 'updated_at', label: 'Last updated date/time' },
 	{ id: 'created_by', label: 'Created by (user)' },
-	{ id: 'sequence', label: 'Sequence number' },
 ]
+
+/**
+ * Presets for grouping a long select/multi-select option list under collapsible
+ * parents in the data-entry picker. Each pattern is a JS RegExp source; the
+ * group label is the first match against an option (or "Other" if none).
+ */
+export const GROUP_PRESETS = [
+	{ id: '', label: 'No grouping', pattern: '' },
+	// "Art 6(1)(a)" → "Art 6"; "Art. 83 (2) (a)" → "Art. 83"
+	{ id: 'code', label: 'By leading code (e.g. “Art 6”)', pattern: '^[A-Za-z.]+\\s*\\d+' },
+	// "Digital Marketing" → "Digital"
+	{ id: 'word', label: 'By first word', pattern: '^\\S+' },
+	{ id: 'custom', label: 'Custom pattern…', pattern: null },
+]
+
+/**
+ * Compute the group label for an option given a RegExp source. Returns 'Other'
+ * when the pattern does not match, and the option itself when no pattern is set.
+ */
+export function groupForOption(option, patternSource) {
+	if (!patternSource) {
+		return ''
+	}
+	try {
+		const m = String(option).match(new RegExp(patternSource))
+		return m ? (m[1] ?? m[0]).trim() : 'Other'
+	} catch (e) {
+		return ''
+	}
+}
 
 /**
  * @param {string} typeId a field type id

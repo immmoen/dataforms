@@ -87,6 +87,21 @@ class RecordMapper extends QBMapper {
 	}
 
 	/**
+	 * Highest per-register sequence number assigned so far (0 if none). Counts
+	 * deleted records too, so numbers are never reused after a deletion.
+	 */
+	public function maxSeqForRegister(int $registerId): int {
+		$qb = $this->db->getQueryBuilder();
+		$qb->select($qb->func()->max('seq'))
+			->from($this->getTableName())
+			->where($qb->expr()->eq('register_id', $qb->createNamedParameter($registerId, IQueryBuilder::PARAM_INT)));
+		$result = $qb->executeQuery();
+		$max = $result->fetchOne();
+		$result->closeCursor();
+		return $max === null || $max === false ? 0 : (int)$max;
+	}
+
+	/**
 	 * Non-deleted record counts for a set of registers, keyed by register id.
 	 *
 	 * @param int[] $registerIds

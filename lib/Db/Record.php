@@ -24,6 +24,8 @@ use OCP\AppFramework\Db\Entity;
  * @method void setUpdated(int $updated)
  * @method int|null getDeletedAt()
  * @method void setDeletedAt(?int $deletedAt)
+ * @method int|null getSeq()
+ * @method void setSeq(?int $seq)
  */
 class Record extends Entity {
 	protected int $registerId = 0;
@@ -32,6 +34,8 @@ class Record extends Entity {
 	protected int $created = 0;
 	protected int $updated = 0;
 	protected ?int $deletedAt = null;
+	/** Per-register sequential number (1, 2, 3 …), assigned at creation. */
+	protected ?int $seq = null;
 
 	public function __construct() {
 		$this->addType('id', 'integer');
@@ -39,5 +43,6 @@ class Record extends Entity {
 		$this->addType('created', 'integer');
 		$this->addType('updated', 'integer');
 		$this->addType('deletedAt', 'integer');
+		$this->addType('seq', 'integer');
 	}
 }

@@ -130,7 +130,7 @@
 					</p>
 				</div>
 
-				<div class="tabs">
+				<div v-if="tabs.length > 1" class="tabs">
 					<button
 						v-for="tab in tabs"
 						:key="tab.id"
@@ -300,12 +300,17 @@ export default {
 			return this.favoriteRegisters.length ? this.registers.filter((r) => !r.favorite) : this.registers
 		},
 		tabs() {
-			return [
-				{ id: 'records', label: t('dataforms', 'Records') },
-				{ id: 'fields', label: t('dataforms', 'Fields') },
-				{ id: 'forms', label: t('dataforms', 'Forms') },
-				{ id: 'rules', label: t('dataforms', 'Rules') },
-			]
+			const tabs = [{ id: 'records', label: t('dataforms', 'Records') }]
+			// The schema/forms/rules builders are manager-only; data-entry users
+			// see just Records (they enter data through the form, not the schema).
+			if (this.selected?.canManage) {
+				tabs.push(
+					{ id: 'fields', label: t('dataforms', 'Fields') },
+					{ id: 'forms', label: t('dataforms', 'Forms') },
+					{ id: 'rules', label: t('dataforms', 'Rules') },
+				)
+			}
+			return tabs
 		},
 	},
 	async mounted() {
