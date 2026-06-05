@@ -33,18 +33,18 @@ emits no engine-specific syntax) and the named parameters are created on the
 **outer** builder so they resolve correctly. It is verified on SQLite. It is the
 only place worth re-checking when running the live cross-DB matrix below.
 
-## Remaining verification (environment-dependent)
+## Live cross-database verification — done ✅
 
-The code review is complete and clean. What remains is **running** the migration
-+ a CRUD/filter/sort pass on each engine, which needs those database servers:
+The review above was confirmed by **running the app on each engine** (fresh
+Nextcloud 32 instances, `occ app:enable dataforms` to apply all migrations, then
+a CRUD + filter/search/sort pass through the OCS API):
 
-```bash
-# Example: spin up the app against MySQL and PostgreSQL test instances,
-# run `occ maintenance:install` + `occ app:enable dataforms`, then exercise:
-#   - migrations apply cleanly (df_* tables + indexes)
-#   - create/list/filter/sort/search records
-#   - the IN-subquery filter & search paths
-```
+| Database | All migrations (12 `df_*` tables) | CRUD | Filter (`IN`-subquery) | Search | Sort |
+|----------|:--:|:--:|:--:|:--:|:--:|
+| **SQLite** | ✅ | ✅ | ✅ | ✅ | ✅ |
+| **MySQL / MariaDB 10.11** | ✅ | ✅ | ✅ | ✅ | ✅ |
+| **PostgreSQL 16** | ✅ | ✅ | ✅ | ✅ | ✅ |
 
-This is the standard Nextcloud app CI matrix; wiring it up is the only open item
-for the portability acceptance criterion.
+The `IN`-subquery filter/search path (the one pattern flagged above) returns
+correct results on all three engines. Portability acceptance criterion: **met.**
+The standard move from here is to wire this same matrix into CI.
