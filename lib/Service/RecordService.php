@@ -64,10 +64,25 @@ class RecordService {
 		}
 
 		$resolvedFilters = $this->resolveFilters($filters, $byName);
-		$sortField = isset($byName[$sort]) ? [
-			'column' => FieldValue::column($byName[$sort]->getType()),
-			'fieldId' => $byName[$sort]->getId(),
-		] : null;
+
+		// Auto fields (sequence / created / updated / created-by) aren't stored
+		// in value columns, so sort them by the matching record-table column.
+		$sortField = null;
+		if (isset($byName[$sort]) && $byName[$sort]->getType() === 'auto') {
+			$cfg = json_decode($byName[$sort]->getConfig() ?? '{}', true) ?: [];
+			$sort = match ($cfg['kind'] ?? 'created_at') {
+				'sequence' => 'seq',
+				'created_at' => 'created',
+				'updated_at' => 'updated',
+				'created_by' => 'created_by',
+				default => 'seq',
+			};
+		} elseif (isset($byName[$sort])) {
+			$sortField = [
+				'column' => FieldValue::column($byName[$sort]->getType()),
+				'fieldId' => $byName[$sort]->getId(),
+			];
+		}
 
 		$records = $this->recordMapper->findByRegister($registerId, $limit, $offset, $sort, $direction, $search, $resolvedFilters, $sortField);
 

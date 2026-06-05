@@ -7,6 +7,23 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.15.1] - Detail layout, sortable sequence & friendlier filters
+
+### Fixed
+- **Record detail: long field labels no longer overlap their values.** The
+  label/value grid now has a column gap, wraps long labels, and top-aligns rows.
+- **The auto "sequence" / Number column is now sortable** — click its header to
+  order records 1, 2, 3 … (auto fields sort by the record's own column:
+  sequence, created, updated or created-by, since they have no value column).
+- **Large numbers are formatted with thousands separators** in the table and the
+  record detail (e.g. `1,200,000,000`), honouring each field's decimals.
+
+### Changed
+- **Friendlier filters.** When you filter on a single/multi-select field, the
+  value is now a **dropdown of that field's options** (with the right operator
+  chosen automatically) instead of free text; date/number fields get the
+  matching input. Auto fields are hidden from the filter list (nothing to match).
+
 ## [0.15.0] - Drag-and-drop form builder & roomier tables
 
 ### Added

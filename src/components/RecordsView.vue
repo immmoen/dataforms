@@ -82,9 +82,21 @@
 
 		<div v-if="showFilter" class="filter-bar">
 			<div v-for="(f, i) in draftFilters" :key="i" class="filter-row">
-				<NcSelect v-model="f.field" :options="filterFieldOptions" :reduce="(o) => o.id" label="label" :clearable="false" class="f-field" :placeholder="t('dataforms', 'Field')" />
+				<NcSelect :model-value="f.field" :options="filterFieldOptions" :reduce="(o) => o.id" label="label" :clearable="false" class="f-field" :placeholder="t('dataforms', 'Field')" @update:model-value="onFilterFieldChange(f, $event)" />
 				<NcSelect v-model="f.op" :options="filterOps" :reduce="(o) => o.id" label="label" :clearable="false" class="f-op" />
-				<NcTextField v-if="!['isEmpty', 'isNotEmpty'].includes(f.op)" v-model="f.value" :label="t('dataforms', 'Value')" class="f-val" />
+				<NcSelect
+					v-if="!['isEmpty', 'isNotEmpty'].includes(f.op) && fieldOptions(f.field).length"
+					v-model="f.value"
+					:options="fieldOptions(f.field)"
+					:clearable="false"
+					class="f-val"
+					:placeholder="t('dataforms', 'Value')" />
+				<NcTextField
+					v-else-if="!['isEmpty', 'isNotEmpty'].includes(f.op)"
+					v-model="f.value"
+					:type="fieldInputType(f.field)"
+					:label="t('dataforms', 'Value')"
+					class="f-val" />
 				<NcButton type="tertiary" :aria-label="t('dataforms', 'Remove')" @click="draftFilters.splice(i, 1)">
 					<template #icon><CloseIcon :size="18" /></template>
 				</NcButton>
@@ -337,8 +349,10 @@ export default {
 			return this.viewOptions.find((v) => v.id === this.activeViewId) ?? null
 		},
 		filterFieldOptions() {
+			// 'auto' values are computed at read time (no stored column to filter);
+			// file/relation live in join tables. Everything else is filterable.
 			return this.fields
-				.filter((f) => !['file', 'relation'].includes(f.type))
+				.filter((f) => !['file', 'relation', 'auto'].includes(f.type))
 				.map((f) => ({ id: f.machineName, label: f.label }))
 		},
 		rangeLabel() {
@@ -401,6 +415,27 @@ export default {
 					? this.activeFilters.map((f) => ({ ...f }))
 					: [{ field: this.filterFieldOptions[0]?.id ?? '', op: 'eq', value: '' }]
 			}
+		},
+		// Options for a select/multi-select filter value (empty for other types).
+		fieldOptions(machineName) {
+			const f = this.fields.find((x) => x.machineName === machineName)
+			return (f && ['select', 'multiselect'].includes(f.type)) ? (f.config?.options ?? []) : []
+		},
+		// HTML input type for a free-text filter value (date/number where useful).
+		fieldInputType(machineName) {
+			const f = this.fields.find((x) => x.machineName === machineName)
+			if (!f) return 'text'
+			if (['number', 'currency', 'percentage'].includes(f.type)) return 'number'
+			if (f.type === 'date') return 'date'
+			return 'text'
+		},
+		// Reset the value and pick a sensible operator when the field changes.
+		onFilterFieldChange(f, fieldId) {
+			f.field = fieldId
+			const fl = this.fields.find((x) => x.machineName === fieldId)
+			f.value = ''
+			// Multi-select values are stored as a JSON array, so match by 'contains'.
+			f.op = (fl && fl.type === 'multiselect') ? 'contains' : 'eq'
 		},
 		// ---- saved views ----
 		isColumnVisible(field) {
@@ -526,6 +561,10 @@ export default {
 			if (field.type === 'relation') {
 				const list = Array.isArray(value) ? value : [value]
 				return list.filter(Boolean).map((v) => (v && typeof v === 'object' && 'label' in v) ? v.label : String(v)).join(', ')
+			}
+			if (['number', 'currency', 'percentage'].includes(field.type) && value !== '' && !isNaN(Number(value))) {
+				const dec = field.config?.decimals ?? (field.type === 'currency' ? 2 : 0)
+				return Number(value).toLocaleString(undefined, { minimumFractionDigits: dec, maximumFractionDigits: dec })
 			}
 			if (Array.isArray(value)) return value.join(', ') // multiselect
 			if (typeof value === 'boolean') return value ? t('dataforms', 'Yes') : t('dataforms', 'No')

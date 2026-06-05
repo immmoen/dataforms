@@ -61,7 +61,7 @@ class RecordMapper extends QBMapper {
 			));
 			$qb->orderBy('sv.' . $sortField['column'], $dir)->addOrderBy('r.id', 'DESC');
 		} else {
-			$sortColumn = in_array($sort, ['created', 'updated', 'id'], true) ? $sort : 'updated';
+			$sortColumn = in_array($sort, ['created', 'updated', 'id', 'seq', 'created_by'], true) ? $sort : 'updated';
 			$qb->orderBy('r.' . $sortColumn, $dir)->addOrderBy('r.id', 'DESC');
 		}
 

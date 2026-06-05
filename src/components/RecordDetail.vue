@@ -73,6 +73,10 @@ export default {
 			return v === null || v === undefined || v === '' || (Array.isArray(v) && v.length === 0)
 		},
 		display(field, v) {
+			if (['number', 'currency', 'percentage'].includes(field.type) && v !== '' && v !== null && !isNaN(Number(v))) {
+				const dec = field.config?.decimals ?? (field.type === 'currency' ? 2 : 0)
+				return Number(v).toLocaleString(undefined, { minimumFractionDigits: dec, maximumFractionDigits: dec })
+			}
 			if (Array.isArray(v)) return v.join(', ')
 			if (typeof v === 'boolean') return v ? t('dataforms', 'Yes') : t('dataforms', 'No')
 			if (v && typeof v === 'object' && 'label' in v) return v.label
@@ -85,9 +89,10 @@ export default {
 <style scoped>
 .detail {
 	display: grid;
-	grid-template-columns: 180px 1fr;
-	gap: 0;
-	min-width: min(520px, 84vw);
+	grid-template-columns: minmax(140px, 220px) 1fr;
+	column-gap: 24px;
+	align-items: start;
+	min-width: min(560px, 84vw);
 	padding: 4px 2px;
 }
 
@@ -96,6 +101,9 @@ export default {
 	padding: 10px 0;
 	border-bottom: 1px solid var(--color-border);
 	font-size: 0.9em;
+	/* Long labels wrap within their column instead of spilling over the value. */
+	overflow-wrap: anywhere;
+	hyphens: auto;
 }
 
 .detail dd {
@@ -104,6 +112,7 @@ export default {
 	border-bottom: 1px solid var(--color-border);
 	font-weight: 500;
 	word-break: break-word;
+	min-width: 0;
 }
 
 .relation {
