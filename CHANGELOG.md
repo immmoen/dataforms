@@ -7,7 +7,23 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
-## [0.21.0] - API console & project vision
+## [0.22.0] - Fill forms in place, picker icon, workflow foundation
+
+### Added
+- **Fill a form without leaving the page.** The inserted form card now has a
+  **Fill in** button that opens the data‑entry form right over the current
+  document (Text, Talk, …) and submits it — reusing the *same* RecordForm the app
+  uses (one renderer). The form code is loaded on demand, so the widget stays
+  tiny until you click.
+- **Workflow foundation:** the app now emits typed domain events
+  (`RecordCreated/Updated/DeletedEvent`) on every record change, so a future
+  automation engine — or any third‑party app — can react. See
+  `docs/WORKFLOW.md` for the full Trigger → Action design.
+
+### Fixed
+- **The form icon was invisible (white‑on‑white) in the Smart Picker and on the
+  reference card.** Those light surfaces now use a coloured icon variant; the
+  white icon stays for the dark app header.
 
 ### Added
 - **API console** under **Settings → Administration → DataForms**: the app is

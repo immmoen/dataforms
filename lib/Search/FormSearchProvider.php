@@ -43,7 +43,7 @@ class FormSearchProvider implements IProvider {
 	}
 
 	public function search(IUser $user, ISearchQuery $query): SearchResult {
-		$icon = $this->url->getAbsoluteURL($this->url->imagePath('dataforms', 'app.svg'));
+		$icon = $this->url->getAbsoluteURL($this->url->imagePath('dataforms', 'app-color.svg'));
 		$entries = [];
 		foreach ($this->formService->searchForPicker($user->getUID(), $query->getTerm(), $query->getLimit()) as $f) {
 			$entries[] = new SearchResultEntry(

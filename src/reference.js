@@ -55,24 +55,79 @@ registerWidget('dataforms_form', (el, { richObject, accessible }) => {
 	sub.setAttribute('style', css({ color: 'var(--color-text-maxcontrast)', 'font-size': '0.85em' }))
 	text.append(title, sub)
 
-	const btn = document.createElement('a')
-	btn.textContent = t('dataforms', 'Open form')
-	btn.href = richObject.url
-	btn.target = '_blank'
-	btn.rel = 'noopener noreferrer'
-	btn.setAttribute('style', css({
-		flex: 'none',
-		'text-decoration': 'none',
+	const actions = document.createElement('span')
+	actions.setAttribute('style', css({ display: 'flex', gap: '8px', flex: 'none', 'align-items': 'center' }))
+
+	// Primary: fill the form right here, without leaving the page.
+	const fill = document.createElement('button')
+	fill.type = 'button'
+	fill.textContent = t('dataforms', 'Fill in')
+	fill.setAttribute('style', css({
+		border: 'none', cursor: 'pointer',
 		padding: '6px 14px',
 		'border-radius': 'var(--border-radius-element, 6px)',
 		background: 'var(--color-primary-element)',
 		color: 'var(--color-primary-element-text)',
 		'font-weight': '500',
 	}))
+	fill.addEventListener('click', () => openInline(richObject, fill))
 
-	card.append(icon, text, btn)
+	// Secondary: open it in the app.
+	const open = document.createElement('a')
+	open.textContent = t('dataforms', 'Open')
+	open.href = richObject.url
+	open.target = '_blank'
+	open.rel = 'noopener noreferrer'
+	open.setAttribute('style', css({
+		'text-decoration': 'none', padding: '6px 10px',
+		color: 'var(--color-primary-element)', 'font-weight': '500',
+	}))
+
+	actions.append(fill, open)
+	card.append(icon, text, actions)
 	el.append(card)
 }, () => {}, {
-	// A plain link card; no full interactive (inline-editing) mode.
 	hasInteractiveView: false,
 })
+
+/**
+ * Open the data-entry form over the current page, without navigating away. The
+ * heavy form code (RecordForm + deps) is dynamically imported, so it only loads
+ * when the user actually clicks "Fill in".
+ */
+async function openInline(richObject, triggerBtn) {
+	const prev = triggerBtn.textContent
+	triggerBtn.disabled = true
+	triggerBtn.textContent = t('dataforms', 'Loading…')
+	let saved = false
+	try {
+		const [{ createApp }, { default: InlineForm }] = await Promise.all([
+			import('vue'),
+			import('./views/InlineForm.vue'),
+		])
+		const mount = document.createElement('div')
+		document.body.appendChild(mount)
+		const app = createApp(InlineForm, {
+			registerId: Number(richObject.registerId),
+			formId: richObject.id ? Number(richObject.id) : null,
+			onSaved: () => {
+				saved = true
+				triggerBtn.textContent = '✓ ' + t('dataforms', 'Added')
+				triggerBtn.style.background = 'var(--color-success, #2d7d46)'
+			},
+			onClose: () => {
+				app.unmount()
+				mount.remove()
+				if (!saved) {
+					triggerBtn.disabled = false
+					triggerBtn.textContent = prev
+				}
+			},
+		})
+		app.mount(mount)
+	} catch (e) {
+		console.error(e)
+		triggerBtn.disabled = false
+		triggerBtn.textContent = prev
+	}
+}

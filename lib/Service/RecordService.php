@@ -17,6 +17,9 @@ use OCA\Dataforms\Db\RecordRefMapper;
 use OCA\Dataforms\Db\RecordValueMapper;
 use OCA\Dataforms\Db\Register;
 use OCA\Dataforms\Db\Share;
+use OCA\Dataforms\Event\RecordCreatedEvent;
+use OCA\Dataforms\Event\RecordDeletedEvent;
+use OCA\Dataforms\Event\RecordUpdatedEvent;
 use OCA\Dataforms\Exception\ForbiddenException;
 use OCA\Dataforms\Exception\NotFoundException;
 use OCA\Dataforms\Exception\ValidationException;
@@ -24,6 +27,7 @@ use OCA\Dataforms\Rules\ExpressionEvaluator;
 use OCA\Dataforms\Rules\RuleEvaluator;
 use OCP\AppFramework\Db\DoesNotExistException;
 use OCP\AppFramework\Utility\ITimeFactory;
+use OCP\EventDispatcher\IEventDispatcher;
 use OCP\Files\IRootFolder;
 
 /**
@@ -46,6 +50,7 @@ class RecordService {
 		private IRootFolder $rootFolder,
 		private ITimeFactory $time,
 		private HistoryMapper $historyMapper,
+		private IEventDispatcher $eventDispatcher,
 	) {
 	}
 
@@ -195,6 +200,7 @@ class RecordService {
 		$this->storeFiles($record->getId(), $fields, $values);
 		$this->storeRefs($record->getId(), $fields, $values);
 		$this->logHistory($registerId, $record->getId(), $userId, 'create', 'Created record', []);
+		$this->eventDispatcher->dispatchTyped(new RecordCreatedEvent($registerId, $record->getId(), $userId, $values));
 		$dto = $this->toDto($record, $fields, $this->valueMapper->findByRecordIds([$record->getId()])[$record->getId()] ?? []);
 		$dto = $this->resolveRelations($fields, [$dto])[0];
 		return $this->resolveFiles($fields, [$dto], $userId)[0];
@@ -224,7 +230,8 @@ class RecordService {
 		$this->storeRefs($record->getId(), $fields, $values);
 
 		$after = $this->valueSnapshot($record->getId());
-		$this->logUpdate($record->getRegisterId(), $record->getId(), $userId, $fields, $before, $after);
+		$changed = $this->logUpdate($record->getRegisterId(), $record->getId(), $userId, $fields, $before, $after);
+		$this->eventDispatcher->dispatchTyped(new RecordUpdatedEvent($record->getRegisterId(), $record->getId(), $userId, $values, $changed));
 
 		$dto = $this->toDto($record, $fields, $this->valueMapper->findByRecordIds([$record->getId()])[$record->getId()] ?? []);
 		$dto = $this->resolveRelations($fields, [$dto])[0];
@@ -247,6 +254,7 @@ class RecordService {
 		$this->recordMapper->update($record);
 		$this->refMapper->deleteForRecord($recordId); // remove this record's outgoing refs
 		$this->logHistory($record->getRegisterId(), $recordId, $userId, 'delete', 'Deleted record', []);
+		$this->eventDispatcher->dispatchTyped(new RecordDeletedEvent($record->getRegisterId(), $recordId, $userId));
 	}
 
 	/**
@@ -298,8 +306,9 @@ class RecordService {
 	 * @param Field[] $fields
 	 * @param array<int,string> $before
 	 * @param array<int,string> $after
+	 * @return string[] the changed field labels
 	 */
-	private function logUpdate(int $registerId, int $recordId, string $userId, array $fields, array $before, array $after): void {
+	private function logUpdate(int $registerId, int $recordId, string $userId, array $fields, array $before, array $after): array {
 		$changedLabels = [];
 		foreach ($fields as $field) {
 			$fid = $field->getId();
@@ -312,6 +321,7 @@ class RecordService {
 			? 'Edited record'
 			: ($n === 1 ? 'Changed ' . $changedLabels[0] : 'Changed ' . $n . ' fields');
 		$this->logHistory($registerId, $recordId, $userId, 'update', $summary, $changedLabels);
+		return $changedLabels;
 	}
 
 	/**

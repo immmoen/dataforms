@@ -44,7 +44,9 @@ class FormReferenceProvider extends ADiscoverableReferenceProvider implements IS
 	}
 
 	public function getIconUrl(): string {
-		return $this->url->getAbsoluteURL($this->url->imagePath('dataforms', 'app.svg'));
+		// Coloured variant — the picker and card sit on a light background where
+		// the white header icon would be invisible.
+		return $this->url->getAbsoluteURL($this->url->imagePath('dataforms', 'app-color.svg'));
 	}
 
 	/** @return string[] */
