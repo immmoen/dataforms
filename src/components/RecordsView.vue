@@ -9,19 +9,38 @@
 				label-visible
 				type="search"
 				@update:model-value="onSearch" />
+			<NcSelect
+				v-if="fields.length && views.length"
+				:model-value="activeView"
+				:options="viewOptions"
+				label="title"
+				:clearable="true"
+				:placeholder="t('dataforms', 'All records')"
+				class="view-select"
+				@update:model-value="onSelectView" />
 			<NcButton :type="activeFilters.length ? 'secondary' : 'tertiary'" @click="toggleFilterBar">
 				<template #icon><FilterIcon :size="20" /></template>
 				{{ activeFilters.length ? t('dataforms', 'Filter ({n})', { n: activeFilters.length }) : t('dataforms', 'Filter') }}
 			</NcButton>
-			<NcButton type="tertiary" :aria-label="t('dataforms', 'Refresh')" :title="t('dataforms', 'Refresh')" @click="load()">
-				<template #icon><RefreshIcon :size="20" /></template>
-			</NcButton>
 			<span class="spacer" />
 			<input ref="importInput" type="file" accept=".csv,text/csv" class="hidden-file" @change="onImportFile">
 
-			<!-- Secondary, less-frequent actions live behind one tidy menu. -->
+			<!-- One tidy menu for everything secondary. -->
 			<NcActions :menu-name="t('dataforms', 'More')" :force-name="false">
 				<template #icon><DotsIcon :size="20" /></template>
+				<NcActionButton close-after-click @click="load()">
+					<template #icon><RefreshIcon :size="20" /></template>
+					{{ t('dataforms', 'Refresh') }}
+				</NcActionButton>
+				<NcActionButton v-if="fields.length" close-after-click @click="openSaveView">
+					<template #icon><ContentSaveIcon :size="20" /></template>
+					{{ t('dataforms', 'Save current view…') }}
+				</NcActionButton>
+				<NcActionButton v-if="activeView && activeView.isOwner" close-after-click @click="removeActiveView">
+					<template #icon><DeleteIcon :size="20" /></template>
+					{{ t('dataforms', 'Delete this view') }}
+				</NcActionButton>
+				<NcActionSeparator />
 				<NcActionButton v-if="canWrite" :disabled="fields.length === 0 || importing" close-after-click @click="showImport = true">
 					<template #icon><UploadIcon :size="20" /></template>
 					{{ importing ? t('dataforms', 'Importing…') : t('dataforms', 'Import from CSV…') }}
@@ -30,6 +49,17 @@
 					<template #icon><DownloadIcon :size="20" /></template>
 					{{ t('dataforms', 'Export to CSV') }}
 				</NcActionButton>
+				<template v-if="fields.length">
+					<NcActionSeparator />
+					<NcActionCaption :name="t('dataforms', 'Columns')" />
+					<NcActionCheckbox
+						v-for="field in fields"
+						:key="field.id"
+						:model-value="isColumnVisible(field)"
+						@update:model-value="toggleColumn(field)">
+						{{ field.label }}
+					</NcActionCheckbox>
+				</template>
 			</NcActions>
 
 			<NcActions
@@ -51,36 +81,6 @@
 				</template>
 				{{ t('dataforms', 'New record') }}
 			</NcButton>
-		</div>
-
-		<div v-if="fields.length" class="views-bar">
-			<NcSelect
-				:model-value="activeView"
-				:options="viewOptions"
-				label="title"
-				:clearable="true"
-				:placeholder="t('dataforms', 'All records')"
-				class="view-select"
-				@update:model-value="onSelectView" />
-			<NcButton type="tertiary" @click="openSaveView">
-				<template #icon><ContentSaveIcon :size="18" /></template>
-				{{ t('dataforms', 'Save as view') }}
-			</NcButton>
-			<NcButton v-if="activeView && activeView.isOwner" type="tertiary" @click="removeActiveView">
-				<template #icon><DeleteIcon :size="18" /></template>
-				{{ t('dataforms', 'Delete view') }}
-			</NcButton>
-			<span class="spacer" />
-			<NcActions :menu-name="t('dataforms', 'Columns')" :primary="false">
-				<template #icon><TableColumnIcon :size="20" /></template>
-				<NcActionCheckbox
-					v-for="field in fields"
-					:key="field.id"
-					:model-value="isColumnVisible(field)"
-					@update:model-value="toggleColumn(field)">
-					{{ field.label }}
-				</NcActionCheckbox>
-			</NcActions>
 		</div>
 
 		<div v-if="showFilter" class="filter-bar">
@@ -316,6 +316,8 @@ import { showError, showSuccess, showWarning } from '@nextcloud/dialogs'
 import NcActions from '@nextcloud/vue/components/NcActions'
 import NcActionButton from '@nextcloud/vue/components/NcActionButton'
 import NcActionCheckbox from '@nextcloud/vue/components/NcActionCheckbox'
+import NcActionCaption from '@nextcloud/vue/components/NcActionCaption'
+import NcActionSeparator from '@nextcloud/vue/components/NcActionSeparator'
 import NcButton from '@nextcloud/vue/components/NcButton'
 import NcCheckboxRadioSwitch from '@nextcloud/vue/components/NcCheckboxRadioSwitch'
 import NcDialog from '@nextcloud/vue/components/NcDialog'
@@ -332,7 +334,6 @@ import DeleteIcon from 'vue-material-design-icons/Delete.vue'
 import DownloadIcon from 'vue-material-design-icons/Download.vue'
 import UploadIcon from 'vue-material-design-icons/Upload.vue'
 import TableIcon from 'vue-material-design-icons/Table.vue'
-import TableColumnIcon from 'vue-material-design-icons/TableColumn.vue'
 import ContentSaveIcon from 'vue-material-design-icons/ContentSave.vue'
 import EyeIcon from 'vue-material-design-icons/Eye.vue'
 import DotsIcon from 'vue-material-design-icons/DotsHorizontal.vue'
@@ -348,8 +349,8 @@ import { listForms } from '../api/forms.js'
 export default {
 	name: 'RecordsView',
 	components: {
-		NcActions, NcActionButton, NcActionCheckbox, NcButton, NcCheckboxRadioSwitch, NcDialog, NcEmptyContent, NcLoadingIcon, NcSelect, NcTextField,
-		PlusIcon, FilterIcon, CloseIcon, PencilIcon, DeleteIcon, DownloadIcon, UploadIcon, TableIcon, TableColumnIcon, ContentSaveIcon, EyeIcon, DotsIcon, RefreshIcon, RecordForm, RecordDetail,
+		NcActions, NcActionButton, NcActionCheckbox, NcActionCaption, NcActionSeparator, NcButton, NcCheckboxRadioSwitch, NcDialog, NcEmptyContent, NcLoadingIcon, NcSelect, NcTextField,
+		PlusIcon, FilterIcon, CloseIcon, PencilIcon, DeleteIcon, DownloadIcon, UploadIcon, TableIcon, ContentSaveIcon, EyeIcon, DotsIcon, RefreshIcon, RecordForm, RecordDetail,
 	},
 	props: {
 		registerId: { type: Number, required: true },
@@ -1018,20 +1019,9 @@ tbody tr:hover td.actions-col {
 	background: var(--color-primary-element-light, var(--color-background-dark));
 }
 
-.views-bar {
-	display: flex;
-	align-items: center;
-	gap: 8px;
-	margin-bottom: 12px;
-	flex-wrap: wrap;
-}
-
-.views-bar .view-select {
-	min-width: 220px;
-}
-
-.views-bar .spacer {
-	flex: 1;
+.toolbar .view-select {
+	min-width: 170px;
+	max-width: 240px;
 }
 
 .save-view-form {

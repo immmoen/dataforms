@@ -7,6 +7,15 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.18.1] - Simpler records toolbar
+
+### Changed
+- **Decluttered the records toolbar into a single row.** The separate "views"
+  row is gone; everything secondary now lives in the one **⋯ More** menu —
+  Refresh, **Save current view**, Delete view, Import/Export CSV, and the
+  **Columns** picker. The toolbar keeps only what's used most: Search, the saved-
+  view selector (shown only when views exist), Filter, and New record.
+
 ## [0.18.0] - Share with a searchable user/group picker
 
 ### Added
