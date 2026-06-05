@@ -59,14 +59,16 @@ field config, enforced server-side — still no new table, no new primitive.
 
 ## Build order
 
-1. ✅ Typed events on create/update/delete *(done)*.
-2. `automations` table + `Automation` domain + OCS CRUD.
-3. `AutomationListener` + condition reuse + an **action registry** with the first
-   action (`notify` — a Nextcloud notification; no external surface).
-4. `email` and `set_field` actions.
-5. `webhook` action (explicit, logged, rate-limited).
-6. A rule-builder-style **UI** to define automations (reusing the condition UI).
-7. Optional: stage transitions + stage-based permissions.
+1. ✅ Typed events on create/update/delete *(0.22)*.
+2. ✅ `automations` table + `Automation` domain + OCS CRUD *(0.23)*.
+3. ✅ `AutomationListener` + condition reuse + **action registry** + `notify`
+   action *(0.23)*.
+4. ✅ `email` and `set_field` actions *(0.24 / 0.25)*.
+5. ✅ `webhook` action — http(s) only, time-limited, logged, optional HMAC
+   signature *(0.25)*.
+6. ✅ Automations **builder UI** (manager-only tab, reusing the condition rows)
+   *(0.24)*.
+7. ⏳ Optional: stage transitions + stage-based permissions.
 
-Each step is independently shippable and testable (shared fixtures, like the
-rule engine).
+The planned action set (notify · email · set-field · webhook) is complete. Each
+step shipped independently and is verified via the API.
