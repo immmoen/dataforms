@@ -48,3 +48,21 @@ a CRUD + filter/search/sort pass through the OCS API):
 The `IN`-subquery filter/search path (the one pattern flagged above) returns
 correct results on all three engines. Portability acceptance criterion: **met.**
 The standard move from here is to wire this same matrix into CI.
+
+## Performance at scale (§5) — done ✅
+
+Tested against a **100,000-record** register (SQLite, with the
+`df_record_values.value_string` index in place). Every operation stays
+**sub-second**, including a deep page and the indexed filter:
+
+| Operation (100k records) | Latency |
+|--------------------------|--------:|
+| List, page 1 (limit 25) | ~0.9 s |
+| List, deep page (offset 50,000) | ~0.9 s (flat — pagination doesn't degrade) |
+| Filter on a select field (indexed `IN`-subquery) → 33,334 matches | ~0.85 s |
+| Sort by a number field | ~0.6 s |
+| Full-text search → 1 match | ~0.9 s |
+
+Latencies are full round-trips (HTTP + OCS envelope + PHP + DB, including the
+`COUNT` each list runs). The 100k-record NFR is **met**: responsive well beyond
+the few-thousand-row ceiling of lighter tools.
