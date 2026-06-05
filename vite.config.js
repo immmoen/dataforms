@@ -15,6 +15,9 @@ import { createAppConfig } from '@nextcloud/vite-config'
 export default createAppConfig(
 	{
 		main: 'src/main.js',
+		// Loaded wherever references render (Text, Talk, …) to draw the rich
+		// interactive form card. Kept separate from the SPA bundle.
+		reference: 'src/reference.js',
 	},
 	{
 		extractLicenseInformation: false,

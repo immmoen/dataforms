@@ -6,12 +6,14 @@ declare(strict_types=1);
 
 namespace OCA\Dataforms\AppInfo;
 
+use OCA\Dataforms\Listener\ReferenceListener;
 use OCA\Dataforms\Reference\FormReferenceProvider;
 use OCA\Dataforms\Search\FormSearchProvider;
 use OCP\AppFramework\App;
 use OCP\AppFramework\Bootstrap\IBootContext;
 use OCP\AppFramework\Bootstrap\IBootstrap;
 use OCP\AppFramework\Bootstrap\IRegistrationContext;
+use OCP\Collaboration\Reference\RenderReferenceEvent;
 
 /**
  * Application bootstrap. Most services are auto-wired by the DI container; here
@@ -26,9 +28,10 @@ class Application extends App implements IBootstrap {
 
 	public function register(IRegistrationContext $context): void {
 		// Smart Picker / unified search: lets a form be searched and inserted
-		// into a document, then rendered as a rich card.
+		// into a document, then rendered as a rich interactive card.
 		$context->registerSearchProvider(FormSearchProvider::class);
 		$context->registerReferenceProvider(FormReferenceProvider::class);
+		$context->registerEventListener(RenderReferenceEvent::class, ReferenceListener::class);
 	}
 
 	public function boot(IBootContext $context): void {

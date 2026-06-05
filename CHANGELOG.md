@@ -7,6 +7,21 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.20.0] - Interactive form card & icon fix
+
+### Added
+- **Inserted form references render as an interactive card** — form name, the
+  register it belongs to, and an **Open form** button — wherever references show
+  (Text, Talk, Collectives, Deck, …). A new reference-widget script
+  (`dataforms-reference`) is loaded via a `RenderReferenceEvent` listener; it
+  draws the card with plain DOM + inline styles (tiny, self-contained) and
+  respects access (shows a notice if you can't see the form).
+
+### Fixed
+- **The app icon was black in the top bar.** It mixed `currentColor` with a
+  hard-coded white shape, so Nextcloud couldn't recolour it. It's now a clean
+  single-colour glyph that themes correctly (white on the dark header).
+
 ## [0.19.0] - Insert a form anywhere via the Smart Picker
 
 ### Added
