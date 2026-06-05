@@ -14,8 +14,9 @@ class ActionRegistry {
 	/** @var array<string,IAction> */
 	private array $actions = [];
 
-	public function __construct(NotifyAction $notify) {
+	public function __construct(NotifyAction $notify, EmailAction $email) {
 		$this->register($notify);
+		$this->register($email);
 	}
 
 	private function register(IAction $action): void {

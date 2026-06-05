@@ -1,0 +1,38 @@
+/**
+ * SPDX-License-Identifier: AGPL-3.0-or-later
+ *
+ * Client for the workflow automations OCS API.
+ */
+import axios from '@nextcloud/axios'
+import { generateOcsUrl } from '@nextcloud/router'
+
+const url = (path) => generateOcsUrl('apps/dataforms/api/v1/' + path)
+const config = { timeout: 30000, headers: { 'OCS-APIRequest': 'true', Accept: 'application/json' } }
+const unwrap = (r) => r.data.ocs.data
+
+export const TRIGGERS = [
+	{ id: 'create', label: 'When a record is created' },
+	{ id: 'update', label: 'When a record is updated' },
+	{ id: 'delete', label: 'When a record is deleted' },
+]
+
+export const ACTION_TYPES = [
+	{ id: 'notify', label: 'Send a notification' },
+	{ id: 'email', label: 'Send an email' },
+]
+
+export async function listAutomations(registerId) {
+	return unwrap(await axios.get(url(`registers/${registerId}/automations`), config))
+}
+
+export async function createAutomation(registerId, data) {
+	return unwrap(await axios.post(url(`registers/${registerId}/automations`), data, config))
+}
+
+export async function updateAutomation(id, changes) {
+	return unwrap(await axios.put(url(`automations/${id}`), { changes }, config))
+}
+
+export async function deleteAutomation(id) {
+	await axios.delete(url(`automations/${id}`), config)
+}

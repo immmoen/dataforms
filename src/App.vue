@@ -160,8 +160,13 @@
 					:register-id="selected.id"
 					:can-manage="selected.canManage" />
 				<RuleBuilder
-					v-else
+					v-else-if="activeTab === 'rules'"
 					:key="'rul-' + selected.id"
+					:register-id="selected.id"
+					:can-manage="selected.canManage" />
+				<AutomationsBuilder
+					v-else
+					:key="'aut-' + selected.id"
 					:register-id="selected.id"
 					:can-manage="selected.canManage" />
 
@@ -246,6 +251,7 @@ import SchemaEditor from './components/SchemaEditor.vue'
 import RecordsView from './components/RecordsView.vue'
 import RuleBuilder from './components/RuleBuilder.vue'
 import FormBuilder from './components/FormBuilder.vue'
+import AutomationsBuilder from './components/AutomationsBuilder.vue'
 import ShareDialog from './components/ShareDialog.vue'
 import { listRegisters, createRegister, deleteRegister, favoriteRegister, REGISTER_COLORS } from './api/registers.js'
 
@@ -269,6 +275,7 @@ export default {
 		RecordsView,
 		RuleBuilder,
 		FormBuilder,
+		AutomationsBuilder,
 		ShareDialog,
 		FolderTableIcon,
 		PlusIcon,
@@ -311,6 +318,7 @@ export default {
 					{ id: 'fields', label: t('dataforms', 'Fields') },
 					{ id: 'forms', label: t('dataforms', 'Forms') },
 					{ id: 'rules', label: t('dataforms', 'Rules') },
+					{ id: 'automations', label: t('dataforms', 'Automations') },
 				)
 			}
 			return tabs

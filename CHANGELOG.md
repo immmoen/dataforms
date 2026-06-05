@@ -7,6 +7,19 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.24.0] - Automations builder UI & email action
+
+### Added
+- **Automations builder** — a new manager-only **Automations** tab on each
+  register: create/edit/enable/delete automations with a name, a trigger
+  (create / update / delete), optional conditions (the same field/operator/value
+  rows as filters and rules), an action, and recipients (searchable user picker).
+  No more API-only.
+- **Email action** — automations can now **send an email** to chosen users
+  (resolved to their Nextcloud addresses) in addition to a notification. Added as
+  a new action class in the registry — the engine itself was untouched
+  (config over code).
+
 ## [0.23.0] - Workflow automations (notify)
 
 ### Added
