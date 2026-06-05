@@ -50,6 +50,17 @@ export async function listShares(registerId) {
 }
 
 /**
+ * Typeahead search for users/groups to share with.
+ *
+ * @param {number} registerId register id
+ * @param {string} search query
+ * @return {Promise<{id:string,label:string,sub:string,type:string}[]>}
+ */
+export async function searchSharees(registerId, search) {
+	return unwrap(await axios.get(url(`registers/${registerId}/sharees`), { ...config, params: { search } }))
+}
+
+/**
  * @param {number} registerId register id
  * @param {object} data {shareType:'user'|'group', shareWith, permissions}
  * @return {Promise<object>} the created/updated share

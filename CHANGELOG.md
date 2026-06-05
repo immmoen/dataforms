@@ -7,6 +7,16 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.18.0] - Share with a searchable user/group picker
+
+### Added
+- **The Share dialog now searches users and groups as you type** — instead of
+  having to know the exact id. Matches both the id (e.g. `del_ee`) and the
+  display name (e.g. *Estonia*), shows users and groups with an avatar and a
+  hint, and you pick one and choose the role. New manager-gated
+  `GET registers/{id}/sharees` endpoint backed by Nextcloud's user/group
+  managers. This is how you share with a specific group or a chosen set of users.
+
 ## [0.17.1] - Fix the share dialog layout
 
 ### Fixed

@@ -10,14 +10,30 @@
 			</p>
 
 			<div class="add-row">
-				<NcTextField
-					v-model="newWith"
+				<NcSelect
 					class="who"
-					:label="newType === 'group' ? t('dataforms', 'Group ID') : t('dataforms', 'User ID')"
-					@keydown.enter="add" />
-				<NcSelect v-model="newType" :options="typeOptions" :reduce="(o) => o.id" label="label" :clearable="false" class="type" />
+					:model-value="selectedSharee"
+					:options="shareeOptions"
+					:loading="searching"
+					:filterable="false"
+					:clearable="true"
+					label="label"
+					:placeholder="t('dataforms', 'Search for a user or group…')"
+					@search="onShareeSearch"
+					@update:model-value="selectedSharee = $event">
+					<template #option="opt">
+						<span class="opt">
+							<span class="opt-avatar" :class="opt.type">{{ opt.label.slice(0, 2).toUpperCase() }}</span>
+							<span class="opt-label">{{ opt.label }}</span>
+							<span class="opt-tag">{{ opt.type === 'group' ? t('dataforms', 'group') : opt.sub }}</span>
+						</span>
+					</template>
+					<template #no-options>
+						{{ lastQuery.length < 1 ? t('dataforms', 'Type a name to search…') : t('dataforms', 'No matching users or groups') }}
+					</template>
+				</NcSelect>
 				<NcSelect v-model="newRole" :options="roles" :reduce="(o) => o.id" label="label" :clearable="false" class="role" />
-				<NcButton class="add-btn" type="primary" :disabled="saving || newWith.trim() === ''" @click="add">
+				<NcButton class="add-btn" type="primary" :disabled="saving || !selectedSharee" @click="add">
 					{{ t('dataforms', 'Add') }}
 				</NcButton>
 			</div>
@@ -63,15 +79,14 @@ import NcButton from '@nextcloud/vue/components/NcButton'
 import NcDialog from '@nextcloud/vue/components/NcDialog'
 import NcLoadingIcon from '@nextcloud/vue/components/NcLoadingIcon'
 import NcSelect from '@nextcloud/vue/components/NcSelect'
-import NcTextField from '@nextcloud/vue/components/NcTextField'
 
 import DeleteIcon from 'vue-material-design-icons/Delete.vue'
 
-import { listShares, addShare, updateShare, removeShare, ROLES, roleOf, permissionsOf } from '../api/shares.js'
+import { listShares, searchSharees, addShare, updateShare, removeShare, ROLES, roleOf, permissionsOf } from '../api/shares.js'
 
 export default {
 	name: 'ShareDialog',
-	components: { NcButton, NcDialog, NcLoadingIcon, NcSelect, NcTextField, DeleteIcon },
+	components: { NcButton, NcDialog, NcLoadingIcon, NcSelect, DeleteIcon },
 	props: {
 		register: { type: Object, required: true },
 	},
@@ -81,18 +96,20 @@ export default {
 			shares: [],
 			loading: true,
 			saving: false,
-			newWith: '',
-			newType: 'user',
+			selectedSharee: null,   // { id, label, sub, type } picked from search
+			shareeOptions: [],
+			searching: false,
+			searchTimer: null,
+			lastQuery: '',
 			newRole: 'read',
 			roles: ROLES,
-			typeOptions: [
-				{ id: 'user', label: t('dataforms', 'User') },
-				{ id: 'group', label: t('dataforms', 'Group') },
-			],
 		}
 	},
 	mounted() {
 		this.load()
+	},
+	beforeUnmount() {
+		clearTimeout(this.searchTimer)
 	},
 	methods: {
 		t,
@@ -108,16 +125,36 @@ export default {
 				this.loading = false
 			}
 		},
+		onShareeSearch(query) {
+			this.lastQuery = query
+			clearTimeout(this.searchTimer)
+			if (query.trim() === '') {
+				this.shareeOptions = []
+				return
+			}
+			this.searchTimer = setTimeout(async () => {
+				this.searching = true
+				try {
+					this.shareeOptions = await searchSharees(this.register.id, query.trim())
+				} catch (e) {
+					console.error(e)
+				} finally {
+					this.searching = false
+				}
+			}, 250)
+		},
 		async add() {
-			if (this.newWith.trim() === '' || this.saving) return
+			if (!this.selectedSharee || this.saving) return
 			this.saving = true
 			try {
 				await addShare(this.register.id, {
-					shareType: this.newType,
-					shareWith: this.newWith.trim(),
+					shareType: this.selectedSharee.type,
+					shareWith: this.selectedSharee.id,
 					permissions: permissionsOf(this.newRole),
 				})
-				this.newWith = ''
+				this.selectedSharee = null
+				this.shareeOptions = []
+				this.lastQuery = ''
 				await this.load()
 			} catch (e) {
 				showError(e.response?.data?.ocs?.data?.message ?? t('dataforms', 'Could not add the share'))
@@ -158,18 +195,24 @@ export default {
    (NcSelect ships a 260px min-width, so we let it shrink to its cell). */
 .add-row {
 	display: grid;
-	grid-template-columns: 130px 1fr;
+	grid-template-columns: 1fr auto;
 	grid-template-areas:
-		"type who"
+		"who who"
 		"role add";
 	gap: 8px;
 	align-items: end;
 	margin-bottom: 16px;
 }
-.add-row .type { grid-area: type; }
 .add-row .who { grid-area: who; }
 .add-row .role { grid-area: role; }
 .add-row .add-btn { grid-area: add; justify-self: end; }
+
+/* search result rows */
+.opt { display: flex; align-items: center; gap: 8px; width: 100%; }
+.opt-avatar { width: 26px; height: 26px; border-radius: 50%; display: grid; place-items: center; color: #fff; font-size: 10px; font-weight: 600; flex: none; background: var(--color-primary-element); }
+.opt-avatar.group { background: var(--color-success, #2d7d46); }
+.opt-label { font-weight: 500; }
+.opt-tag { margin-left: auto; color: var(--color-text-maxcontrast); font-size: 0.78em; }
 
 /* Allow the @nextcloud/vue selects to shrink to their container. */
 .share-dialog :deep(.v-select) { min-width: 0; }

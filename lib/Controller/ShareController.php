@@ -44,6 +44,17 @@ class ShareController extends OCSController {
 	}
 
 	#[NoAdminRequired]
+	public function sharees(int $registerId, string $search = ''): DataResponse {
+		try {
+			return new DataResponse($this->service->searchSharees($this->userId(), $registerId, $search));
+		} catch (NotFoundException $e) {
+			return new DataResponse(['message' => $e->getMessage()], Http::STATUS_NOT_FOUND);
+		} catch (ForbiddenException $e) {
+			return new DataResponse(['message' => $e->getMessage()], Http::STATUS_FORBIDDEN);
+		}
+	}
+
+	#[NoAdminRequired]
 	public function create(int $registerId, string $shareType = 'user', string $shareWith = '', int $permissions = 1): DataResponse {
 		try {
 			return new DataResponse($this->service->add($this->userId(), $registerId, $shareType, $shareWith, $permissions), Http::STATUS_CREATED);

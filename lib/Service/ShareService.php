@@ -53,6 +53,60 @@ class ShareService {
 	}
 
 	/**
+	 * Typeahead search for users and groups to share a register with. Only a
+	 * manager of the register may search (gate via findManageable). Matches both
+	 * the id (e.g. "del_ee") and the display name (e.g. "Estonia").
+	 *
+	 * @return array<int,array{id:string,label:string,sub:string,type:string}>
+	 * @throws NotFoundException
+	 * @throws \OCA\Dataforms\Exception\ForbiddenException
+	 */
+	public function searchSharees(string $userId, int $registerId, string $search): array {
+		$register = $this->registerService->findManageable($userId, $registerId);
+		$search = trim($search);
+		if ($search === '') {
+			return [];
+		}
+		$owner = $register->getOwner();
+		$out = [];
+
+		// Users — match by id and by display name, de-duplicated by uid.
+		$users = [];
+		foreach ($this->userManager->search($search, 20) as $u) {
+			$users[$u->getUID()] = $u;
+		}
+		foreach ($this->userManager->searchDisplayName($search, 20) as $u) {
+			$users[$u->getUID()] = $u;
+		}
+		foreach ($users as $u) {
+			if ($u->getUID() === $owner) {
+				continue; // the owner already has full access
+			}
+			$out[] = [
+				'id' => $u->getUID(),
+				'label' => $u->getDisplayName() ?: $u->getUID(),
+				'sub' => $u->getUID(),
+				'type' => 'user',
+			];
+			if (count($out) >= 15) {
+				break;
+			}
+		}
+
+		// Groups.
+		foreach ($this->groupManager->search($search, 15) as $g) {
+			$out[] = [
+				'id' => $g->getGID(),
+				'label' => $g->getDisplayName() ?: $g->getGID(),
+				'sub' => $g->getGID(),
+				'type' => 'group',
+			];
+		}
+
+		return $out;
+	}
+
+	/**
 	 * @throws NotFoundException
 	 * @throws \OCA\Dataforms\Exception\ForbiddenException
 	 * @throws ValidationException
