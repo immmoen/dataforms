@@ -17,7 +17,7 @@
 					@keydown.enter="add" />
 				<NcSelect v-model="newType" :options="typeOptions" :reduce="(o) => o.id" label="label" :clearable="false" class="type" />
 				<NcSelect v-model="newRole" :options="roles" :reduce="(o) => o.id" label="label" :clearable="false" class="role" />
-				<NcButton type="primary" :disabled="saving || newWith.trim() === ''" @click="add">
+				<NcButton class="add-btn" type="primary" :disabled="saving || newWith.trim() === ''" @click="add">
 					{{ t('dataforms', 'Add') }}
 				</NcButton>
 			</div>
@@ -149,20 +149,40 @@ export default {
 </script>
 
 <style scoped>
-.share-dialog { min-width: min(480px, 84vw); padding: 8px 2px; }
+.share-dialog { min-width: min(480px, 86vw); max-width: 100%; padding: 8px 2px; box-sizing: border-box; }
 .hint { color: var(--color-text-maxcontrast); font-size: 0.85em; margin: 0 0 14px; }
-.add-row { display: flex; gap: 8px; align-items: flex-end; margin-bottom: 16px; }
-.add-row .who { flex: 1; }
-.add-row .type { width: 110px; }
-.add-row .role { width: 120px; }
+
+/* Deterministic 2x2 layout so it fits any dialog width:
+     [ type ][ who          ]
+     [ role ][        Add ]
+   (NcSelect ships a 260px min-width, so we let it shrink to its cell). */
+.add-row {
+	display: grid;
+	grid-template-columns: 130px 1fr;
+	grid-template-areas:
+		"type who"
+		"role add";
+	gap: 8px;
+	align-items: end;
+	margin-bottom: 16px;
+}
+.add-row .type { grid-area: type; }
+.add-row .who { grid-area: who; }
+.add-row .role { grid-area: role; }
+.add-row .add-btn { grid-area: add; justify-self: end; }
+
+/* Allow the @nextcloud/vue selects to shrink to their container. */
+.share-dialog :deep(.v-select) { min-width: 0; }
+.share-dialog :deep(.input-field) { min-width: 0; }
+
 .centered { margin: 30px auto; }
 .share-list { display: flex; flex-direction: column; }
-.share-row { display: flex; align-items: center; gap: 10px; padding: 8px 0; border-top: 1px solid var(--color-border); }
-.avatar { width: 32px; height: 32px; border-radius: 50%; display: grid; place-items: center; color: #fff; font-size: 11px; font-weight: 600; background: var(--color-primary-element); }
+.share-row { display: flex; align-items: center; gap: 10px; padding: 8px 0; border-top: 1px solid var(--color-border); min-width: 0; }
+.avatar { width: 32px; height: 32px; border-radius: 50%; display: grid; place-items: center; color: #fff; font-size: 11px; font-weight: 600; background: var(--color-primary-element); flex: none; }
 .avatar.group { background: var(--color-success, #2d7d46); }
-.who-name { font-weight: 500; }
+.who-name { font-weight: 500; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
 .type-tag { color: var(--color-text-maxcontrast); font-size: 0.78em; margin-left: 6px; }
 .owner-tag { color: var(--color-text-maxcontrast); font-size: 0.85em; font-weight: 600; }
 .spacer { flex: 1; }
-.role-sel { width: 130px; }
+.role-sel { width: 130px; flex: none; }
 </style>

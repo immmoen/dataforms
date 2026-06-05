@@ -7,6 +7,16 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.17.1] - Fix the share dialog layout
+
+### Fixed
+- **The Share dialog overflowed and the Add button was cut off.** The
+  user/group + role selects ship a 260px min-width, which pushed the controls
+  past the dialog edge (with a stray horizontal scrollbar) so sharing was
+  effectively unusable. The add row is now a compact 2×2 grid and the selects
+  shrink to fit, so the type, who, role and **Add** controls are all visible at
+  any dialog width.
+
 ## [0.17.0] - Audit history & accessibility
 
 ### Added
