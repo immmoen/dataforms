@@ -46,6 +46,16 @@ export async function deleteRecord(id) {
 }
 
 /**
+ * Audit history for a record (most recent first).
+ *
+ * @param {number} id record id
+ * @return {Promise<{action:string,user:string,summary:string,detail:object,created:number}[]>}
+ */
+export async function listHistory(id) {
+	return unwrap(await axios.get(url(`records/${id}/history`), config))
+}
+
+/**
  * Pickable options for a relation target register.
  *
  * @param {number} registerId target register id

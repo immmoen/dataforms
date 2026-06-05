@@ -147,4 +147,15 @@ class RecordController extends OCSController {
 			return new DataResponse(['message' => $e->getMessage()], Http::STATUS_FORBIDDEN);
 		}
 	}
+
+	#[NoAdminRequired]
+	public function history(int $id): DataResponse {
+		try {
+			return new DataResponse($this->service->history($this->readUserId(), $id));
+		} catch (NotFoundException $e) {
+			return new DataResponse(['message' => $e->getMessage()], Http::STATUS_NOT_FOUND);
+		} catch (ForbiddenException $e) {
+			return new DataResponse(['message' => $e->getMessage()], Http::STATUS_FORBIDDEN);
+		}
+	}
 }

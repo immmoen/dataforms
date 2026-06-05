@@ -7,6 +7,24 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.17.0] - Audit history & accessibility
+
+### Added
+- **Record history (audit log, §4.9).** Every create, edit and delete is recorded
+  with who did it, when, and which fields changed. A collapsible **History**
+  timeline appears at the bottom of the record detail. Append-only `df_history`
+  table; history is read-gated like the record and best-effort (never blocks a
+  save). New `GET records/{id}/history` endpoint.
+
+### Changed
+- **Accessibility pass.** The records table uses proper header semantics
+  (`scope`, `aria-sort`) and the sortable headers are keyboard-operable (Tab +
+  Enter/Space) with a visible focus ring. The drag-and-drop form builder gains a
+  keyboard/click **“add to form”** button on every palette field (drag-and-drop
+  is mouse-only), and decorative icons are hidden from screen readers.
+- **i18n:** added the `l10n/` catalog directory and documented the translation
+  workflow; the UI strings are wrapped with the Nextcloud translation helpers.
+
 ## [0.16.0] - Inline editing & auto-refresh
 
 ### Added

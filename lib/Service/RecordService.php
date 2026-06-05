@@ -8,6 +8,8 @@ namespace OCA\Dataforms\Service;
 
 use OCA\Dataforms\Db\Field;
 use OCA\Dataforms\Db\FieldMapper;
+use OCA\Dataforms\Db\History;
+use OCA\Dataforms\Db\HistoryMapper;
 use OCA\Dataforms\Db\Record;
 use OCA\Dataforms\Db\RecordFileMapper;
 use OCA\Dataforms\Db\RecordMapper;
@@ -43,6 +45,7 @@ class RecordService {
 		private FieldValidator $fieldValidator,
 		private IRootFolder $rootFolder,
 		private ITimeFactory $time,
+		private HistoryMapper $historyMapper,
 	) {
 	}
 
@@ -191,6 +194,7 @@ class RecordService {
 		$this->storeValues($record->getId(), $fields, $values);
 		$this->storeFiles($record->getId(), $fields, $values);
 		$this->storeRefs($record->getId(), $fields, $values);
+		$this->logHistory($registerId, $record->getId(), $userId, 'create', 'Created record', []);
 		$dto = $this->toDto($record, $fields, $this->valueMapper->findByRecordIds([$record->getId()])[$record->getId()] ?? []);
 		$dto = $this->resolveRelations($fields, [$dto])[0];
 		return $this->resolveFiles($fields, [$dto], $userId)[0];
@@ -209,6 +213,8 @@ class RecordService {
 		$fields = $this->fieldMapper->findByRegister($record->getRegisterId());
 		$values = $this->validateAndCompute($record->getRegisterId(), $fields, $values, $record->getId());
 
+		$before = $this->valueSnapshot($record->getId());
+
 		$record->setUpdated($this->time->getTime());
 		$this->recordMapper->update($record);
 
@@ -216,6 +222,10 @@ class RecordService {
 		$this->storeValues($record->getId(), $fields, $values);
 		$this->storeFiles($record->getId(), $fields, $values);
 		$this->storeRefs($record->getId(), $fields, $values);
+
+		$after = $this->valueSnapshot($record->getId());
+		$this->logUpdate($record->getRegisterId(), $record->getId(), $userId, $fields, $before, $after);
+
 		$dto = $this->toDto($record, $fields, $this->valueMapper->findByRecordIds([$record->getId()])[$record->getId()] ?? []);
 		$dto = $this->resolveRelations($fields, [$dto])[0];
 		return $this->resolveFiles($fields, [$dto], $userId)[0];
@@ -236,6 +246,91 @@ class RecordService {
 		$record->setDeletedAt($now);
 		$this->recordMapper->update($record);
 		$this->refMapper->deleteForRecord($recordId); // remove this record's outgoing refs
+		$this->logHistory($record->getRegisterId(), $recordId, $userId, 'delete', 'Deleted record', []);
+	}
+
+	/**
+	 * Audit history for a record (most recent first), each entry decorated with
+	 * the actor and a human-readable summary.
+	 *
+	 * @return array<int,array<string,mixed>>
+	 * @throws NotFoundException
+	 */
+	public function history(string $userId, int $recordId): array {
+		$record = $this->findReadable($userId, $recordId); // read gate
+		$out = [];
+		foreach ($this->historyMapper->findByRecord($record->getId()) as $h) {
+			$out[] = [
+				'id' => $h->getId(),
+				'action' => $h->getAction(),
+				'user' => $h->getUserId(),
+				'summary' => $h->getSummary(),
+				'detail' => $h->getDetail() ? (json_decode($h->getDetail(), true) ?: null) : null,
+				'created' => $h->getCreated(),
+			];
+		}
+		return $out;
+	}
+
+	// ---- history helpers -------------------------------------------------
+
+	/**
+	 * Snapshot of a record's stored scalar values keyed by field id, used to
+	 * diff an update. (Relation/file changes are summarised generically.)
+	 *
+	 * @return array<int,string>
+	 */
+	private function valueSnapshot(int $recordId): array {
+		$rows = $this->valueMapper->findByRecordIds([$recordId])[$recordId] ?? [];
+		$snap = [];
+		foreach ($rows as $row) {
+			$snap[(int)$row['field_id']] = implode('|', [
+				$row['value_string'] ?? '',
+				$row['value_number'] ?? '',
+				$row['value_datetime'] ?? '',
+				$row['value_bool'] ?? '',
+			]);
+		}
+		return $snap;
+	}
+
+	/**
+	 * @param Field[] $fields
+	 * @param array<int,string> $before
+	 * @param array<int,string> $after
+	 */
+	private function logUpdate(int $registerId, int $recordId, string $userId, array $fields, array $before, array $after): void {
+		$changedLabels = [];
+		foreach ($fields as $field) {
+			$fid = $field->getId();
+			if (($before[$fid] ?? '') !== ($after[$fid] ?? '')) {
+				$changedLabels[] = $field->getLabel();
+			}
+		}
+		$n = count($changedLabels);
+		$summary = $n === 0
+			? 'Edited record'
+			: ($n === 1 ? 'Changed ' . $changedLabels[0] : 'Changed ' . $n . ' fields');
+		$this->logHistory($registerId, $recordId, $userId, 'update', $summary, $changedLabels);
+	}
+
+	/**
+	 * @param string[] $changedFields
+	 */
+	private function logHistory(int $registerId, int $recordId, string $userId, string $action, string $summary, array $changedFields): void {
+		try {
+			$h = new History();
+			$h->setRegisterId($registerId);
+			$h->setRecordId($recordId);
+			$h->setUserId($userId);
+			$h->setAction($action);
+			$h->setSummary($summary);
+			$h->setDetail($changedFields === [] ? null : json_encode(['fields' => $changedFields], JSON_THROW_ON_ERROR));
+			$h->setCreated($this->time->getTime());
+			$this->historyMapper->insert($h);
+		} catch (\Throwable $e) {
+			// History is best-effort; never block the primary action on it.
+		}
 	}
 
 	/**

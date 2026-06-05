@@ -38,6 +38,7 @@ return [
 		['name' => 'record#show', 'url' => '/api/v1/records/{id}', 'verb' => 'GET', 'requirements' => ['id' => '\d+']],
 		['name' => 'record#update', 'url' => '/api/v1/records/{id}', 'verb' => 'PUT', 'requirements' => ['id' => '\d+']],
 		['name' => 'record#destroy', 'url' => '/api/v1/records/{id}', 'verb' => 'DELETE', 'requirements' => ['id' => '\d+']],
+		['name' => 'record#history', 'url' => '/api/v1/records/{id}/history', 'verb' => 'GET', 'requirements' => ['id' => '\d+']],
 
 		// Rules (conditional logic)
 		['name' => 'rule#index', 'url' => '/api/v1/registers/{registerId}/rules', 'verb' => 'GET', 'requirements' => ['registerId' => '\d+']],

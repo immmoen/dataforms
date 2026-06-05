@@ -112,9 +112,17 @@
 							draggable="true"
 							@dragstart="startDrag({ from: 'palette', machineName: f.machineName })"
 							@dragend="endDrag">
-							<DragIcon :size="16" class="grip" />
+							<DragIcon :size="16" class="grip" aria-hidden="true" />
 							<span class="chip-label">{{ f.label }}</span>
 							<span class="chip-type">{{ typeLabel(f.type) }}</span>
+							<button
+								type="button"
+								class="chip-add"
+								:aria-label="t('dataforms', 'Add {field} to the form', { field: f.label })"
+								:title="t('dataforms', 'Add to the form')"
+								@click="addToForm(f.machineName)">
+								<PlusIcon :size="16" />
+							</button>
 						</li>
 						<li v-if="palette.length === 0" class="palette-empty">
 							{{ paletteSearch ? t('dataforms', 'No matching fields') : t('dataforms', 'All fields are placed.') }}
@@ -386,6 +394,16 @@ export default {
 				this.draft.sections[si].fields.splice(i, 1)
 			}
 		},
+		// Keyboard/click alternative to dragging: append the field to the last
+		// section (drag-and-drop is mouse-only, so this keeps the builder usable
+		// without a pointer).
+		addToForm(machineName) {
+			if (this.draft.sections.length === 0) {
+				this.addSection()
+			}
+			this.detach(machineName)
+			this.draft.sections[this.draft.sections.length - 1].fields.push(machineName)
+		},
 		// ---- sections -----------------------------------------------------
 		addSection() {
 			this.draft.sections.push({ title: '', fields: [] })
@@ -527,6 +545,14 @@ export default {
 .chip-label { font-weight: 500; font-size: 0.9em; }
 .chip-type { margin-left: auto; color: var(--color-text-maxcontrast); font-size: 0.72em; text-transform: uppercase; letter-spacing: 0.02em; }
 .grip { color: var(--color-text-maxcontrast); flex: none; }
+.chip-add {
+	display: inline-flex; align-items: center; justify-content: center; flex: none;
+	width: 24px; height: 24px; border: none; border-radius: 50%; cursor: pointer;
+	background: var(--color-primary-element-light, var(--color-background-dark));
+	color: var(--color-primary-element); padding: 0;
+}
+.chip-add:hover { background: var(--color-primary-element); color: var(--color-primary-element-text, #fff); }
+.chip-add:focus-visible { outline: 2px solid var(--color-primary-element); outline-offset: 1px; }
 
 .canvas { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
 .section {

@@ -25,6 +25,30 @@
 				</dd>
 			</template>
 		</dl>
+
+		<!-- Audit history -->
+		<div class="history">
+			<button type="button" class="history-toggle" :aria-expanded="showHistory" @click="toggleHistory">
+				<HistoryIcon :size="18" />
+				{{ t('dataforms', 'History') }}
+				<span class="chev" :class="{ open: showHistory }">▸</span>
+			</button>
+			<div v-if="showHistory" class="history-body">
+				<NcLoadingIcon v-if="historyLoading" :size="22" />
+				<p v-else-if="history.length === 0" class="empty">{{ t('dataforms', 'No history recorded.') }}</p>
+				<ul v-else class="timeline">
+					<li v-for="h in history" :key="h.id" class="event">
+						<span class="dot" :class="'dot-' + h.action" />
+						<div class="event-main">
+							<div class="event-summary">{{ h.summary }}</div>
+							<div v-if="h.detail && h.detail.fields" class="event-detail">{{ h.detail.fields.join(', ') }}</div>
+							<div class="event-meta">{{ h.user }} · {{ formatTime(h.created) }}</div>
+						</div>
+					</li>
+				</ul>
+			</div>
+		</div>
+
 		<template #actions>
 			<NcButton @click="$emit('close')">{{ t('dataforms', 'Close') }}</NcButton>
 			<NcButton v-if="canEdit" type="primary" @click="$emit('edit', record)">
@@ -39,17 +63,44 @@ import { translate as t } from '@nextcloud/l10n'
 import { generateUrl } from '@nextcloud/router'
 import NcButton from '@nextcloud/vue/components/NcButton'
 import NcDialog from '@nextcloud/vue/components/NcDialog'
+import NcLoadingIcon from '@nextcloud/vue/components/NcLoadingIcon'
+import HistoryIcon from 'vue-material-design-icons/History.vue'
+import { listHistory } from '../api/records.js'
 
 export default {
 	name: 'RecordDetail',
-	components: { NcButton, NcDialog },
+	components: { NcButton, NcDialog, NcLoadingIcon, HistoryIcon },
 	props: {
 		fields: { type: Array, required: true },
 		record: { type: Object, required: true },
 		canEdit: { type: Boolean, default: false },
 	},
 	emits: ['close', 'edit'],
+	data() {
+		return { showHistory: false, history: [], historyLoading: false }
+	},
 	methods: {
+		async toggleHistory() {
+			this.showHistory = !this.showHistory
+			if (this.showHistory && this.history.length === 0) {
+				this.historyLoading = true
+				try {
+					this.history = await listHistory(this.record.id)
+				} catch (e) {
+					console.error(e)
+				} finally {
+					this.historyLoading = false
+				}
+			}
+		},
+		formatTime(ts) {
+			if (!ts) return ''
+			try {
+				return new Date(ts * 1000).toLocaleString()
+			} catch (e) {
+				return ''
+			}
+		},
 		t,
 		value(field) {
 			return this.record.values[field.machineName]
@@ -130,5 +181,79 @@ export default {
 	display: flex;
 	flex-direction: column;
 	gap: 2px;
+}
+
+.history {
+	margin-top: 14px;
+	border-top: 1px solid var(--color-border);
+	padding-top: 8px;
+}
+
+.history-toggle {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	background: none;
+	border: none;
+	cursor: pointer;
+	color: var(--color-main-text);
+	font-weight: 600;
+	font-size: 0.92em;
+	padding: 4px 2px;
+}
+
+.history-toggle .chev {
+	transition: transform 0.12s ease;
+	color: var(--color-text-maxcontrast);
+}
+
+.history-toggle .chev.open {
+	transform: rotate(90deg);
+}
+
+.history-body {
+	padding: 6px 2px 2px;
+}
+
+.timeline {
+	display: flex;
+	flex-direction: column;
+	gap: 10px;
+	margin: 4px 0 0;
+}
+
+.event {
+	display: flex;
+	gap: 10px;
+	align-items: flex-start;
+}
+
+.dot {
+	width: 10px;
+	height: 10px;
+	border-radius: 50%;
+	margin-top: 4px;
+	flex: none;
+	background: var(--color-primary-element);
+}
+
+.dot-create { background: var(--color-success, #4f7355); }
+.dot-update { background: var(--color-primary-element); }
+.dot-delete { background: var(--color-error, #9d3a3a); }
+
+.event-summary {
+	font-weight: 500;
+	font-size: 0.9em;
+}
+
+.event-detail {
+	color: var(--color-text-maxcontrast);
+	font-size: 0.84em;
+}
+
+.event-meta {
+	color: var(--color-text-maxcontrast);
+	font-size: 0.8em;
+	margin-top: 1px;
 }
 </style>

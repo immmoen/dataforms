@@ -137,14 +137,26 @@
 
 		<template v-else>
 			<div class="table-wrap">
-				<table>
+				<table :aria-label="t('dataforms', 'Records')">
 					<thead>
 						<tr>
-							<th v-for="field in columns" :key="field.id" class="sortable" @click="toggleSort(field)">
+							<th
+								v-for="field in columns"
+								:key="field.id"
+								scope="col"
+								class="sortable"
+								role="button"
+								tabindex="0"
+								:aria-sort="ariaSort(field)"
+								@click="toggleSort(field)"
+								@keydown.enter.prevent="toggleSort(field)"
+								@keydown.space.prevent="toggleSort(field)">
 								{{ field.label }}
-								<span v-if="sort === field.machineName" class="sort-ind">{{ direction === 'ASC' ? '▲' : '▼' }}</span>
+								<span v-if="sort === field.machineName" class="sort-ind" aria-hidden="true">{{ direction === 'ASC' ? '▲' : '▼' }}</span>
 							</th>
-							<th class="actions-col" />
+							<th scope="col" class="actions-col">
+								<span class="visually-hidden">{{ t('dataforms', 'Actions') }}</span>
+							</th>
 						</tr>
 					</thead>
 					<tbody>
@@ -610,6 +622,12 @@ export default {
 			this.page = 0
 			this.load()
 		},
+		ariaSort(field) {
+			if (this.sort !== field.machineName) {
+				return 'none'
+			}
+			return this.direction === 'ASC' ? 'ascending' : 'descending'
+		},
 		async reload() {
 			this.rules = await listRules(this.registerId).catch(() => [])
 			this.forms = await listForms(this.registerId).catch(() => [])
@@ -871,6 +889,23 @@ export default {
 
 .hidden-file {
 	display: none;
+}
+
+.visually-hidden {
+	position: absolute;
+	width: 1px;
+	height: 1px;
+	padding: 0;
+	margin: -1px;
+	overflow: hidden;
+	clip: rect(0, 0, 0, 0);
+	white-space: nowrap;
+	border: 0;
+}
+
+th.sortable:focus-visible {
+	outline: 2px solid var(--color-primary-element);
+	outline-offset: -2px;
 }
 
 .spacer {
