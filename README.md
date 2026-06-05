@@ -9,6 +9,9 @@ collections), the **forms** that feed them — with conditional logic — and th
 a processing-activities register, a breach log, a risk register, an asset
 inventory, and so on.
 
+> 📘 **End‑user guides** (all roles, including admins): **[docs/guides/](docs/guides/README.md)**.
+> Project vision & principles: [VISION.md](VISION.md).
+
 > **Status: MVP (Phases 0–3 mostly complete).** Registers, an 18-type field
 > schema editor, records with live conditional rules, a table view with search/
 > filter/sort/pagination, CSV import & export, register sharing (read/write/
