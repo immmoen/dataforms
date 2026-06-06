@@ -6,6 +6,10 @@ declare(strict_types=1);
 
 namespace OCA\Dataforms\Event;
 
-/** Dispatched after a record is created. */
+/**
+ * Dispatched after a record is created.
+ *
+ * @psalm-immutable
+ */
 class RecordCreatedEvent extends ARecordEvent {
 }

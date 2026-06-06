@@ -6,6 +6,10 @@ declare(strict_types=1);
 
 namespace OCA\Dataforms\Event;
 
-/** Dispatched after a record is updated (carries the changed field labels). */
+/**
+ * Dispatched after a record is updated (carries the changed field labels).
+ *
+ * @psalm-immutable
+ */
 class RecordUpdatedEvent extends ARecordEvent {
 }

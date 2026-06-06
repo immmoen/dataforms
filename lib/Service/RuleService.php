@@ -68,7 +68,7 @@ class RuleService {
 		$rule->setTarget((string)$data['target']);
 		$rule->setDefinition($this->encodeDefinition($data));
 		$rule->setPosition((int)($data['position'] ?? 0));
-		$rule->setEnabled($data['enabled'] ?? true ? true : false);
+		$rule->setEnabled((bool)($data['enabled'] ?? true));
 		return $this->mapper->insert($rule);
 	}
 

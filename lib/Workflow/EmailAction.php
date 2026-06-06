@@ -36,8 +36,11 @@ class EmailAction implements IAction {
 		$recipients = [];
 		foreach ((array)($context->config['users'] ?? []) as $uid) {
 			$user = $this->userManager->get((string)$uid);
-			$email = $user?->getEMailAddress();
-			if ($email) {
+			if ($user === null) {
+				continue;
+			}
+			$email = $user->getEMailAddress();
+			if ($email !== null && $email !== '') {
 				$recipients[$email] = $user->getDisplayName();
 			}
 		}

@@ -112,10 +112,6 @@ class RecordMapper extends QBMapper {
 		return $count;
 	}
 
-	/**
-	 * Highest per-register sequence number assigned so far (0 if none). Counts
-	 * deleted records too, so numbers are never reused after a deletion.
-	 */
 	/** Hard-delete every record row of a register, soft-deleted ones included (purge). */
 	public function deleteByRegister(int $registerId): void {
 		$qb = $this->db->getQueryBuilder();
@@ -124,6 +120,10 @@ class RecordMapper extends QBMapper {
 		$qb->executeStatement();
 	}
 
+	/**
+	 * Highest per-register sequence number assigned so far (0 if none). Counts
+	 * deleted records too, so numbers are never reused after a deletion.
+	 */
 	public function maxSeqForRegister(int $registerId): int {
 		$qb = $this->db->getQueryBuilder();
 		$qb->select($qb->func()->max('seq'))
@@ -193,12 +193,19 @@ class RecordMapper extends QBMapper {
 				case 'contains':
 					$sub->andWhere($sub->expr()->iLike($col, $qb->createNamedParameter('%' . $this->db->escapeLikeParameter((string)$f['value']) . '%')));
 					break;
-				case 'gt': $sub->andWhere($col . ' > ' . $qb->createNamedParameter($f['value'])); break;
-				case 'lt': $sub->andWhere($col . ' < ' . $qb->createNamedParameter($f['value'])); break;
-				case 'gte': $sub->andWhere($col . ' >= ' . $qb->createNamedParameter($f['value'])); break;
-				case 'lte': $sub->andWhere($col . ' <= ' . $qb->createNamedParameter($f['value'])); break;
-				case 'isNotEmpty': $sub->andWhere($sub->expr()->isNotNull($col)); break;
-				case 'isEmpty': $sub->andWhere($sub->expr()->isNotNull($col)); $negate = true; break;
+				case 'gt': $sub->andWhere($col . ' > ' . $qb->createNamedParameter($f['value']));
+					break;
+				case 'lt': $sub->andWhere($col . ' < ' . $qb->createNamedParameter($f['value']));
+					break;
+				case 'gte': $sub->andWhere($col . ' >= ' . $qb->createNamedParameter($f['value']));
+					break;
+				case 'lte': $sub->andWhere($col . ' <= ' . $qb->createNamedParameter($f['value']));
+					break;
+				case 'isNotEmpty': $sub->andWhere($sub->expr()->isNotNull($col));
+					break;
+				case 'isEmpty': $sub->andWhere($sub->expr()->isNotNull($col));
+					$negate = true;
+					break;
 				default: continue 2;
 			}
 			$qb->andWhere('r.id ' . ($negate ? 'NOT ' : '') . 'IN (' . $sub->getSQL() . ')');

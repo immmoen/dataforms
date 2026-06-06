@@ -44,7 +44,7 @@ class AutomationController extends OCSController {
 	}
 
 	#[NoAdminRequired]
-	public function create(int $registerId, string $name = '', string $trigger = '', string $actionType = '', $condition = null, $actionConfig = [], bool $enabled = true): DataResponse {
+	public function create(int $registerId, string $name = '', string $trigger = '', string $actionType = '', mixed $condition = null, mixed $actionConfig = [], bool $enabled = true): DataResponse {
 		try {
 			return new DataResponse($this->service->create($this->userId(), $registerId, [
 				'name' => $name, 'trigger' => $trigger, 'actionType' => $actionType,

@@ -47,6 +47,7 @@ class RegisterService {
 	 * @return int[] register ids the user has favourited
 	 */
 	private function favorites(string $userId): array {
+		/** @psalm-suppress DeprecatedMethod — IUserConfig replacement requires a newer Nextcloud; kept for the declared NC 30+ support range */
 		$raw = $this->config->getUserValue($userId, 'dataforms', 'favorites', '[]');
 		$decoded = json_decode($raw, true);
 		return is_array($decoded) ? array_map('intval', $decoded) : [];
@@ -64,6 +65,7 @@ class RegisterService {
 		if ($favorite) {
 			$favs[] = $id;
 		}
+		/** @psalm-suppress DeprecatedMethod — see favorites(); kept for NC 30+ compatibility */
 		$this->config->setUserValue($userId, 'dataforms', 'favorites', json_encode($favs));
 		return $this->decorate($register, $userId, $this->groupIdsOf($userId));
 	}

@@ -11,6 +11,7 @@ use OCP\AppFramework\Controller;
 use OCP\AppFramework\Http;
 use OCP\AppFramework\Http\Attribute\NoAdminRequired;
 use OCP\AppFramework\Http\JSONResponse;
+use OCP\Files\Folder;
 use OCP\Files\IRootFolder;
 use OCP\Files\NotPermittedException;
 use OCP\IRequest;
@@ -40,7 +41,7 @@ class UploadController extends Controller {
 			return new JSONResponse(['message' => 'Not logged in'], Http::STATUS_UNAUTHORIZED);
 		}
 		$file = $this->request->getUploadedFile('file');
-		if ($file === null || ($file['error'] ?? 1) !== UPLOAD_ERR_OK) {
+		if (empty($file) || ($file['error'] ?? 1) !== UPLOAD_ERR_OK) {
 			return new JSONResponse(['message' => 'No file uploaded'], Http::STATUS_BAD_REQUEST);
 		}
 
@@ -49,6 +50,9 @@ class UploadController extends Controller {
 			$folder = $userFolder->nodeExists(self::FOLDER)
 				? $userFolder->get(self::FOLDER)
 				: $userFolder->newFolder(self::FOLDER);
+			if (!$folder instanceof Folder) {
+				return new JSONResponse(['message' => 'Upload location is not a folder'], Http::STATUS_INTERNAL_SERVER_ERROR);
+			}
 
 			$name = $folder->getNonExistingName(basename((string)$file['name']));
 			$node = $folder->newFile($name, file_get_contents($file['tmp_name']));

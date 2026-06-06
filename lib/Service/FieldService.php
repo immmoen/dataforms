@@ -55,7 +55,7 @@ class FieldService {
 	}
 
 	/**
-	 * @param array{label?:string,type?:string,machineName?:string,config?:mixed,mandatory?:bool,unique?:bool,default?:string} $data
+	 * @param array{label?:string,type?:string,machineName?:string,config?:mixed,mandatory?:bool,unique?:bool,default?:string|null} $data
 	 * @throws NotFoundException
 	 * @throws \OCA\Dataforms\Exception\ForbiddenException
 	 * @throws ValidationException

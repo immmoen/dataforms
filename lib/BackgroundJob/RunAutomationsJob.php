@@ -63,14 +63,16 @@ class RunAutomationsJob extends QueuedJob {
 				if ($action === null || !$action->isDeferred()) {
 					continue; // inline actions already ran in the listener
 				}
-				$condition = $automation->getCondition()
-					? (json_decode($automation->getCondition(), true) ?: null)
+				$conditionJson = $automation->getCondition();
+				$condition = ($conditionJson !== null && $conditionJson !== '')
+					? (json_decode($conditionJson, true) ?: null)
 					: null;
 				if (!$this->evaluator->matches($condition, $values)) {
 					continue;
 				}
-				$config = $automation->getActionConfig()
-					? (json_decode($automation->getActionConfig(), true) ?: [])
+				$configJson = $automation->getActionConfig();
+				$config = ($configJson !== null && $configJson !== '')
+					? (json_decode($configJson, true) ?: [])
 					: [];
 				$action->run(new ActionContext(
 					$registerId,

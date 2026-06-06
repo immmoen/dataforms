@@ -91,9 +91,10 @@ class AutomationService {
 			$a->setEnabled((bool)$changes['enabled']);
 		}
 		// Re-validate the (possibly newly combined) action type + config.
+		$cfgJson = $a->getActionConfig();
 		$this->validateActionConfig(
 			$a->getActionType(),
-			$a->getActionConfig() ? (json_decode((string)$a->getActionConfig(), true) ?: []) : []
+			($cfgJson !== null && $cfgJson !== '') ? (json_decode($cfgJson, true) ?: []) : []
 		);
 		$a->setUpdated($this->time->getTime());
 		return $this->mapper->update($a)->jsonSerialize();

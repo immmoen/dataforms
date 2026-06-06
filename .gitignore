@@ -8,4 +8,6 @@
 build_out.log
 .php-cs-fixer.cache
 .psalm-cache/
+.phpunit.result.cache
+tests/.phpunit.result.cache
 .DS_Store

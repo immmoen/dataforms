@@ -361,12 +361,14 @@ class RecordService {
 		$record = $this->findReadable($userId, $recordId); // read gate
 		$out = [];
 		foreach ($this->historyMapper->findByRecord($record->getId()) as $h) {
+			$detailJson = $h->getDetail();
+			$detail = ($detailJson !== null && $detailJson !== '') ? (json_decode($detailJson, true) ?: null) : null;
 			$out[] = [
 				'id' => $h->getId(),
 				'action' => $h->getAction(),
 				'user' => $h->getUserId(),
 				'summary' => $h->getSummary(),
-				'detail' => $h->getDetail() ? (json_decode($h->getDetail(), true) ?: null) : null,
+				'detail' => $detail,
 				'created' => $h->getCreated(),
 			];
 		}
@@ -744,7 +746,7 @@ class RecordService {
 		if (count($relationFields) === 0) {
 			return $dtos;
 		}
-		$recordIds = array_map(static fn ($d) => $d['id'], $dtos);
+		$recordIds = array_map(static fn (array $d): int => (int)$d['id'], $dtos);
 		$refsByRecord = $this->refMapper->findByRecordIds($recordIds);
 
 		// Collect target ids per relation field to batch-resolve labels.
@@ -800,7 +802,7 @@ class RecordService {
 		if (count($fileFields) === 0) {
 			return $dtos;
 		}
-		$recordIds = array_map(static fn ($d) => $d['id'], $dtos);
+		$recordIds = array_map(static fn (array $d): int => (int)$d['id'], $dtos);
 		$filesByRecord = $this->fileMapper->findByRecordIds($recordIds);
 		$userFolder = $this->rootFolder->getUserFolder($userId);
 		$nameCache = [];

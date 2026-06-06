@@ -56,10 +56,23 @@ class Automation extends Entity {
 			'registerId' => $this->getRegisterId(),
 			'name' => $this->getName(),
 			'trigger' => $this->getTrigger(),
-			'condition' => $this->getCondition() ? (json_decode($this->getCondition(), true) ?: null) : null,
+			'condition' => $this->decodeJson($this->getCondition(), null),
 			'actionType' => $this->getActionType(),
-			'actionConfig' => $this->getActionConfig() ? (json_decode($this->getActionConfig(), true) ?: []) : [],
+			'actionConfig' => $this->decodeJson($this->getActionConfig(), []),
 			'enabled' => $this->getEnabled(),
 		];
+	}
+
+	/**
+	 * Decode a stored JSON column, returning $fallback for null/empty/invalid.
+	 *
+	 * @param mixed $fallback
+	 * @return mixed
+	 */
+	private function decodeJson(?string $json, $fallback) {
+		if ($json === null || $json === '') {
+			return $fallback;
+		}
+		return json_decode($json, true) ?: $fallback;
 	}
 }

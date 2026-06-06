@@ -18,14 +18,38 @@
 	<extraFiles>
 		<directory name="vendor" />
 	</extraFiles>
-	<stubs>
-		<file name="vendor/nextcloud/ocp/stubs/oc_files.php" preloadClasses="true" />
-	</stubs>
 	<issueHandlers>
 		<UndefinedClass>
 			<errorLevel type="suppress">
 				<referencedClass name="OC" />
 			</errorLevel>
 		</UndefinedClass>
+		<!--
+			Framework/stub noise, not app bugs:
+			- The migration types (OCP\DB\ISchemaWrapper etc.) document their
+			  parameters as Doctrine\DBAL\Schema\* in docblocks, but Doctrine DBAL
+			  is not installed for static analysis (it's an internal NC dependency).
+			- The OCP stubs reference legacy OC\… internals (e.g. oc\hooks\emitter)
+			  that the analysis-only nextcloud/ocp package does not ship.
+			- Nextcloud Entity properties are populated by QBMapper hydration via
+			  __call, not in the constructor — the standard NC Entity pattern.
+		-->
+		<UndefinedDocblockClass>
+			<errorLevel type="suppress">
+				<referencedClass name="Doctrine\DBAL\Schema\Table" />
+				<referencedClass name="Doctrine\DBAL\Schema\Schema" />
+			</errorLevel>
+		</UndefinedDocblockClass>
+		<MissingDependency errorLevel="suppress" />
+		<PropertyNotSetInConstructor errorLevel="suppress" />
+		<!--
+			Defensive (string)/(int)/(bool) casts on values that arrive as `mixed`
+			from JSON / request input are intentional, even where an optimistic
+			docblock says the type is already narrowed. Keeping them hardens the
+			service layer against malformed input, so the "redundant cast" family
+			is not treated as an error here.
+		-->
+		<RedundantCastGivenDocblockType errorLevel="suppress" />
+		<RedundantCast errorLevel="suppress" />
 	</issueHandlers>
 </psalm>

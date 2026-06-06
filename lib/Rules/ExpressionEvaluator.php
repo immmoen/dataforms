@@ -109,7 +109,7 @@ class ExpressionEvaluator {
 				$i += 2;
 				continue;
 			}
-			if (strpos('+-*/%()<>,', $c) !== false) {
+			if (in_array($c, ['+', '-', '*', '/', '%', '(', ')', '<', '>', ','], true)) {
 				$tokens[] = ['type' => 'op', 'value' => $c];
 				$i++;
 				continue;
@@ -349,6 +349,8 @@ class ExpressionEvaluator {
 			return $v ? 'true' : 'false';
 		}
 		if (is_float($v) && $v == (int)$v) {
+			// A whole float (e.g. 3.0) renders without the decimal part.
+			/** @psalm-suppress InvalidCast — $v is a finite whole float here */
 			return (string)(int)$v;
 		}
 		return (string)($v ?? '');

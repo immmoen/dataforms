@@ -72,6 +72,7 @@ class ShareService {
 
 		// Users — match by id and by display name, de-duplicated by uid.
 		$users = [];
+		/** @psalm-suppress DeprecatedMethod — broad user search kept for the declared NC 30+ support range */
 		foreach ($this->userManager->search($search, 20) as $u) {
 			$users[$u->getUID()] = $u;
 		}

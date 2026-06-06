@@ -6,6 +6,10 @@ declare(strict_types=1);
 
 namespace OCA\Dataforms\Event;
 
-/** Dispatched after a record is (soft-)deleted. */
+/**
+ * Dispatched after a record is (soft-)deleted.
+ *
+ * @psalm-immutable
+ */
 class RecordDeletedEvent extends ARecordEvent {
 }
