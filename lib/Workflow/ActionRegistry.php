@@ -14,11 +14,12 @@ class ActionRegistry {
 	/** @var array<string,IAction> */
 	private array $actions = [];
 
-	public function __construct(NotifyAction $notify, EmailAction $email, SetFieldAction $setField, WebhookAction $webhook) {
+	public function __construct(NotifyAction $notify, EmailAction $email, SetFieldAction $setField, WebhookAction $webhook, ProvisionFoldersAction $provisionFolders) {
 		$this->register($notify);
 		$this->register($email);
 		$this->register($setField);
 		$this->register($webhook);
+		$this->register($provisionFolders);
 	}
 
 	private function register(IAction $action): void {

@@ -21,6 +21,9 @@ use OCP\AppFramework\Utility\ITimeFactory;
 class AutomationService {
 	public const TRIGGERS = ['create', 'update', 'delete'];
 
+	/** Upper bound on folder templates in a provision_folders action. */
+	private const MAX_PROVISION_FOLDERS = 50;
+
 	public function __construct(
 		private AutomationMapper $mapper,
 		private RegisterService $registerService,
@@ -155,13 +158,32 @@ class AutomationService {
 	 * @throws ValidationException
 	 */
 	private function validateActionConfig(string $actionType, mixed $config): void {
-		if ($actionType !== 'webhook') {
-			return;
-		}
 		$arr = is_array($config) ? $config : [];
-		$url = trim((string)($arr['url'] ?? ''));
-		if ($url !== '' && !preg_match('#^https?://#i', $url)) {
-			throw new ValidationException('Webhook URL must start with http:// or https://');
+		if ($actionType === 'webhook') {
+			$url = trim((string)($arr['url'] ?? ''));
+			if ($url !== '' && !preg_match('#^https?://#i', $url)) {
+				throw new ValidationException('Webhook URL must start with http:// or https://');
+			}
+		}
+		if ($actionType === 'provision_folders') {
+			$folders = array_filter(array_map('strval', (array)($arr['folders'] ?? [])), static fn ($s) => trim($s) !== '');
+			if ($folders === []) {
+				throw new ValidationException('Add at least one folder to create');
+			}
+			if (count($folders) > self::MAX_PROVISION_FOLDERS) {
+				throw new ValidationException('Too many folders to create (max ' . self::MAX_PROVISION_FOLDERS . ')');
+			}
+			// Validate the optional base folder at save time so a bad path surfaces
+			// in the builder instead of failing silently in the background job.
+			foreach (explode('/', str_replace('\\', '/', (string)($arr['basePath'] ?? ''))) as $seg) {
+				$seg = trim($seg);
+				if ($seg === '') {
+					continue;
+				}
+				if (trim($seg, '.') === '' || preg_match('#[<>:"|?*\x00-\x1F]#', $seg)) {
+					throw new ValidationException('The base folder contains an invalid path');
+				}
+			}
 		}
 	}
 

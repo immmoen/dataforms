@@ -112,6 +112,22 @@ class RecordMapper extends QBMapper {
 		return $count;
 	}
 
+	/**
+	 * The owner (author) uid of a record, regardless of soft-delete state, or null
+	 * if the record does not exist. Used by provisioning actions to act as the
+	 * record author rather than whoever triggered the event.
+	 */
+	public function findOwnerById(int $id): ?string {
+		$qb = $this->db->getQueryBuilder();
+		$qb->select('owner')
+			->from($this->getTableName())
+			->where($qb->expr()->eq('id', $qb->createNamedParameter($id, IQueryBuilder::PARAM_INT)));
+		$result = $qb->executeQuery();
+		$owner = $result->fetchOne();
+		$result->closeCursor();
+		return $owner === false ? null : (string)$owner;
+	}
+
 	/** Hard-delete every record row of a register, soft-deleted ones included (purge). */
 	public function deleteByRegister(int $registerId): void {
 		$qb = $this->db->getQueryBuilder();

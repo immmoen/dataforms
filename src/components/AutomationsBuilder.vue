@@ -10,7 +10,7 @@
 			<div>
 				<h3>{{ t('dataforms', 'Automations') }}</h3>
 				<p class="hint">
-					{{ t('dataforms', 'React to record changes: when something happens and your conditions match, send a notification or an email. Runs on the server.') }}
+					{{ t('dataforms', 'React to record changes: when something happens and your conditions match, run an action — notify someone, send an email, set a field, create folders, or call a webhook. Runs on the server.') }}
 				</p>
 			</div>
 			<NcButton v-if="canManage" type="primary" @click="openAdd">
@@ -83,6 +83,17 @@
 					<NcTextField v-model="draft.setValue" :label="t('dataforms', 'Value')" />
 				</template>
 
+				<template v-else-if="draft.actionType === 'provision_folders'">
+					<label class="block-label">{{ t('dataforms', 'Base folder (optional)') }}</label>
+					<NcTextField v-model="draft.basePath" :placeholder="t('dataforms', 'e.g. Clients')" />
+					<label class="block-label">{{ t('dataforms', 'Folders to create (one per line)') }}</label>
+					<NcTextArea v-model="draft.folderLines" :placeholder="folderPlaceholder" />
+					<p class="hint">
+						{{ t('dataforms', 'Created in the record author’s Files. Use {field} to insert a value, e.g. {client}/Contracts. Existing folders are reused.') }}
+						<br>{{ t('dataforms', 'Fields:') }} <code>{{ machineNames }}</code>
+					</p>
+				</template>
+
 				<template v-else-if="draft.actionType === 'webhook'">
 					<label class="block-label">{{ t('dataforms', 'Webhook URL') }}</label>
 					<NcTextField v-model="draft.url" placeholder="https://example.org/hook" />
@@ -126,7 +137,7 @@ import { listFields } from '../api/fields.js'
 import { searchSharees } from '../api/shares.js'
 import { FILTER_OPS } from '../api/rules.js'
 
-const blank = () => ({ name: '', trigger: 'create', conditions: [], actionType: 'notify', recipients: [], subject: '', message: '', setField: '', setValue: '', url: '', secret: '' })
+const blank = () => ({ name: '', trigger: 'create', conditions: [], actionType: 'notify', recipients: [], subject: '', message: '', setField: '', setValue: '', url: '', secret: '', basePath: '', folderLines: '' })
 
 export default {
 	name: 'AutomationsBuilder',
@@ -161,6 +172,14 @@ export default {
 				.filter((f) => !['file', 'relation', 'auto'].includes(f.type))
 				.map((f) => ({ id: f.machineName, label: f.label }))
 		},
+		// Field machine names shown as a hint for {field} folder templates.
+		machineNames() {
+			return this.fields.map((f) => '{' + f.machineName + '}').join(' ')
+		},
+		folderPlaceholder() {
+			const first = this.fields[0]?.machineName ?? 'name'
+			return '{' + first + '}\n{' + first + '}/Contracts\n{' + first + '}/Correspondence'
+		},
 		// Fields the set-field action can write (excludes join-table & derived types).
 		settableFields() {
 			return this.fields
@@ -177,6 +196,9 @@ export default {
 			}
 			if (a === 'set_field') {
 				return !!this.draft.setField
+			}
+			if (a === 'provision_folders') {
+				return this.draft.folderLines.split('\n').some((s) => s.trim() !== '')
 			}
 			if (a === 'webhook') {
 				return /^https?:\/\//i.test(this.draft.url.trim())
@@ -228,6 +250,8 @@ export default {
 				setValue: cfg.value ?? '',
 				url: cfg.url || '',
 				secret: cfg.secret || '',
+				basePath: cfg.basePath || '',
+				folderLines: Array.isArray(cfg.folders) ? cfg.folders.join('\n') : '',
 			}
 			this.recipientOptions = recipients
 			this.showDialog = true
@@ -259,6 +283,11 @@ export default {
 				config = { users: this.draft.recipients.map((r) => r.id), message: this.draft.message }
 			} else if (this.draft.actionType === 'set_field') {
 				config = { field: this.draft.setField, value: this.draft.setValue }
+			} else if (this.draft.actionType === 'provision_folders') {
+				config = {
+					basePath: this.draft.basePath.trim(),
+					folders: this.draft.folderLines.split('\n').map((s) => s.trim()).filter((s) => s !== ''),
+				}
 			} else if (this.draft.actionType === 'webhook') {
 				config = { url: this.draft.url.trim(), secret: this.draft.secret }
 			}

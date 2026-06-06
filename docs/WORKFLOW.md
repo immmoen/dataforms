@@ -30,8 +30,22 @@ Automation = { register, trigger, condition?, action }
 
 trigger   : on_create | on_update | on_delete | on_field_change(field)
 condition : the existing Rule condition AST (reused — no new language)
-action    : notify | email | set_field | webhook        (start small)
+action    : notify | email | set_field | provision_folders | webhook
 ```
+
+### Provisioning actions (replacing an external flow runner)
+
+`provision_folders` is the first of the actions that let DataForms drive
+intake → workspace setup *without* an external engine (Windmill/n8n) or even
+Nextcloud Flow. It creates a folder tree in the **record author's** Files from
+`{machineName}` templates filled with the record's values (e.g. a client-intake
+form creates `Clients/{client_name}/Contracts`). Every path segment is sanitised
+(no `/`, `\`, `..`, control chars — a field value can never escape its segment),
+creation is `mkdir -p`/idempotent, and it runs only inside the author's own
+Files, so it can do nothing the author couldn't do by hand. Planned siblings:
+`apply_template` (copy template files in) and `set_share` (grant access) — each
+added the same way, a new `IAction` class in the registry, and each must clear
+the same hardening bar.
 
 - **Storage:** an `automations` table holding `register_id`, `trigger`,
   `condition` (JSON, reusing the rule schema), `action_type`, `action_config`
@@ -59,8 +73,9 @@ write or exhaust the PHP worker pool:
   They run **synchronously** in `AutomationListener` — but only *after* the
   record's writes have committed (events are dispatched post-commit), so they
   never observe a half-written or rolled-back row.
-- **Deferred actions** (`email`, `webhook`) have slow or external side effects.
-  The listener does **not** run them; it enqueues a single
+- **Deferred actions** (`email`, `webhook`, `provision_folders`) have slow or
+  external side effects (SMTP, outbound HTTP, filesystem I/O). The listener does
+  **not** run them; it enqueues a single
   `OCA\Dataforms\BackgroundJob\RunAutomationsJob` (an `OCP\BackgroundJob`
   `QueuedJob`). The job re-reads the register's currently-enabled automations
   against the captured value snapshot and runs only the deferred ones — picking
