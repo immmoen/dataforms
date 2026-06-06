@@ -16,7 +16,7 @@
 						<span v-if="fileItems(field).length === 0" class="empty">—</span>
 						<ul v-else class="file-list">
 							<li v-for="f in fileItems(field)" :key="f.id">
-								<a :href="fileUrl(f.id)" target="_blank" rel="noopener noreferrer">📎 {{ f.name }}</a>
+								<a :href="fileUrl(f.id)" target="_blank" rel="noopener noreferrer"><span aria-hidden="true">📎 </span>{{ f.name }}</a>
 							</li>
 						</ul>
 					</template>
@@ -28,17 +28,17 @@
 
 		<!-- Audit history -->
 		<div class="history">
-			<button type="button" class="history-toggle" :aria-expanded="showHistory" @click="toggleHistory">
-				<HistoryIcon :size="18" />
+			<button type="button" class="history-toggle" :aria-expanded="showHistory" aria-controls="df-record-history" @click="toggleHistory">
+				<HistoryIcon :size="18" aria-hidden="true" />
 				{{ t('dataforms', 'History') }}
-				<span class="chev" :class="{ open: showHistory }">▸</span>
+				<span class="chev" :class="{ open: showHistory }" aria-hidden="true">▸</span>
 			</button>
-			<div v-if="showHistory" class="history-body">
+			<div v-if="showHistory" id="df-record-history" class="history-body" role="region" :aria-label="t('dataforms', 'History')" aria-live="polite">
 				<NcLoadingIcon v-if="historyLoading" :size="22" />
 				<p v-else-if="history.length === 0" class="empty">{{ t('dataforms', 'No history recorded.') }}</p>
 				<ul v-else class="timeline">
 					<li v-for="h in history" :key="h.id" class="event">
-						<span class="dot" :class="'dot-' + h.action" />
+						<span class="dot" :class="'dot-' + h.action" role="img" :aria-label="h.action" />
 						<div class="event-main">
 							<div class="event-summary">{{ h.summary }}</div>
 							<div v-if="h.detail && h.detail.fields" class="event-detail">{{ h.detail.fields.join(', ') }}</div>

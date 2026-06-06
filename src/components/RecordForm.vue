@@ -20,7 +20,7 @@
 					<div v-for="field in section.fields" :key="field.id" class="form-field">
 						<div class="label-row">
 							<span class="lbl">{{ field.label }}</span>
-							<span v-if="evaluation.required[field.machineName]" class="req">*</span>
+							<span v-if="evaluation.required[field.machineName]" class="req" aria-hidden="true">*</span>
 							<span v-if="computedTargets.has(field.machineName)" class="computed-tag">
 								{{ t('dataforms', 'computed') }}
 							</span>
@@ -30,11 +30,14 @@
 							:label="field.label"
 							:model-value="valueFor(field)"
 							:disabled="computedTargets.has(field.machineName)"
+							:required="!!evaluation.required[field.machineName]"
+							:invalid="!!allErrors[field.machineName]"
+							:describedby="describedbyFor(field)"
 							@update:model-value="onInput(field, $event)" />
-						<p v-if="field.config && field.config.help" class="field-help">
+						<p v-if="field.config && field.config.help" :id="'df-help-' + field.machineName" class="field-help">
 							{{ field.config.help }}
 						</p>
-						<p v-if="allErrors[field.machineName]" class="err">
+						<p v-if="allErrors[field.machineName]" :id="'df-err-' + field.machineName" class="err" role="alert">
 							{{ allErrors[field.machineName] }}
 						</p>
 					</div>
@@ -148,6 +151,18 @@ export default {
 				return this.evaluation.values[field.machineName]
 			}
 			return this.values[field.machineName]
+		},
+		// Space-separated ids of the help and error text shown for a field, so the
+		// input's aria-describedby points a screen reader at both (WCAG 1.3.1).
+		describedbyFor(field) {
+			const ids = []
+			if (field.config && field.config.help) {
+				ids.push('df-help-' + field.machineName)
+			}
+			if (this.allErrors[field.machineName]) {
+				ids.push('df-err-' + field.machineName)
+			}
+			return ids.join(' ')
 		},
 		onInput(field, value) {
 			this.values = { ...this.values, [field.machineName]: value }

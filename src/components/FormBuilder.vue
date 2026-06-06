@@ -46,7 +46,15 @@
 			</NcEmptyContent>
 
 			<ul v-else class="form-list">
-				<li v-for="form in forms" :key="form.id" class="form-row" @click="canManage && openEdit(form)">
+				<li
+					v-for="form in forms"
+					:key="form.id"
+					class="form-row"
+					:role="canManage ? 'button' : null"
+					:tabindex="canManage ? 0 : null"
+					@click="canManage && openEdit(form)"
+					@keydown.enter.prevent="canManage && openEdit(form)"
+					@keydown.space.prevent="canManage && openEdit(form)">
 					<FormIcon :size="20" class="row-icon" />
 					<span class="form-title">{{ form.title }}</span>
 					<span class="form-meta">
@@ -173,7 +181,7 @@
 								@dragend="endDrag"
 								@dragover.prevent.stop="dragOverSection = si"
 								@drop.prevent.stop="onDropBefore(si, idx)">
-								<DragIcon :size="16" class="grip" />
+								<DragIcon :size="16" class="grip" aria-hidden="true" />
 								<div class="placed-main">
 									<div class="placed-label">
 										{{ fieldByName[mn] ? fieldByName[mn].label : mn }}

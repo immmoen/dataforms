@@ -83,6 +83,7 @@
 						:options="typeOptions"
 						:reduce="(o) => o.id"
 						label="label"
+						:aria-label="t('dataforms', 'Type')"
 						:clearable="false"
 						:disabled="!!editingField" />
 					<p v-if="editingField" class="block-hint">
@@ -94,6 +95,7 @@
 					<label class="block-label">{{ t('dataforms', 'Options (one per line)') }}</label>
 					<NcTextArea
 						v-model="draft.optionsText"
+						:aria-label="t('dataforms', 'Options (one per line)')"
 						:placeholder="t('dataforms', 'Consent\nContract\nLegal obligation')" />
 				</div>
 
@@ -104,6 +106,7 @@
 						:options="groupPresets"
 						:reduce="(o) => o.id"
 						label="label"
+						:aria-label="t('dataforms', 'Group options in the form')"
 						:clearable="false" />
 					<NcTextField
 						v-if="draft.groupPreset === 'custom'"
@@ -133,7 +136,7 @@
 
 				<div v-if="draft.type === 'auto'" class="field-block">
 					<label class="block-label">{{ t('dataforms', 'Records') }}</label>
-					<NcSelect v-model="draft.autoKind" :options="autoKinds" :reduce="(o) => o.id" label="label" :clearable="false" />
+					<NcSelect v-model="draft.autoKind" :options="autoKinds" :reduce="(o) => o.id" label="label" :aria-label="t('dataforms', 'Records')" :clearable="false" />
 					<p class="block-hint">{{ t('dataforms', 'Filled automatically; read-only in the form.') }}</p>
 				</div>
 
@@ -144,6 +147,7 @@
 						:options="registerOptions"
 						:reduce="(o) => o.id"
 						label="label"
+						:aria-label="t('dataforms', 'Linked register')"
 						:clearable="false"
 						:placeholder="t('dataforms', 'Pick a register to link to')" />
 					<label class="block-label" style="margin-top:12px">{{ t('dataforms', 'Display field') }}</label>
@@ -152,6 +156,7 @@
 						:options="targetFieldOptions"
 						:reduce="(o) => o.id"
 						label="label"
+						:aria-label="t('dataforms', 'Display field')"
 						:clearable="true"
 						:placeholder="t('dataforms', 'Which field to show (defaults to the first)')" />
 					<NcCheckboxRadioSwitch v-model="draft.multiple" style="margin-top:12px">
@@ -163,6 +168,7 @@
 						:options="onDeleteOptions"
 						:reduce="(o) => o.id"
 						label="label"
+						:aria-label="t('dataforms', 'When a linked record is deleted')"
 						:clearable="false" />
 				</div>
 

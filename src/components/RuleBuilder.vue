@@ -61,11 +61,11 @@
 				<div class="row2">
 					<div class="block">
 						<label class="block-label">{{ t('dataforms', 'Effect') }}</label>
-						<NcSelect v-model="draft.effect" :options="effects" :reduce="(o) => o.id" label="label" :clearable="false" />
+						<NcSelect v-model="draft.effect" :options="effects" :reduce="(o) => o.id" label="label" :aria-label="t('dataforms', 'Effect')" :clearable="false" />
 					</div>
 					<div class="block">
 						<label class="block-label">{{ t('dataforms', 'Target field') }}</label>
-						<NcSelect v-model="draft.target" :options="fieldOptions" :reduce="(o) => o.id" label="label" :clearable="false" />
+						<NcSelect v-model="draft.target" :options="fieldOptions" :reduce="(o) => o.id" label="label" :aria-label="t('dataforms', 'Target field')" :clearable="false" />
 					</div>
 				</div>
 
@@ -73,11 +73,11 @@
 				<div v-if="usesConditions" class="conditions">
 					<div class="cond-head">
 						<span class="block-label">{{ t('dataforms', 'When') }}</span>
-						<NcSelect v-model="draft.logic" :options="['and', 'or']" :clearable="false" class="logic-sel" />
+						<NcSelect v-model="draft.logic" :options="['and', 'or']" :aria-label="t('dataforms', 'Condition logic')" :clearable="false" class="logic-sel" />
 					</div>
 					<div v-for="(c, i) in draft.conditions" :key="i" class="cond-row">
-						<NcSelect v-model="c.field" :options="fieldOptions" :reduce="(o) => o.id" label="label" :clearable="false" class="cond-field" />
-						<NcSelect v-model="c.op" :options="ops" :reduce="(o) => o.id" label="label" :clearable="false" class="cond-op" />
+						<NcSelect v-model="c.field" :options="fieldOptions" :reduce="(o) => o.id" label="label" :aria-label="t('dataforms', 'Condition field')" :clearable="false" class="cond-field" />
+						<NcSelect v-model="c.op" :options="ops" :reduce="(o) => o.id" label="label" :aria-label="t('dataforms', 'Operator')" :clearable="false" class="cond-op" />
 						<template v-if="!['isEmpty', 'isNotEmpty'].includes(c.op)">
 							<NcSelect
 								v-if="optionsForField(c.field).length"
@@ -85,11 +85,12 @@
 								:options="optionsForField(c.field)"
 								:clearable="false"
 								:taggable="true"
+								:aria-label="t('dataforms', 'Value')"
 								:placeholder="t('dataforms', 'Value')"
 								class="cond-val" />
 							<NcTextField v-else v-model="c.value" :label="t('dataforms', 'Value')" class="cond-val" />
 						</template>
-						<NcButton type="tertiary" @click="draft.conditions.splice(i, 1)">
+						<NcButton type="tertiary" :aria-label="t('dataforms', 'Remove condition')" @click="draft.conditions.splice(i, 1)">
 							<template #icon><DeleteIcon :size="18" /></template>
 						</NcButton>
 					</div>
@@ -117,7 +118,7 @@
 				<div v-if="draft.effect === 'validate'" class="validation">
 					<div class="block">
 						<label class="block-label">{{ t('dataforms', 'Check') }}</label>
-						<NcSelect v-model="draft.validation.kind" :options="['regex', 'range', 'expression']" :clearable="false" />
+						<NcSelect v-model="draft.validation.kind" :options="['regex', 'range', 'expression']" :aria-label="t('dataforms', 'Validation check')" :clearable="false" />
 					</div>
 					<NcTextField v-if="draft.validation.kind === 'regex'" v-model="draft.validation.pattern" :label="t('dataforms', 'Pattern (regex)')" />
 					<div v-if="draft.validation.kind === 'range'" class="row2">

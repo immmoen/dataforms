@@ -165,14 +165,17 @@
 								v-for="field in columns"
 								:key="field.id"
 								:class="{ editable: canModify(record) && isInlineEditable(field), editing: isEditingCell(record, field) }"
+								:tabindex="canModify(record) && isInlineEditable(field) ? 0 : null"
 								@click="onCellClick(record, field)"
-								@dblclick="onCellDblClick(record, field)">
+								@dblclick="onCellDblClick(record, field)"
+								@keydown.enter.prevent="!isEditingCell(record, field) && canModify(record) && isInlineEditable(field) && onCellDblClick(record, field)">
 								<template v-if="isEditingCell(record, field)">
 									<select
 										v-if="field.type === 'select'"
 										ref="inlineInput"
 										v-model="editValue"
 										class="inline-input"
+										:aria-label="t('dataforms', 'Edit {field}', { field: field.label })"
 										@change="saveInline(record, field)"
 										@keydown.esc="cancelInline"
 										@blur="saveInline(record, field)">
@@ -184,6 +187,7 @@
 										ref="inlineInput"
 										v-model="editValue"
 										class="inline-input"
+										:aria-label="t('dataforms', 'Edit {field}', { field: field.label })"
 										@change="saveInline(record, field)"
 										@keydown.esc="cancelInline"
 										@blur="saveInline(record, field)">
@@ -197,6 +201,7 @@
 										v-model="editValue"
 										:type="inlineInputType(field)"
 										class="inline-input"
+										:aria-label="t('dataforms', 'Edit {field}', { field: field.label })"
 										@keydown.enter="saveInline(record, field)"
 										@keydown.esc="cancelInline"
 										@blur="saveInline(record, field)">

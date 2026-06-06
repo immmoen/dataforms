@@ -12,7 +12,7 @@
 			:type="htmlType"
 			:value="modelValue ?? ''"
 			:disabled="disabled"
-			:aria-label="label"
+			v-bind="ariaAttrs"
 			class="native-input"
 			@input="emit($event.target.value)">
 
@@ -20,7 +20,7 @@
 			v-else-if="field.type === 'longtext'"
 			:value="modelValue ?? ''"
 			:disabled="disabled"
-			:aria-label="label"
+			v-bind="ariaAttrs"
 			rows="3"
 			class="native-input native-textarea"
 			@input="emit($event.target.value)" />
@@ -30,7 +30,7 @@
 			type="number"
 			:value="modelValue ?? ''"
 			:disabled="disabled"
-			:aria-label="label"
+			v-bind="ariaAttrs"
 			class="native-input"
 			@input="emit($event.target.value === '' ? null : Number($event.target.value))">
 
@@ -60,7 +60,7 @@
 			:type="htmlType"
 			:value="modelValue ?? ''"
 			:disabled="disabled"
-			:aria-label="label"
+			v-bind="ariaAttrs"
 			class="native-input"
 			@input="emit($event.target.value)">
 
@@ -70,7 +70,7 @@
 			:options="options"
 			:disabled="disabled"
 			:clearable="true"
-			:aria-label="label"
+			v-bind="ariaAttrs"
 			:placeholder="t('dataforms', 'Choose…')"
 			@update:model-value="emit($event)" />
 
@@ -89,7 +89,7 @@
 			:options="options"
 			:multiple="true"
 			:disabled="disabled"
-			:aria-label="label"
+			v-bind="ariaAttrs"
 			:placeholder="t('dataforms', 'Choose…')"
 			@update:model-value="emit($event)" />
 
@@ -103,7 +103,7 @@
 			:close-on-select="!field.config?.multiple"
 			:loading="relLoading"
 			:disabled="disabled"
-			:aria-label="label"
+			v-bind="ariaAttrs"
 			:placeholder="t('dataforms', 'Choose a record…')"
 			@search="onRelSearch"
 			@update:model-value="emit($event)" />
@@ -111,7 +111,7 @@
 		<div v-else-if="field.type === 'file'" class="file-field">
 			<ul v-if="fileList.length" class="attached-files">
 				<li v-for="f in fileList" :key="f.id" class="attached-file">
-					<a :href="fileUrl(f.id)" target="_blank" rel="noopener noreferrer" class="file-link">📎 {{ f.name }}</a>
+					<a :href="fileUrl(f.id)" target="_blank" rel="noopener noreferrer" class="file-link"><span aria-hidden="true">📎 </span>{{ f.name }}</a>
 					<NcButton v-if="!disabled" type="tertiary-no-background" :aria-label="t('dataforms', 'Remove file')" @click.prevent="removeFile(f.id)">
 						<template #icon><CloseIcon :size="16" /></template>
 					</NcButton>
@@ -140,7 +140,7 @@
 			type="text"
 			:value="modelValue ?? ''"
 			:disabled="disabled"
-			:aria-label="label"
+			v-bind="ariaAttrs"
 			:placeholder="['user', 'group'].includes(field.type) ? t('dataforms', 'Enter an id') : ''"
 			class="native-input"
 			@input="emit($event.target.value)">
@@ -171,6 +171,9 @@ export default {
 		modelValue: { type: [String, Number, Boolean, Array, Object, null], default: null },
 		label: { type: String, default: '' },
 		disabled: { type: Boolean, default: false },
+		required: { type: Boolean, default: false },
+		invalid: { type: Boolean, default: false },
+		describedby: { type: String, default: '' },
 	},
 	emits: ['update:modelValue'],
 	data() {
@@ -182,6 +185,17 @@ export default {
 		}
 	},
 	computed: {
+		// Accessible-name + state attributes bound onto every input control, so a
+		// screen reader announces the field name, its required/invalid state, and
+		// any help/error text associated by the parent form (WCAG 4.1.2 / 3.3.1).
+		ariaAttrs() {
+			return {
+				'aria-label': this.label || null,
+				'aria-required': this.required || null,
+				'aria-invalid': this.invalid || null,
+				'aria-describedby': this.describedby || null,
+			}
+		},
 		htmlType() {
 			return {
 				email: 'email', url: 'url', phone: 'tel',
