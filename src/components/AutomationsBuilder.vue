@@ -52,10 +52,25 @@
 
 				<label class="block-label">{{ t('dataforms', 'Only if (optional)') }}</label>
 				<div v-for="(c, i) in draft.conditions" :key="i" class="cond-row">
-					<NcSelect v-model="c.field" :options="fieldOptions" :reduce="(o) => o.id" label="label" :clearable="false" class="c-field" :placeholder="t('dataforms', 'Field')" />
-					<NcSelect v-model="c.op" :options="ops" :reduce="(o) => o.id" label="label" :clearable="false" class="c-op" />
-					<NcTextField v-if="!['isEmpty', 'isNotEmpty'].includes(c.op)" v-model="c.value" :label="t('dataforms', 'Value')" class="c-val" />
-					<NcButton type="tertiary" :aria-label="t('dataforms', 'Remove')" @click="draft.conditions.splice(i, 1)"><template #icon><CloseIcon :size="18" /></template></NcButton>
+					<NcSelect v-model="c.field" :options="fieldOptions" :reduce="(o) => o.id" label="label" :clearable="false" class="c-field" :aria-label="t('dataforms', 'Condition field')" :placeholder="t('dataforms', 'Field')" />
+					<div class="cond-row-2">
+						<NcSelect v-model="c.op" :options="ops" :reduce="(o) => o.id" label="label" :clearable="false" class="c-op" :aria-label="t('dataforms', 'Operator')" />
+						<NcSelect
+							v-if="!['isEmpty', 'isNotEmpty'].includes(c.op) && optionsForField(c.field).length"
+							v-model="c.value"
+							:options="optionsForField(c.field)"
+							:clearable="false"
+							:taggable="true"
+							:aria-label="t('dataforms', 'Value')"
+							:placeholder="t('dataforms', 'Value')"
+							class="c-val" />
+						<NcTextField
+							v-else-if="!['isEmpty', 'isNotEmpty'].includes(c.op)"
+							v-model="c.value"
+							:label="t('dataforms', 'Value')"
+							class="c-val" />
+						<NcButton type="tertiary" :aria-label="t('dataforms', 'Remove condition')" @click="draft.conditions.splice(i, 1)"><template #icon><CloseIcon :size="18" /></template></NcButton>
+					</div>
 				</div>
 				<NcButton type="tertiary" @click="addCondition"><template #icon><PlusIcon :size="16" /></template>{{ t('dataforms', 'Add condition') }}</NcButton>
 
@@ -247,6 +262,12 @@ export default {
 		n,
 		triggerLabel(id) { return this.triggers.find((x) => x.id === id)?.label ?? id },
 		actionLabel(id) { return this.actionTypes.find((x) => x.id === id)?.label ?? id },
+		// Predefined options for a select/multiselect field, so a condition value
+		// can be picked from a dropdown instead of typed.
+		optionsForField(machineName) {
+			const f = this.fields.find((x) => x.machineName === machineName)
+			return (f && Array.isArray(f.config?.options)) ? f.config.options : []
+		},
 		async load() {
 			this.loading = true
 			try {
@@ -404,5 +425,10 @@ export default {
 .spacer { flex: 1; }
 .auto-form { display: flex; flex-direction: column; gap: 10px; min-width: min(520px, 84vw); padding: 8px 2px; }
 .block-label { font-weight: 600; font-size: 0.85em; margin-top: 6px; }
-.cond-row { display: grid; grid-template-columns: 1.2fr 0.9fr 1.2fr auto; gap: 6px; align-items: center; }
+/* Field on its own line; operator + value + remove on a second line, so the
+   value control always keeps a usable width in the narrow dialog. */
+.cond-row { display: flex; flex-direction: column; gap: 6px; margin-bottom: 12px; }
+.cond-row-2 { display: flex; gap: 6px; align-items: center; }
+.cond-row-2 .c-op { flex: 0 1 150px; min-width: 110px; }
+.cond-row-2 .c-val { flex: 1 1 auto; min-width: 140px; }
 </style>

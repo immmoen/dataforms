@@ -344,7 +344,12 @@ export default {
 .conditions { border-left: 3px solid var(--color-primary-element); padding-left: 14px; display: flex; flex-direction: column; gap: 8px; }
 .cond-head { display: flex; align-items: center; gap: 10px; }
 .logic-sel { width: 90px; }
-.cond-row { display: grid; grid-template-columns: 1fr 0.8fr 1fr auto; gap: 8px; align-items: center; }
+/* Wrap so the value control keeps a usable width in the narrow dialog: the
+   field takes the first line, operator + value + remove flow onto the next. */
+.cond-row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-bottom: 10px; }
+.cond-row .cond-field { flex: 1 1 100%; }
+.cond-row .cond-op { flex: 0 1 150px; min-width: 110px; }
+.cond-row .cond-val { flex: 1 1 160px; min-width: 140px; }
 .expr-hint { color: var(--color-text-maxcontrast); font-size: 0.8em; margin: 6px 0 0; }
 .validation { display: flex; flex-direction: column; gap: 12px; }
 </style>
