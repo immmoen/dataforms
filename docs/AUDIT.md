@@ -251,10 +251,14 @@ M7/M8 read-path indexes) are degradation, not instance threats, and stay on the 
 - [x] **H5** — removed `REPLACE_ME` donation URLs, the broken screenshot reference, and the empty author `mail` attribute; version bumped to 0.26.0.
 - [ ] add a real `<screenshot>` (full URL, HTTP 200) and donation links once a public repo/pages exist (L1/M9) · verify repo org (I1) · align brand to **DataForms** (L14).
 
-**Release hygiene:**
-- [ ] bump/remove package.json version (L3) · signing/cert flow + Makefile `--exclude=/*.json` doesn't strip l10n (I3) · Transifex · **a11y** keyboard/contrast pass · **CI** lint + Psalm/PHPStan + write-path smoke test.
+**Release hygiene (Track B):**
+- [x] **PHP CI gate now runs and is green** — fixed the psalm config (it could never run: stale stub path) and the unit bootstrap (OCP autoload); cs-fixer clean, psalm "No errors found!" at errorLevel 2, phpunit 38/38.
+- [x] **a11y (WCAG 2.1 AA) pass** over all Vue components — 20 findings fixed (labels/names, keyboard operability, error/status announcements, decorative-icon hiding, colour-not-only).
+- [x] **100k-record perf re-verified** — default list/deep-page index-served at ~27/36 ms (see PORTABILITY.md §5); surfaced a data-field-sort scaling caveat.
+- [ ] **Frontend CI lint** — `@nextcloud/eslint-config` / `@nextcloud/stylelint-config` peer-dep chain is missing from `package.json` (incl. a beta-only resolver), so `eslint`/`stylelint` can't run yet; build + vitest are green. Add the peer deps + regenerate the lockfile, then clear whatever the linters surface.
+- [ ] App **signing/cert** flow + Makefile `--exclude=/*.json` doesn't strip l10n (I3) · Transifex · bump/remove package.json version (L3).
 
-**Nice-to-have (post-launch):** L5 ReDoS limits · L4 file-id validation · L10/L11/L12 query batching · L13 seq uniqueness · L15 reference bundle size · L16 option cap · I2/I4 hygiene.
+**Nice-to-have (post-launch):** data-field sort covering index (PORTABILITY §5) · L5 ReDoS limits · L4 file-id validation · L10/L11/L12 query batching · L13 seq uniqueness · L15 reference bundle size · L16 option cap · I2/I4 hygiene.
 
 ---
 

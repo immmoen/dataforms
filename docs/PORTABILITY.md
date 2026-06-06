@@ -49,20 +49,35 @@ The `IN`-subquery filter/search path (the one pattern flagged above) returns
 correct results on all three engines. Portability acceptance criterion: **met.**
 The standard move from here is to wire this same matrix into CI.
 
-## Performance at scale (§5) — done ✅
+## Performance at scale (§5) — re-verified ✅ (post-index, 0.29.0)
 
-Tested against a **100,000-record** register (SQLite, with the
-`df_record_values.value_string` index in place). Every operation stays
-**sub-second**, including a deep page and the indexed filter:
+Re-tested against a freshly bulk-loaded **100,000-record** register (SQLite,
+with the `df_record_values.value_string` index and the new
+`[register_id, updated]`/`[register_id, created]` indexes from audit M8). These
+numbers are **service-layer** round-trips (PHP + DB, incl. the `COUNT` each list
+runs); add the HTTP + OCS envelope for the full request latency.
 
 | Operation (100k records) | Latency |
 |--------------------------|--------:|
-| List, page 1 (limit 25) | ~0.9 s |
-| List, deep page (offset 50,000) | ~0.9 s (flat — pagination doesn't degrade) |
-| Filter on a select field (indexed `IN`-subquery) → 33,334 matches | ~0.85 s |
-| Sort by a number field | ~0.6 s |
-| Full-text search → 1 match | ~0.9 s |
+| Bulk load of 100,000 records (chunked transactions) | ~22.5 s |
+| List, page 1 (limit 25, default `updated` sort) | **~27 ms** |
+| List, deep page (offset 50,000) | **~36 ms** (flat — pagination doesn't degrade) |
 
-Latencies are full round-trips (HTTP + OCS envelope + PHP + DB, including the
-`COUNT` each list runs). The 100k-record NFR is **met**: responsive well beyond
-the few-thousand-row ceiling of lighter tools.
+The default list and deep pagination are now **index-served** (the M8 indexes
+removed the filesort) and stay tens-of-milliseconds even at 100k — comfortably
+within the NFR.
+
+**Known scaling caveat — ordering by a *data field*.** Sorting a 100k register
+by a value-column field (e.g. a number field) is the heaviest read path: it
+correlates each record to its value row (`LEFT JOIN df_record_values … ORDER BY
+sv.value_*`) and the planner falls back to a large sort, which did **not** stay
+sub-second in re-testing. The default `updated`/`created`/`seq` sorts (the common
+case, and the only ones backed by a `df_records` index) are fast; per-field sorts
+on very large registers are the exception. The fix, if data-field sorts on large
+registers become common, is a covering index strategy on `df_record_values`
+(e.g. `(field_id, value_number, record_id)`) or a denormalised sort column — left
+as a future optimisation, tracked alongside the L10/L11 read-path items.
+
+Filter (indexed `IN`-subquery) and full-text search were sub-second in the prior
+full-round-trip run and are unchanged by the M8 work; they were not re-timed in
+this pass (the harness was stopped after surfacing the data-field-sort caveat).
