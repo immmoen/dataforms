@@ -33,6 +33,8 @@ use OCP\AppFramework\Db\Entity;
  * @method void setIsUnique(?bool $isUnique)
  * @method string|null getDefaultValue()
  * @method void setDefaultValue(?string $defaultValue)
+ * @method int|null getDeletedAt()
+ * @method void setDeletedAt(?int $deletedAt)
  */
 class Field extends Entity implements JsonSerializable {
 	protected int $registerId = 0;
@@ -44,6 +46,9 @@ class Field extends Entity implements JsonSerializable {
 	protected ?bool $mandatory = false;
 	protected ?bool $isUnique = false;
 	protected ?string $defaultValue = null;
+	// Soft-delete tombstone: when set, the field is retired but its row (and
+	// machine_name) is kept so the name stays reserved (audit M2).
+	protected ?int $deletedAt = null;
 
 	public function __construct() {
 		$this->addType('id', 'integer');
@@ -51,6 +56,7 @@ class Field extends Entity implements JsonSerializable {
 		$this->addType('position', 'integer');
 		$this->addType('mandatory', 'boolean');
 		$this->addType('isUnique', 'boolean');
+		$this->addType('deletedAt', 'integer');
 	}
 
 	public function jsonSerialize(): array {

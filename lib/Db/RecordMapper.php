@@ -68,14 +68,14 @@ class RecordMapper extends QBMapper {
 	 * @param array{column:string,fieldId:int}|null $sortField sort by a data field
 	 * @return Record[]
 	 */
-	public function findByRegister(int $registerId, int $limit = 50, int $offset = 0, string $sort = 'updated', string $direction = 'DESC', string $search = '', array $filters = [], ?array $sortField = null): array {
+	public function findByRegister(int $registerId, int $limit = 50, int $offset = 0, string $sort = 'updated', string $direction = 'DESC', string $search = '', array $filters = [], ?array $sortField = null, array $searchFieldIds = []): array {
 		$qb = $this->db->getQueryBuilder();
 		$qb->select('r.*')
 			->from($this->getTableName(), 'r')
 			->where($qb->expr()->eq('r.register_id', $qb->createNamedParameter($registerId, IQueryBuilder::PARAM_INT)))
 			->andWhere($qb->expr()->isNull('r.deleted_at'));
 
-		$this->applySearch($qb, $search);
+		$this->applySearch($qb, $search, $searchFieldIds);
 		$this->applyFilters($qb, $filters);
 
 		$dir = strtoupper($direction) === 'ASC' ? 'ASC' : 'DESC';
@@ -98,13 +98,13 @@ class RecordMapper extends QBMapper {
 	/**
 	 * @param array<int,array{fieldId:int,column:string,op:string,value:mixed}> $filters
 	 */
-	public function countByRegister(int $registerId, string $search = '', array $filters = []): int {
+	public function countByRegister(int $registerId, string $search = '', array $filters = [], array $searchFieldIds = []): int {
 		$qb = $this->db->getQueryBuilder();
 		$qb->select($qb->func()->count('r.id'))
 			->from($this->getTableName(), 'r')
 			->where($qb->expr()->eq('r.register_id', $qb->createNamedParameter($registerId, IQueryBuilder::PARAM_INT)))
 			->andWhere($qb->expr()->isNull('r.deleted_at'));
-		$this->applySearch($qb, $search);
+		$this->applySearch($qb, $search, $searchFieldIds);
 		$this->applyFilters($qb, $filters);
 		$result = $qb->executeQuery();
 		$count = (int)$result->fetchOne();
@@ -116,6 +116,14 @@ class RecordMapper extends QBMapper {
 	 * Highest per-register sequence number assigned so far (0 if none). Counts
 	 * deleted records too, so numbers are never reused after a deletion.
 	 */
+	/** Hard-delete every record row of a register, soft-deleted ones included (purge). */
+	public function deleteByRegister(int $registerId): void {
+		$qb = $this->db->getQueryBuilder();
+		$qb->delete($this->getTableName())
+			->where($qb->expr()->eq('register_id', $qb->createNamedParameter($registerId, IQueryBuilder::PARAM_INT)));
+		$qb->executeStatement();
+	}
+
 	public function maxSeqForRegister(int $registerId): int {
 		$qb = $this->db->getQueryBuilder();
 		$qb->select($qb->func()->max('seq'))
@@ -197,20 +205,35 @@ class RecordMapper extends QBMapper {
 		}
 	}
 
-	private function applySearch(IQueryBuilder $qb, string $search): void {
+	/**
+	 * Restrict the result set to records with a string value matching $search.
+	 *
+	 * The value subquery is scoped to the register's searchable string-field ids
+	 * ($searchFieldIds) so it touches only this register's text values instead of
+	 * scanning df_record_values instance-wide (audit M6). With no searchable
+	 * fields a text search can never match, so the result is forced empty.
+	 *
+	 * @param int[] $searchFieldIds
+	 */
+	private function applySearch(IQueryBuilder $qb, string $search, array $searchFieldIds = []): void {
 		$search = trim($search);
 		if ($search === '') {
 			return;
 		}
+		if ($searchFieldIds === []) {
+			$qb->andWhere('1 = 0'); // no string fields → nothing can match
+			return;
+		}
 		// Portable across engines: restrict to records that have a matching
 		// value via an IN subquery (Nextcloud's expression builder has no
-		// exists()). The LIKE parameter is bound on the outer builder so its
-		// placeholder resolves when the combined query runs.
+		// exists()). Both parameters are bound on the outer builder so their
+		// placeholders resolve when the combined query runs.
 		$param = $qb->createNamedParameter('%' . $this->db->escapeLikeParameter($search) . '%');
 		$sub = $this->db->getQueryBuilder();
 		$sub->select('rv.record_id')
 			->from('df_record_values', 'rv')
-			->where($sub->expr()->iLike('rv.value_string', $param));
+			->where($sub->expr()->iLike('rv.value_string', $param))
+			->andWhere($sub->expr()->in('rv.field_id', $qb->createNamedParameter($searchFieldIds, IQueryBuilder::PARAM_INT_ARRAY)));
 		$qb->andWhere('r.id IN (' . $sub->getSQL() . ')');
 	}
 }

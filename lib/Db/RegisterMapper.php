@@ -69,4 +69,33 @@ class RegisterMapper extends QBMapper {
 
 		return $this->findEntities($qb);
 	}
+
+	/**
+	 * Ids of registers soft-deleted at or before $cutoff (epoch seconds) — the
+	 * retention job's purge candidates.
+	 *
+	 * @return int[]
+	 */
+	public function findSoftDeletedBefore(int $cutoff): array {
+		$qb = $this->db->getQueryBuilder();
+		$qb->select('id')
+			->from($this->getTableName())
+			->where($qb->expr()->isNotNull('deleted_at'))
+			->andWhere($qb->expr()->lte('deleted_at', $qb->createNamedParameter($cutoff, IQueryBuilder::PARAM_INT)));
+		$result = $qb->executeQuery();
+		$ids = [];
+		foreach ($result->fetchAll() as $row) {
+			$ids[] = (int)$row['id'];
+		}
+		$result->closeCursor();
+		return $ids;
+	}
+
+	/** Hard-delete a register row by id (used by purge, after its children are gone). */
+	public function deleteById(int $id): void {
+		$qb = $this->db->getQueryBuilder();
+		$qb->delete($this->getTableName())
+			->where($qb->expr()->eq('id', $qb->createNamedParameter($id, IQueryBuilder::PARAM_INT)));
+		$qb->executeStatement();
+	}
 }

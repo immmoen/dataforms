@@ -14,6 +14,7 @@ use OCA\Dataforms\Db\RecordValueMapper;
 use OCA\Dataforms\Exception\NotFoundException;
 use OCA\Dataforms\Exception\ValidationException;
 use OCP\AppFramework\Db\DoesNotExistException;
+use OCP\AppFramework\Utility\ITimeFactory;
 
 /**
  * Business logic for register fields (the schema). Access is gated through
@@ -40,6 +41,7 @@ class FieldService {
 		private RecordValueMapper $valueMapper,
 		private RecordFileMapper $fileMapper,
 		private RecordRefMapper $refMapper,
+		private ITimeFactory $time,
 	) {
 	}
 
@@ -131,7 +133,11 @@ class FieldService {
 		$this->valueMapper->deleteByField($fieldId); // clean up stored values
 		$this->fileMapper->deleteForField($fieldId); // and any attached-file refs
 		$this->refMapper->deleteForField($fieldId); // and any relation refs
-		$this->mapper->delete($field);
+		// Soft-delete: keep the row as a name tombstone so its machine_name stays
+		// reserved and a reused name can't silently re-bind a stale rule to a new
+		// field (audit M2). Active queries filter deleted_at; purge hard-deletes it.
+		$field->setDeletedAt($this->time->getTime());
+		$this->mapper->update($field);
 	}
 
 	/**

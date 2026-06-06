@@ -43,4 +43,12 @@ class RuleMapper extends QBMapper {
 			->addOrderBy('id', 'ASC');
 		return $this->findEntities($qb);
 	}
+
+	/** Delete all rules of a register (used by register purge). */
+	public function deleteByRegister(int $registerId): void {
+		$qb = $this->db->getQueryBuilder();
+		$qb->delete($this->getTableName())
+			->where($qb->expr()->eq('register_id', $qb->createNamedParameter($registerId, IQueryBuilder::PARAM_INT)));
+		$qb->executeStatement();
+	}
 }

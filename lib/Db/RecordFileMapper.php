@@ -52,6 +52,21 @@ class RecordFileMapper {
 	}
 
 	/**
+	 * Delete every file-attachment row belonging to a set of field ids (register purge).
+	 *
+	 * @param int[] $fieldIds
+	 */
+	public function deleteByFieldIds(array $fieldIds): void {
+		if ($fieldIds === []) {
+			return;
+		}
+		$qb = $this->db->getQueryBuilder();
+		$qb->delete('df_rec_files')
+			->where($qb->expr()->in('field_id', $qb->createNamedParameter($fieldIds, IQueryBuilder::PARAM_INT_ARRAY)));
+		$qb->executeStatement();
+	}
+
+	/**
 	 * @param int[] $recordIds
 	 * @return array<int,array<int,array{field_id:int,file_id:int,position:int}>> recordId => rows
 	 */

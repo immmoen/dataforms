@@ -40,4 +40,12 @@ class HistoryMapper extends QBMapper {
 			->where($qb->expr()->eq('record_id', $qb->createNamedParameter($recordId, IQueryBuilder::PARAM_INT)));
 		$qb->executeStatement();
 	}
+
+	/** Delete all history for a register (used by register purge). */
+	public function deleteByRegister(int $registerId): void {
+		$qb = $this->db->getQueryBuilder();
+		$qb->delete($this->getTableName())
+			->where($qb->expr()->eq('register_id', $qb->createNamedParameter($registerId, IQueryBuilder::PARAM_INT)));
+		$qb->executeStatement();
+	}
 }

@@ -90,6 +90,22 @@ class RecordValueMapper {
 	}
 
 	/**
+	 * Delete every value row belonging to a set of field ids (used by register
+	 * purge — a register's values all hang off its field ids).
+	 *
+	 * @param int[] $fieldIds
+	 */
+	public function deleteByFieldIds(array $fieldIds): void {
+		if ($fieldIds === []) {
+			return;
+		}
+		$qb = $this->db->getQueryBuilder();
+		$qb->delete('df_record_values')
+			->where($qb->expr()->in('field_id', $qb->createNamedParameter($fieldIds, IQueryBuilder::PARAM_INT_ARRAY)));
+		$qb->executeStatement();
+	}
+
+	/**
 	 * All value rows for a set of records, keyed by record id.
 	 *
 	 * @param int[] $recordIds

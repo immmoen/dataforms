@@ -94,7 +94,8 @@ class RecordService {
 			];
 		}
 
-		$records = $this->recordMapper->findByRegister($registerId, $limit, $offset, $sort, $direction, $search, $resolvedFilters, $sortField);
+		$searchFieldIds = $this->searchableFieldIds($fields);
+		$records = $this->recordMapper->findByRegister($registerId, $limit, $offset, $sort, $direction, $search, $resolvedFilters, $sortField, $searchFieldIds);
 
 		$ids = array_map(static fn (Record $r) => $r->getId(), $records);
 		$valuesByRecord = $this->valueMapper->findByRecordIds($ids);
@@ -108,9 +109,27 @@ class RecordService {
 
 		return [
 			'records' => $dtos,
-			'total' => $this->recordMapper->countByRegister($registerId, $search, $resolvedFilters),
+			'total' => $this->recordMapper->countByRegister($registerId, $search, $resolvedFilters, $searchFieldIds),
 			'fields' => array_map(static fn (Field $f) => $f->jsonSerialize(), $fields),
 		];
+	}
+
+	/**
+	 * Ids of the register's fields whose searchable text lives in value_string
+	 * (text/longtext/select/email/url/…). Free-text search is scoped to these so
+	 * its value-table subquery can't scan the whole instance (audit M6).
+	 *
+	 * @param Field[] $fields
+	 * @return int[]
+	 */
+	private function searchableFieldIds(array $fields): array {
+		$ids = [];
+		foreach ($fields as $f) {
+			if (FieldValue::column($f->getType()) === 'value_string') {
+				$ids[] = $f->getId();
+			}
+		}
+		return $ids;
 	}
 
 	/**
@@ -153,7 +172,8 @@ class RecordService {
 	 */
 	public function options(string $userId, int $registerId, string $displayField, string $search): array {
 		$this->registerService->find($userId, $registerId); // read gate
-		$records = $this->recordMapper->findByRegister($registerId, 50, 0, 'updated', 'DESC', $search);
+		$searchFieldIds = $this->searchableFieldIds($this->fieldMapper->findByRegister($registerId));
+		$records = $this->recordMapper->findByRegister($registerId, 50, 0, 'updated', 'DESC', $search, [], null, $searchFieldIds);
 		$ids = array_map(static fn (Record $r) => $r->getId(), $records);
 		$labels = $this->labelsForRecords($registerId, $ids, $displayField);
 		$out = [];

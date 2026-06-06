@@ -44,26 +44,21 @@ class FormService {
 	 * @return array<int,array{formId:int,formTitle:string,registerId:int,registerTitle:string}>
 	 */
 	public function searchForPicker(string $userId, string $term = '', int $limit = 20): array {
-		$term = mb_strtolower(trim($term));
+		// Resolve the registers the user can read once, then fetch their forms in
+		// a single JOINed query (audit M7) instead of a query per register.
+		$registers = $this->registerService->findAll($userId);
+		if ($registers === []) {
+			return [];
+		}
+		$registerIds = array_map(static fn ($r) => (int)$r['id'], $registers);
 		$out = [];
-		foreach ($this->registerService->findAll($userId) as $register) {
-			$registerTitle = (string)($register['title'] ?? '');
-			$registerMatches = $term === '' || str_contains(mb_strtolower($registerTitle), $term);
-			foreach ($this->mapper->findByRegister((int)$register['id']) as $form) {
-				$formTitle = $form->getTitle();
-				if ($term !== '' && !$registerMatches && !str_contains(mb_strtolower($formTitle), $term)) {
-					continue;
-				}
-				$out[] = [
-					'formId' => $form->getId(),
-					'formTitle' => $formTitle,
-					'registerId' => (int)$register['id'],
-					'registerTitle' => $registerTitle,
-				];
-				if (count($out) >= $limit) {
-					return $out;
-				}
-			}
+		foreach ($this->mapper->searchForUser($registerIds, trim($term), $limit) as $row) {
+			$out[] = [
+				'formId' => $row['id'],
+				'formTitle' => $row['title'],
+				'registerId' => $row['register_id'],
+				'registerTitle' => $row['register_title'],
+			];
 		}
 		return $out;
 	}

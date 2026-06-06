@@ -13,8 +13,18 @@
 > placeholders removed (H5). Confirmed by a 13-assertion functional test against
 > the running instance: transactional CRUD round-trip; inline `set_field` runs
 > synchronously while the webhook is deferred to a job; loopback SSRF blocked with
-> `LocalServerException`; a 3-row bulk import fires **zero** automation jobs. The
-> Medium/Low items below are unchanged and remain the should-fix backlog.
+> `LocalServerException`; a 3-row bulk import fires **zero** automation jobs.
+
+> ### ✅ Update (v0.27.0–0.29.0): all should-fix Mediums fixed & verified
+> The two security Mediums — **M3** cross-register relation read/write leak and **M4** CSV
+> formula injection — are closed (0.27.0). The scalability trio is done (0.28.0): **M6**
+> field-scoped record search, **M7** single-JOIN unified search, **M8** `[register_id, updated]`/
+> `[created]` sort indexes. And the data-lifecycle pair: **M2** field-name tombstoning (0.28.0)
+> and **M1** register cascade-purge behind a 30-day retention `TimedJob` (0.29.0). Confirmed by
+> 16 further functional assertions against the running instance. The only remaining Medium is
+> **M5** (cap automations/recipients — latency polish; the H2 queue already removed its DoS
+> risk). What's left is the Low/Info polish backlog and the release-readiness track (CI,
+> a11y, signing, 100k perf re-run).
 
 ---
 
@@ -122,17 +132,24 @@ Verified: value rows are intact after the atomic create/update path.
 
 ### MEDIUM
 
-- **M1 — Register deletion orphans 8 child tables (storage leak)** (`RegisterService::delete`)
-  cleans only shares/views/forms; leaves `df_automations` (despite an unused
-  `deleteByRecord`), `df_rules`, `df_fields`, `df_records`, `df_record_values`,
-  `df_rec_files`, `df_rec_refs`, `df_history`. *(Not a security issue — deleted registers
-  are filtered by `deleted_at IS NULL`; purely a storage-hygiene leak.)* *Fix:* cascade-clean
-  in `delete()`, or a retention `TimedJob` that hard-purges children of long-deleted registers.
+- **M1 — Register deletion orphans 8 child tables (storage leak)** ✅ **FIXED (0.29.0)**
+  (`RegisterService::delete`) cleaned only shares/views/forms; left `df_automations`,
+  `df_rules`, `df_fields`, `df_records`, `df_record_values`, `df_rec_files`, `df_rec_refs`,
+  `df_history` forever. *Fixed:* registers stay soft-deleted (recoverable) for a 30-day
+  retention window; a daily `PurgeDeletedRegistersJob` (`TimedJob`) then calls
+  `RegisterPurgeService::purge`, which hard-deletes every child row across all df_* tables —
+  including **incoming** relation rows from other registers — inside one transaction.
+  Verified: purge removes all of a register's rows + foreign refs, leaves unrelated registers
+  intact, and respects the retention window (aged purged, recent kept).
 - **M2 — Field deletion leaves dangling `machineName` references; reuse silently re-binds**
-  (`FieldService::delete`) Nothing rewrites rules/forms/views/automation `set_field` targets,
-  and `ensureUnique` checks only live rows — so a deleted name can be reused and a stale rule
-  silently re-binds to a new, unrelated field. *Fix:* tombstone deleted machine-names; sweep
-  dependent metadata on delete.
+  ✅ **FIXED (0.28.0)** (`FieldService::delete`) `ensureUnique` checked only live rows, so a
+  deleted name could be reused and a stale rule silently re-bind to a new, unrelated field.
+  *Fixed:* fields are now soft-deleted (`df_fields.deleted_at`) — the row survives as a name
+  tombstone so `machineNameExists` keeps the name reserved (a reused name gets `_2`), while
+  `findByRegister`/`maxPosition` exclude it. Stored values/files/refs are still cleaned; the
+  tombstone is hard-removed by register purge. Verified: name stays reserved after delete,
+  active list excludes it, values cleaned. *(Stale references to a deleted field are now inert
+  rather than silently re-bound; forms self-heal their field list on next save.)*
 - **M3 — Relation label resolution leaks values across the sharing boundary** ✅ **FIXED (0.27.0)**
   (`RecordService::resolveRelations`/`labelsForRecords`) resolved labels for a relation's
   `targetRegisterId` with **no** read gate (unlike `options()`). A Write user could store an
@@ -150,18 +167,22 @@ Verified: value rows are intact after the atomic create/update path.
 - **M5 — Synchronous SMTP + per-recipient notify add write-path latency** — subsumed by H2's
   queue; cap recipient-list and automations-per-register.
 - **M6 — Per-register record search runs an unindexed leading-wildcard LIKE over
-  `df_record_values`, twice per page** (`RecordMapper::applySearch`) no `field_id` predicate
-  + leading `%` makes the only index unusable; two large scans per searched page at 100k
-  records. *Fix:* scope to searchable string-field ids; prefer anchored `term%` (or
-  FULLTEXT/GIN); min term length; don't re-run for the count.
-- **M7 — Unified-search `FormSearchProvider` issues O(N) queries per register on every
-  global search** (`FormService::searchForPicker`) loops `findAll` → `findByRegister(forms)`
-  per register on every unified-search keystroke instance-wide. *Fix:* single JOIN
-  (`FormMapper::searchForUser`); compute accessible register-ids once; short-circuit on
-  empty/short terms.
+  `df_record_values`** ✅ **FIXED (0.28.0)** (`RecordMapper::applySearch`) had no `field_id`
+  predicate, so the value subquery scanned the value table instance-wide. *Fixed:* search is
+  now scoped to the register's searchable string-field ids (`field_id IN (…)`), bounding the
+  scan to one register's text values; a register with no string fields short-circuits to no
+  matches. Verified: term matches the right rows, numbers aren't matched as text, no-string-field
+  register returns empty. *(Substring semantics preserved; FULLTEXT/GIN left as a later option.)*
+- **M7 — Unified-search issues O(N) queries per register on every global search**
+  ✅ **FIXED (0.28.0)** (`FormService::searchForPicker`) looped `findByRegister` per readable
+  register on every keystroke instance-wide. *Fixed:* one `FormMapper::searchForUser` JOIN over
+  the readable register ids (resolved once) returns all matching forms + their register titles —
+  2 queries total regardless of register count. Verified: lists forms across registers, term
+  filters by form or register title.
 - **M8 — Default record list (sort by `updated`) has no supporting index → filesort**
-  (`RecordMapper::findByRegister`) only `[register_id]`/`[register_id, seq]` exist. *Fix:*
-  add `[register_id, updated]` (and `[register_id, created]`).
+  ✅ **FIXED (0.28.0)** (`RecordMapper::findByRegister`) only `[register_id]`/`[register_id, seq]`
+  existed. *Fixed:* migration adds `[register_id, updated]` and `[register_id, created]` to
+  `df_records`. Verified present via schema introspection.
 - **M9 — Missing/broken App-Store screenshot** (`info.xml`) the `<screenshot>` raw URL points
   at a file not in `img/`. *Fix:* commit a real screenshot (confirm HTTP 200) or remove the
   line.
@@ -198,14 +219,12 @@ minor: validate `richObject.url` scheme before `anchor.href` in `reference.js`).
   caps. Highest-leverage change in the codebase.
 - **No transactional integrity (H4):** 5-table writes with no rollback; `update()` can lose
   values. Fix = transaction + dispatch after commit.
-- **Unbounded storage growth (M1):** deleted registers leak rows in 8 tables forever. Fix =
-  cascade-clean or retention job.
+- **Unbounded storage growth (M1):** ✅ fixed (0.29.0) — 30-day retention + daily purge job.
 
-**At 100k+ records** the read path is *mostly* fine (paginated, capped at 500, portable
-SQL) but has three hotspots: **M8** (default `updated` filesort → add index), **M6**
-(unindexed text search → field-scope + anchored/FULLTEXT), **L11/L10** (per-row Files/
-relation lookups → batch). **M7** is the one read-path item that touches *other* apps
-(unified search O(N) per global keystroke).
+**At 100k+ records** the read path is now in good shape: **M8** (added `[register_id, updated]`/
+`[created]` indexes) ✅, **M6** (search field-scoped to one register) ✅, **M7** (unified search
+collapsed to a single JOIN — the one item that touched *other* apps) ✅. The remaining read-path
+items are **L11/L10** (per-row Files/relation lookups → batch), which are low-impact polish.
 
 **Net:** ✅ **resolved in 0.26.0.** Backgrounding the side-effecting actions, wrapping the
 writes in transactions, and adding the SSRF guard converted the automation engine from
@@ -221,10 +240,12 @@ M7/M8 read-path indexes) are degradation, not instance threats, and stay on the 
 - [x] **H2/H3** — webhook + email moved off the request thread into a `RunAutomationsJob` (`IJobList`); bulk import bypasses automations and is row-capped; events dispatch post-commit.
 - [x] **H4** — `atomically()` transaction around `create/update/delete`; events dispatched after commit.
 
-**Should-fix before submission:**
+**Should-fix before submission — ✅ all done:**
 - [x] **M3** read gate in `resolveRelations` + target-id validation on write *(0.27.0)*.
 - [x] **M4** CSV formula neutralisation in exports *(0.27.0)*.
-- [ ] **M1/M2** cascade/purge + tombstone field names · **M8/M6/M7** add `[register_id, updated]` index, field-scope record search, single-JOIN search provider · **M5** cap automations/recipients.
+- [x] **M6** field-scoped record search · **M7** single-JOIN unified search · **M8** `[register_id, updated]`/`[created]` indexes *(0.28.0)*.
+- [x] **M2** field-name tombstoning *(0.28.0)* · **M1** register cascade-purge + 30-day retention job *(0.29.0)*.
+- [ ] **M5** cap automations-per-register / recipient-list (latency polish; the queue from H2 already removed the DoS risk).
 
 **App-Store metadata (`info.xml`):**
 - [x] **H5** — removed `REPLACE_ME` donation URLs, the broken screenshot reference, and the empty author `mail` attribute; version bumped to 0.26.0.

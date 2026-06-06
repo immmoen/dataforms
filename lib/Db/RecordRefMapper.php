@@ -108,4 +108,37 @@ class RecordRefMapper {
 			->andWhere($qb->expr()->eq('field_id', $qb->createNamedParameter($fieldId, IQueryBuilder::PARAM_INT)));
 		$qb->executeStatement();
 	}
+
+	/**
+	 * Delete every outgoing relation row belonging to a set of field ids
+	 * (register purge — a register's outgoing refs hang off its relation fields).
+	 *
+	 * @param int[] $fieldIds
+	 */
+	public function deleteByFieldIds(array $fieldIds): void {
+		if ($fieldIds === []) {
+			return;
+		}
+		$qb = $this->db->getQueryBuilder();
+		$qb->delete('df_rec_refs')
+			->where($qb->expr()->in('field_id', $qb->createNamedParameter($fieldIds, IQueryBuilder::PARAM_INT_ARRAY)));
+		$qb->executeStatement();
+	}
+
+	/**
+	 * Delete every *incoming* relation row that targets a record in the given
+	 * register (register purge — other registers' refs pointing at purged
+	 * records would otherwise dangle). Uses a portable IN-subquery on df_records.
+	 */
+	public function deleteByTargetRegister(int $registerId): void {
+		$qb = $this->db->getQueryBuilder();
+		$reg = $qb->createNamedParameter($registerId, IQueryBuilder::PARAM_INT);
+		$sub = $this->db->getQueryBuilder();
+		$sub->select('id')
+			->from('df_records')
+			->where('register_id = ' . $reg);
+		$qb->delete('df_rec_refs')
+			->where('target_record_id IN (' . $sub->getSQL() . ')');
+		$qb->executeStatement();
+	}
 }
