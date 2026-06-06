@@ -28,6 +28,10 @@ class EmailAction implements IAction {
 		return 'email';
 	}
 
+	public function isDeferred(): bool {
+		return true; // SMTP can block; run off the request thread
+	}
+
 	public function run(ActionContext $context): void {
 		$recipients = [];
 		foreach ((array)($context->config['users'] ?? []) as $uid) {

@@ -50,11 +50,46 @@ A "stage" is just a single-select `Field` (e.g. Case Status). A later addition
 is a **transition map** (which stage → which, and who may move it) stored in the
 field config, enforced server-side — still no new table, no new primitive.
 
+## Execution model (0.26 — hardened)
+
+Actions are split by cost so a slow or hostile endpoint can never block a record
+write or exhaust the PHP worker pool:
+
+- **Inline actions** (`notify`, `set_field`) are cheap, internal and loop-safe.
+  They run **synchronously** in `AutomationListener` — but only *after* the
+  record's writes have committed (events are dispatched post-commit), so they
+  never observe a half-written or rolled-back row.
+- **Deferred actions** (`email`, `webhook`) have slow or external side effects.
+  The listener does **not** run them; it enqueues a single
+  `OCA\Dataforms\BackgroundJob\RunAutomationsJob` (an `OCP\BackgroundJob`
+  `QueuedJob`). The job re-reads the register's currently-enabled automations
+  against the captured value snapshot and runs only the deferred ones — picking
+  up any enable/disable change made between the write and the job firing.
+  Each action declares its lane via `IAction::isDeferred()`.
+
+**Operational requirement:** because email/webhook delivery happens in the
+background queue, the instance must run **system cron** (the recommended
+Nextcloud setup) for timely delivery. With AJAX cron, delivery happens on the
+next page load; with no cron, deferred actions never run.
+
+**Atomicity:** record create/update/delete wrap their multi-table writes
+(`df_records` + the value/file/ref tables + history) in a single DB transaction;
+a mid-write failure rolls the whole change back rather than leaving orphaned or
+missing value rows.
+
+**Bulk import bypasses automations by design.** A CSV import writes rows via a
+no-events path inside one transaction and is row-capped — importing 1,000 rows
+must not fire 1,000 webhooks/emails. Run the relevant automations manually (or
+re-save records) if a bulk load should trigger them.
+
 ## Hard limits (from the no-list)
 
 - **Server-side only**, sandboxed condition evaluation — never `eval`.
 - **Webhooks are explicit and user-configured**; outbound calls are opt-in,
-  logged, and rate-limited. No outbound calls by default.
+  logged, time-limited, and **SSRF-guarded** — the HTTP client refuses
+  internal/loopback/link-local targets (`allow_local_address => false`) and never
+  follows redirects, regardless of the instance's `allow_local_remote_servers`
+  setting. No outbound calls by default.
 - No arbitrary scripting in actions; actions are a fixed, audited set.
 
 ## Build order
@@ -68,7 +103,10 @@ field config, enforced server-side — still no new table, no new primitive.
    signature *(0.25)*.
 6. ✅ Automations **builder UI** (manager-only tab, reusing the condition rows)
    *(0.24)*.
-7. ⏳ Optional: stage transitions + stage-based permissions.
+7. ✅ Hardening *(0.26)*: deferred actions (email/webhook) moved to a background
+   job; record writes wrapped in transactions with post-commit dispatch; webhook
+   SSRF guard; bulk import no longer amplifies automations.
+8. ⏳ Optional: stage transitions + stage-based permissions.
 
 The planned action set (notify · email · set-field · webhook) is complete. Each
 step shipped independently and is verified via the API.

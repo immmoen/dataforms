@@ -48,11 +48,14 @@ class AutomationService {
 	public function create(string $userId, int $registerId, array $data): array {
 		$this->registerService->findManageable($userId, $registerId);
 
+		$actionType = $this->validAction($data['actionType'] ?? '');
+		$this->validateActionConfig($actionType, $data['actionConfig'] ?? []);
+
 		$a = new Automation();
 		$a->setRegisterId($registerId);
 		$a->setName(trim((string)($data['name'] ?? '')) ?: 'Automation');
 		$a->setTrigger($this->validTrigger($data['trigger'] ?? ''));
-		$a->setActionType($this->validAction($data['actionType'] ?? ''));
+		$a->setActionType($actionType);
 		$a->setCondition($this->encodeJson($data['condition'] ?? null));
 		$a->setActionConfig($this->encodeJson($data['actionConfig'] ?? []));
 		$a->setEnabled((bool)($data['enabled'] ?? true));
@@ -87,6 +90,11 @@ class AutomationService {
 		if (array_key_exists('enabled', $changes)) {
 			$a->setEnabled((bool)$changes['enabled']);
 		}
+		// Re-validate the (possibly newly combined) action type + config.
+		$this->validateActionConfig(
+			$a->getActionType(),
+			$a->getActionConfig() ? (json_decode((string)$a->getActionConfig(), true) ?: []) : []
+		);
 		$a->setUpdated($this->time->getTime());
 		return $this->mapper->update($a)->jsonSerialize();
 	}
@@ -135,6 +143,25 @@ class AutomationService {
 			throw new ValidationException('Unknown action: ' . $t);
 		}
 		return $t;
+	}
+
+	/**
+	 * Lightweight save-time sanity check on an action's config. The authoritative
+	 * SSRF defence lives in WebhookAction (it refuses local addresses and
+	 * redirects at call time); this just rejects an obviously-wrong webhook URL
+	 * early, for a clear error in the builder UI.
+	 *
+	 * @throws ValidationException
+	 */
+	private function validateActionConfig(string $actionType, mixed $config): void {
+		if ($actionType !== 'webhook') {
+			return;
+		}
+		$arr = is_array($config) ? $config : [];
+		$url = trim((string)($arr['url'] ?? ''));
+		if ($url !== '' && !preg_match('#^https?://#i', $url)) {
+			throw new ValidationException('Webhook URL must start with http:// or https://');
+		}
 	}
 
 	private function encodeJson(mixed $value): ?string {

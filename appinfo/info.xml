@@ -25,23 +25,22 @@ the **forms** that feed them, entirely from the browser, with no code.
 
 Free and open source (AGPL-3.0-or-later). Development is funded by voluntary donations.
 	]]></description>
-	<version>0.25.0</version>
+	<version>0.26.0</version>
 	<licence>agpl</licence>
-	<author mail="">The Dataforms contributors</author>
+	<author>The Dataforms contributors</author>
 	<namespace>Dataforms</namespace>
 	<category>tools</category>
 	<category>organization</category>
 
-	<!-- Placeholders — fill before App Store submission. -->
+	<!--
+	  Confirm these point at the real project repository before App Store
+	  submission. A <screenshot>full-URL</screenshot> and <donation> links may be
+	  added once a public repo and (optional) donation pages exist; they are
+	  omitted here rather than shipped as placeholders.
+	-->
 	<website>https://github.com/immmoen/dataforms</website>
 	<bugs>https://github.com/immmoen/dataforms/issues</bugs>
 	<repository type="git">https://github.com/immmoen/dataforms.git</repository>
-
-	<screenshot>https://raw.githubusercontent.com/immmoen/dataforms/main/img/screenshot1.png</screenshot>
-
-	<!-- Voluntary donations only — no paid/closed model. URLs are placeholders. -->
-	<donation title="Support development via Stripe" type="stripe">https://REPLACE_ME</donation>
-	<donation title="Donate via PayPal" type="paypal">https://REPLACE_ME</donation>
 
 	<dependencies>
 		<!-- Verify exact min/max against the maintained Nextcloud releases at build time. -->

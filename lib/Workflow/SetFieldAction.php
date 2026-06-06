@@ -34,6 +34,12 @@ class SetFieldAction implements IAction {
 		return 'set_field';
 	}
 
+	public function isDeferred(): bool {
+		// Must run inline so the stored value is immediately authoritative; it
+		// writes the value column directly, so it never re-fires automations.
+		return false;
+	}
+
 	public function run(ActionContext $context): void {
 		$machineName = trim((string)($context->config['field'] ?? ''));
 		if ($machineName === '') {

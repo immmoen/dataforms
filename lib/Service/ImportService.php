@@ -10,18 +10,28 @@ use OCA\Dataforms\Db\Field;
 use OCA\Dataforms\Db\FieldMapper;
 use OCA\Dataforms\Exception\NotFoundException;
 use OCA\Dataforms\Exception\ValidationException;
+use OCP\IDBConnection;
 
 /**
  * CSV import. Columns are matched to fields by header (label or machine name).
- * Each row is created through RecordService, so the same validation, type
- * coercion and computed-field evaluation apply. Computed, relation and file
- * fields are skipped on import.
+ * Each row is validated through RecordService (same validation, type coercion
+ * and computed-field evaluation as a single create), but written via
+ * createForImport(): the whole file is one DB transaction and — by design — a
+ * bulk load does NOT fire per-row automations (no webhook/email/notification
+ * storm). Computed, relation and file fields are skipped on import.
  */
 class ImportService {
+	/**
+	 * Hard cap on rows processed in a single import request, so one upload can't
+	 * pin a PHP worker past max_execution_time. Larger files must be split.
+	 */
+	private const MAX_ROWS = 5000;
+
 	public function __construct(
 		private RegisterService $registerService,
 		private FieldMapper $fieldMapper,
 		private RecordService $recordService,
+		private IDBConnection $db,
 	) {
 	}
 
@@ -57,29 +67,50 @@ class ImportService {
 		$failed = 0;
 		$errors = [];
 		$line = 1;
+		$capped = false;
 
-		while (($row = fgetcsv($handle)) !== false) {
-			$line++;
-			if ($row === [null] || (count($row) === 1 && trim((string)$row[0]) === '')) {
-				continue; // blank line
-			}
-			$values = [];
-			foreach ($columnMap as $index => $field) {
-				if (array_key_exists($index, $row)) {
-					$values[$field->getMachineName()] = $this->coerce($field, (string)$row[$index]);
+		// One transaction for the whole file: a per-row validation failure is
+		// caught and skipped (it never writes, so the transaction stays clean),
+		// while any catastrophic DB error rolls the entire batch back rather than
+		// leaving a half-imported register.
+		$this->db->beginTransaction();
+		try {
+			while (($row = fgetcsv($handle)) !== false) {
+				$line++;
+				if ($row === [null] || (count($row) === 1 && trim((string)$row[0]) === '')) {
+					continue; // blank line
+				}
+				if (($imported + $failed) >= self::MAX_ROWS) {
+					$capped = true;
+					break;
+				}
+				$values = [];
+				foreach ($columnMap as $index => $field) {
+					if (array_key_exists($index, $row)) {
+						$values[$field->getMachineName()] = $this->coerce($field, (string)$row[$index]);
+					}
+				}
+				try {
+					$this->recordService->createForImport($userId, $registerId, $fields, $values);
+					$imported++;
+				} catch (ValidationException $e) {
+					$failed++;
+					if (count($errors) < 20) {
+						$errors[] = 'Row ' . $line . ': ' . $e->getMessage();
+					}
 				}
 			}
-			try {
-				$this->recordService->create($userId, $registerId, $values);
-				$imported++;
-			} catch (ValidationException $e) {
-				$failed++;
-				if (count($errors) < 20) {
-					$errors[] = 'Row ' . $line . ': ' . $e->getMessage();
-				}
-			}
+			$this->db->commit();
+		} catch (\Throwable $e) {
+			$this->db->rollBack();
+			fclose($handle);
+			throw $e;
 		}
 		fclose($handle);
+
+		if ($capped) {
+			$errors[] = 'Import stopped at the ' . self::MAX_ROWS . '-row limit. Split the file and import the remaining rows in a second batch.';
+		}
 
 		return ['imported' => $imported, 'failed' => $failed, 'errors' => $errors];
 	}

@@ -6,6 +6,7 @@ declare(strict_types=1);
 
 namespace OCA\Dataforms\Listener;
 
+use OCA\Dataforms\BackgroundJob\RunAutomationsJob;
 use OCA\Dataforms\Event\RecordCreatedEvent;
 use OCA\Dataforms\Event\RecordDeletedEvent;
 use OCA\Dataforms\Event\RecordUpdatedEvent;
@@ -13,6 +14,7 @@ use OCA\Dataforms\Rules\RuleEvaluator;
 use OCA\Dataforms\Service\AutomationService;
 use OCA\Dataforms\Workflow\ActionContext;
 use OCA\Dataforms\Workflow\ActionRegistry;
+use OCP\BackgroundJob\IJobList;
 use OCP\EventDispatcher\Event;
 use OCP\EventDispatcher\IEventListener;
 use Psr\Log\LoggerInterface;
@@ -23,6 +25,13 @@ use Psr\Log\LoggerInterface;
  * (no new logic language); actions run through the ActionRegistry. Best-effort —
  * a failing automation never breaks the record write.
  *
+ * Actions are split by cost. **Inline** actions (in-app notification, set-field)
+ * are cheap, internal and loop-safe, so they run here synchronously. **Deferred**
+ * actions (outbound webhook, email) have slow or external side effects, so the
+ * listener only enqueues a {@see RunAutomationsJob}; they are delivered off the
+ * request thread by the background-job queue. This keeps a slow or hung endpoint
+ * from blocking the record write or exhausting the PHP worker pool.
+ *
  * @template-implements IEventListener<Event>
  */
 class AutomationListener implements IEventListener {
@@ -31,6 +40,7 @@ class AutomationListener implements IEventListener {
 		private AutomationService $automations,
 		private ActionRegistry $registry,
 		private RuleEvaluator $evaluator,
+		private IJobList $jobList,
 		private LoggerInterface $logger,
 	) {
 	}
@@ -46,16 +56,22 @@ class AutomationListener implements IEventListener {
 			return;
 		}
 		/** @var RecordCreatedEvent|RecordUpdatedEvent|RecordDeletedEvent $event */
+		$hasDeferred = false;
 		try {
 			foreach ($this->automations->findActive($event->getRegisterId(), $trigger) as $automation) {
+				$action = $this->registry->get($automation->getActionType());
+				if ($action === null) {
+					continue;
+				}
 				$condition = $automation->getCondition()
 					? (json_decode($automation->getCondition(), true) ?: null)
 					: null;
 				if (!$this->evaluator->matches($condition, $event->getValues())) {
 					continue;
 				}
-				$action = $this->registry->get($automation->getActionType());
-				if ($action === null) {
+				if ($action->isDeferred()) {
+					// Run later, off the request thread (see RunAutomationsJob).
+					$hasDeferred = true;
 					continue;
 				}
 				$config = $automation->getActionConfig()
@@ -72,6 +88,16 @@ class AutomationListener implements IEventListener {
 			}
 		} catch (\Throwable $e) {
 			$this->logger->warning('Dataforms automation failed', ['exception' => $e]);
+		}
+
+		if ($hasDeferred) {
+			$this->jobList->add(RunAutomationsJob::class, [
+				'registerId' => $event->getRegisterId(),
+				'recordId' => $event->getRecordId(),
+				'userId' => $event->getUserId(),
+				'trigger' => $trigger,
+				'values' => $event->getValues(),
+			]);
 		}
 	}
 }

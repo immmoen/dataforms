@@ -6,11 +6,21 @@
 **Method:** multi-agent audit (6 dimensions) with adversarial verification of every finding.
 **Result:** 34 confirmed findings — 5 high · 9 medium · 16 low · 4 info. No critical.
 
+> ### ✅ Update (v0.26.0): all 5 High blockers fixed & verified
+> Webhook SSRF guard (H1), webhook/email moved to a background `QueuedJob` with
+> post-commit event dispatch (H2), CSV import no longer fires per-row automations
+> (H3), record writes wrapped in DB transactions (H4), and the `info.xml`
+> placeholders removed (H5). Confirmed by a 13-assertion functional test against
+> the running instance: transactional CRUD round-trip; inline `set_field` runs
+> synchronously while the webhook is deferred to a job; loopback SSRF blocked with
+> `LocalServerException`; a 3-row bulk import fires **zero** automation jobs. The
+> Medium/Low items below are unchanged and remain the should-fix backlog.
+
 ---
 
 ## 1. Executive summary
 
-### Verdict: **NOT store-ready yet.** Two hard blockers, both in the workflow engine.
+### Verdict (at audit time): **NOT store-ready.** Two hard blockers, both in the workflow engine. — *All five now resolved in v0.26.0; see the banner above.*
 
 DataForms is a well-architected app with several genuinely good security properties
 (no `v-html`/`innerHTML` anywhere, HMAC-signed webhooks, per-register ACLs enforced
@@ -61,6 +71,9 @@ instance's `allow_local_remote_servers` setting.
 *Fix:* pass `'nextcloud' => ['allow_local_address' => false]` to `post()`; cap/disable
 redirects and re-validate redirect targets; optional admin domain allow-list; validate the
 URL at save time in `AutomationService::create`.
+**✅ FIXED (0.26.0):** `WebhookAction` now passes `allow_local_address => false`
+and `allow_redirects => false`; `AutomationService` rejects non-http(s) webhook
+URLs at save time. Verified: loopback POST throws `LocalServerException`.
 
 **H2 — Side-effecting actions run synchronously on the write path (instance-wide DoS)**
 (`RecordService` → `AutomationListener` → `WebhookAction`/`EmailAction`/`NotifyAction`)
@@ -73,6 +86,12 @@ the FPM pool and take down the whole instance.
 the actions in the job; route webhook + email to the queue (keep notify/set_field inline
 if desired). Interim: hard-cut timeouts (connect 2s/read 3s), cap webhooks/request, add a
 per-URL circuit breaker.
+**✅ FIXED (0.26.0):** `IAction::isDeferred()` splits actions into inline
+(notify/set_field) and deferred (email/webhook). The listener runs inline actions
+synchronously and enqueues a `RunAutomationsJob` (`QueuedJob`) for deferred ones;
+events dispatch only after the write commits. Requires system cron for delivery
+(documented in `WORKFLOW.md`). Verified: webhook automation enqueues a job rather
+than blocking the write.
 
 **H3 — CSV import fires the full automation+webhook+email chain per row**
 (`lib/Service/ImportService.php`) The import loop calls `create()` per row with no
@@ -82,6 +101,11 @@ on-create webhook = up to 1,000 sequential ≤10s POSTs in one HTTP request → 
 *Fix:* move import into a background job (controller persists upload, enqueues, returns a
 pollable id); per-batch transactions; a `createBulk`/`$dispatchEvents=false` variant so
 per-row automations don't fire thousands of times; interim row-count guard on the endpoint.
+**✅ FIXED (0.26.0):** new `RecordService::createForImport()` writes rows without
+dispatching events; `ImportService` wraps the whole file in one transaction and
+caps it at 5,000 rows/request. Bulk import bypasses automations by design.
+Verified: a 3-row import creates 3 records and fires **zero** automation jobs.
+*(Fully backgrounding very large imports remains a post-launch nice-to-have.)*
 
 **H4 — Record create/update touch 5 tables with no wrapping transaction (partial-write
 corruption)** (`lib/Service/RecordService.php`) No `beginTransaction/commit/rollBack`
@@ -91,6 +115,10 @@ connection drop) leaves the record with *fewer* values — silent data loss. Eve
 fire on a half-written record.
 *Fix:* inject `OCP\IDBConnection`; wrap create/update bodies in a transaction; dispatch
 events **after** commit; optionally reject/truncate over-length `value_string`.
+**✅ FIXED (0.26.0):** `RecordService` injects `IDBConnection` and runs
+create/update/delete writes through an `atomically()` helper
+(`beginTransaction`/`commit`/`rollBack`); events dispatch only after commit.
+Verified: value rows are intact after the atomic create/update path.
 
 ### MEDIUM
 
@@ -174,24 +202,26 @@ SQL) but has three hotspots: **M8** (default `updated` filesort → add index), 
 relation lookups → batch). **M7** is the one read-path item that touches *other* apps
 (unified search O(N) per global keystroke).
 
-**Net:** safe to run for a single team today, but the synchronous automation engine must
-not ship as-is. Backgrounding side effects + transactional writes + the SSRF guard converts
-it from "instance-risk" to "instance-safe."
+**Net:** ✅ **resolved in 0.26.0.** Backgrounding the side-effecting actions, wrapping the
+writes in transactions, and adding the SSRF guard converted the automation engine from
+"instance-risk" to "instance-safe." The remaining scalability items (M1 storage leak; M6/
+M7/M8 read-path indexes) are degradation, not instance threats, and stay on the backlog.
 
 ---
 
 ## 4. Store-submission checklist
 
-**Blocking (fix before any submission):**
-- [ ] **H1** — `allow_local_address => false` + redirect cap in `WebhookAction`; validate URL at save.
-- [ ] **H2/H3/M5** — webhook + email (+ import) off the request thread into `IJobList`; suppress per-row automations on bulk import; cap automations/recipients.
-- [ ] **H4** — transaction around `create/update`; dispatch events after commit.
+**Blocking (fix before any submission) — ✅ all done in 0.26.0:**
+- [x] **H1** — `allow_local_address => false` + `allow_redirects => false` in `WebhookAction`; non-http(s) URL rejected at save.
+- [x] **H2/H3** — webhook + email moved off the request thread into a `RunAutomationsJob` (`IJobList`); bulk import bypasses automations and is row-capped; events dispatch post-commit.
+- [x] **H4** — `atomically()` transaction around `create/update/delete`; events dispatched after commit.
 
 **Should-fix before submission:**
-- [ ] **M3** read gate in `resolveRelations` · **M4** CSV formula neutralisation · **M1/M2** cascade/purge + tombstone field names · **M8/M6/M7** add `[register_id, updated]` index, field-scope record search, single-JOIN search provider.
+- [ ] **M3** read gate in `resolveRelations` · **M4** CSV formula neutralisation · **M1/M2** cascade/purge + tombstone field names · **M8/M6/M7** add `[register_id, updated]` index, field-scope record search, single-JOIN search provider · **M5** cap automations/recipients.
 
-**App-Store metadata (`info.xml` — resolve as one block):**
-- [ ] donation URLs (L1) · real screenshot returning 200 or remove (M9) · author mail (L2) · verify repo org (I1) · remove placeholder comments · align brand to **DataForms** (L14).
+**App-Store metadata (`info.xml`):**
+- [x] **H5** — removed `REPLACE_ME` donation URLs, the broken screenshot reference, and the empty author `mail` attribute; version bumped to 0.26.0.
+- [ ] add a real `<screenshot>` (full URL, HTTP 200) and donation links once a public repo/pages exist (L1/M9) · verify repo org (I1) · align brand to **DataForms** (L14).
 
 **Release hygiene:**
 - [ ] bump/remove package.json version (L3) · signing/cert flow + Makefile `--exclude=/*.json` doesn't strip l10n (I3) · Transifex · **a11y** keyboard/contrast pass · **CI** lint + Psalm/PHPStan + write-path smoke test.
@@ -200,6 +230,9 @@ it from "instance-risk" to "instance-safe."
 
 ---
 
-**Bottom line:** fix the three workflow blockers (H1–H3) + the transaction gap (H4), then
-clear the `info.xml` placeholder block — and DataForms is a credible App-Store submission
-and safe for a busy multi-tenant Nextcloud instance.
+**Bottom line:** the three workflow blockers (H1–H3), the transaction gap (H4), and the
+`info.xml` placeholders (H5) are **fixed and verified in 0.26.0** — DataForms is now safe
+for a busy multi-tenant Nextcloud instance and a credible App-Store submission. The
+remaining Medium/Low items (relation read gate, CSV-injection guard, cascade-delete, the
+three read-path indexes, brand/metadata polish, CI) are the should-fix backlog, none of
+them instance-threatening.

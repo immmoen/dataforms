@@ -29,6 +29,10 @@ class WebhookAction implements IAction {
 		return 'webhook';
 	}
 
+	public function isDeferred(): bool {
+		return true; // outbound HTTP: run off the request thread (background job)
+	}
+
 	public function run(ActionContext $context): void {
 		$url = trim((string)($context->config['url'] ?? ''));
 		if ($url === '' || !preg_match('#^https?://#i', $url)) {
@@ -58,6 +62,14 @@ class WebhookAction implements IAction {
 				'headers' => $headers,
 				'timeout' => 10,
 				'connect_timeout' => 5,
+				// SSRF defence: refuse internal/loopback/link-local targets
+				// regardless of the instance's allow_local_remote_servers setting,
+				// and never follow redirects (a 30x to a local address would
+				// otherwise bypass the check via DNS-rebind / redirect chaining).
+				'nextcloud' => [
+					'allow_local_address' => false,
+				],
+				'allow_redirects' => false,
 			]);
 			$this->logger->info('Dataforms webhook delivered', ['url' => $url, 'record' => $context->recordId]);
 		} catch (\Throwable $e) {

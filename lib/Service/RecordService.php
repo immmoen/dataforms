@@ -29,6 +29,7 @@ use OCP\AppFramework\Db\DoesNotExistException;
 use OCP\AppFramework\Utility\ITimeFactory;
 use OCP\EventDispatcher\IEventDispatcher;
 use OCP\Files\IRootFolder;
+use OCP\IDBConnection;
 
 /**
  * Records and their EAV values. All validation and computed-field evaluation
@@ -51,6 +52,7 @@ class RecordService {
 		private ITimeFactory $time,
 		private HistoryMapper $historyMapper,
 		private IEventDispatcher $eventDispatcher,
+		private IDBConnection $db,
 	) {
 	}
 
@@ -185,6 +187,44 @@ class RecordService {
 		$fields = $this->fieldMapper->findByRegister($registerId);
 		$values = $this->validateAndCompute($registerId, $fields, $values, 0);
 
+		// The record header and its five value/join tables are written as one
+		// unit; a mid-write failure must leave nothing behind.
+		$record = $this->atomically(fn (): Record => $this->writeNewRecord($userId, $registerId, $fields, $values));
+
+		// Dispatch only after the data is durably committed, so automations
+		// (notifications, webhooks) never fire on a half-written or rolled-back row.
+		$this->eventDispatcher->dispatchTyped(new RecordCreatedEvent($registerId, $record->getId(), $userId, $values));
+
+		$dto = $this->toDto($record, $fields, $this->valueMapper->findByRecordIds([$record->getId()])[$record->getId()] ?? []);
+		$dto = $this->resolveRelations($fields, [$dto])[0];
+		return $this->resolveFiles($fields, [$dto], $userId)[0];
+	}
+
+	/**
+	 * Bulk-import variant: validates and writes one record WITHOUT opening its
+	 * own transaction (the importer wraps the whole batch) and WITHOUT dispatching
+	 * record events — a bulk load must never fire per-row automations/webhooks.
+	 * The caller is responsible for the write-permission check and the surrounding
+	 * transaction.
+	 *
+	 * @param Field[] $fields pre-loaded register fields
+	 * @param array<string,mixed> $values machineName => value
+	 * @throws ValidationException
+	 */
+	public function createForImport(string $userId, int $registerId, array $fields, array $values): void {
+		$values = $this->validateAndCompute($registerId, $fields, $values, 0);
+		$this->writeNewRecord($userId, $registerId, $fields, $values);
+	}
+
+	/**
+	 * Insert a new record header plus its value/file/ref rows and the create-history
+	 * entry. Pure write — no transaction management, no permission check, no event
+	 * dispatch (the callers own those).
+	 *
+	 * @param Field[] $fields
+	 * @param array<string,mixed> $values
+	 */
+	private function writeNewRecord(string $userId, int $registerId, array $fields, array $values): Record {
 		$now = $this->time->getTime();
 		$record = new Record();
 		$record->setRegisterId($registerId);
@@ -200,10 +240,7 @@ class RecordService {
 		$this->storeFiles($record->getId(), $fields, $values);
 		$this->storeRefs($record->getId(), $fields, $values);
 		$this->logHistory($registerId, $record->getId(), $userId, 'create', 'Created record', []);
-		$this->eventDispatcher->dispatchTyped(new RecordCreatedEvent($registerId, $record->getId(), $userId, $values));
-		$dto = $this->toDto($record, $fields, $this->valueMapper->findByRecordIds([$record->getId()])[$record->getId()] ?? []);
-		$dto = $this->resolveRelations($fields, [$dto])[0];
-		return $this->resolveFiles($fields, [$dto], $userId)[0];
+		return $record;
 	}
 
 	/**
@@ -221,16 +258,22 @@ class RecordService {
 
 		$before = $this->valueSnapshot($record->getId());
 
-		$record->setUpdated($this->time->getTime());
-		$this->recordMapper->update($record);
+		// update() is the dangerous path: it deletes the record's values before
+		// re-inserting them, so a failure mid-write would otherwise drop data.
+		// Wrap the header update + value replacement + history in one transaction.
+		$changed = $this->atomically(function () use ($record, $userId, $fields, $values, $before): array {
+			$record->setUpdated($this->time->getTime());
+			$this->recordMapper->update($record);
 
-		$this->valueMapper->deleteByRecord($record->getId());
-		$this->storeValues($record->getId(), $fields, $values);
-		$this->storeFiles($record->getId(), $fields, $values);
-		$this->storeRefs($record->getId(), $fields, $values);
+			$this->valueMapper->deleteByRecord($record->getId());
+			$this->storeValues($record->getId(), $fields, $values);
+			$this->storeFiles($record->getId(), $fields, $values);
+			$this->storeRefs($record->getId(), $fields, $values);
 
-		$after = $this->valueSnapshot($record->getId());
-		$changed = $this->logUpdate($record->getRegisterId(), $record->getId(), $userId, $fields, $before, $after);
+			$after = $this->valueSnapshot($record->getId());
+			return $this->logUpdate($record->getRegisterId(), $record->getId(), $userId, $fields, $before, $after);
+		});
+
 		$this->eventDispatcher->dispatchTyped(new RecordUpdatedEvent($record->getRegisterId(), $record->getId(), $userId, $values, $changed));
 
 		$dto = $this->toDto($record, $fields, $this->valueMapper->findByRecordIds([$record->getId()])[$record->getId()] ?? []);
@@ -247,14 +290,44 @@ class RecordService {
 		$register = $this->registerService->findWritable($userId, $record->getRegisterId());
 		$this->requireOwnOrManage($userId, $record, $register);
 
-		$this->enforceReferentialIntegrity($recordId);
+		// Referential-integrity enforcement may cascade-delete referencing records,
+		// so it belongs inside the transaction: a 'block' policy throws and rolls
+		// back cleanly (nothing written), a 'cascade' soft-deletes atomically.
+		$this->atomically(function () use ($record, $recordId, $userId): void {
+			$this->enforceReferentialIntegrity($recordId);
+			$record->setDeletedAt($this->time->getTime());
+			$this->recordMapper->update($record);
+			$this->refMapper->deleteForRecord($recordId); // remove this record's outgoing refs
+			$this->logHistory($record->getRegisterId(), $recordId, $userId, 'delete', 'Deleted record', []);
+		});
 
-		$now = $this->time->getTime();
-		$record->setDeletedAt($now);
-		$this->recordMapper->update($record);
-		$this->refMapper->deleteForRecord($recordId); // remove this record's outgoing refs
-		$this->logHistory($record->getRegisterId(), $recordId, $userId, 'delete', 'Deleted record', []);
 		$this->eventDispatcher->dispatchTyped(new RecordDeletedEvent($record->getRegisterId(), $recordId, $userId));
+	}
+
+	/**
+	 * Run a write closure inside a single DB transaction, committing on success
+	 * and rolling back on any throwable (which is re-thrown). Keeps multi-table
+	 * record writes atomic so a partial failure can never leave orphaned or
+	 * missing value rows.
+	 *
+	 * @template T
+	 * @param callable():T $fn
+	 * @return T
+	 */
+	private function atomically(callable $fn) {
+		$this->db->beginTransaction();
+		try {
+			$result = $fn();
+			$this->db->commit();
+			return $result;
+		} catch (\Throwable $e) {
+			try {
+				$this->db->rollBack();
+			} catch (\Throwable) {
+				// rollback best-effort; surface the original error
+			}
+			throw $e;
+		}
 	}
 
 	/**

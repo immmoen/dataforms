@@ -16,4 +16,15 @@ interface IAction {
 
 	/** Run the action. Must be side-effect-safe and never throw fatally. */
 	public function run(ActionContext $context): void;
+
+	/**
+	 * Whether this action must run off the request thread (in a background job).
+	 *
+	 * Deferred actions are ones with slow or external side effects — outbound
+	 * HTTP, SMTP — that must never block the record write path or let a hung
+	 * endpoint exhaust the PHP worker pool. Inline actions (cheap, internal,
+	 * loop-safe — e.g. an in-app notification or a direct field write) return
+	 * false and run synchronously in the listener.
+	 */
+	public function isDeferred(): bool;
 }

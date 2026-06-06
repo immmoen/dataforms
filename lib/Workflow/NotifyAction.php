@@ -27,6 +27,10 @@ class NotifyAction implements IAction {
 		return 'notify';
 	}
 
+	public function isDeferred(): bool {
+		return false; // in-app notification: cheap, internal, runs inline
+	}
+
 	public function run(ActionContext $context): void {
 		$recipients = array_values(array_filter(array_map('strval', (array)($context->config['users'] ?? []))));
 		// Fall back to the actor so a misconfigured automation still does something visible.
