@@ -50,7 +50,7 @@ class ExportController extends Controller {
 
 		$header = ['id'];
 		foreach ($fields as $field) {
-			$header[] = $field['label'];
+			$header[] = $this->csvSafe((string)$field['label']);
 		}
 		fputcsv($handle, $header);
 
@@ -63,7 +63,7 @@ class ExportController extends Controller {
 				} elseif (is_bool($value)) {
 					$value = $value ? 'yes' : 'no';
 				}
-				$row[] = (string)$value;
+				$row[] = $this->csvSafe((string)$value);
 			}
 			fputcsv($handle, $row);
 		}
@@ -74,5 +74,27 @@ class ExportController extends Controller {
 
 		$filename = 'register-' . $registerId . '.csv';
 		return new DataDownloadResponse($csv, $filename, 'text/csv; charset=UTF-8');
+	}
+
+	/**
+	 * Neutralise spreadsheet formula injection. A cell beginning with =, +, -, @
+	 * or a control char (tab/CR/LF) is evaluated as a formula by Excel/Sheets, so
+	 * a stored value like "=HYPERLINK(...)" or "=cmd|'...'!A1" can execute when the
+	 * export is opened. Such cells are prefixed with a single quote so they are
+	 * treated as literal text. Genuine numbers (including negatives/decimals) are
+	 * left untouched.
+	 */
+	private function csvSafe(string $value): string {
+		if ($value === '') {
+			return $value;
+		}
+		$first = $value[0];
+		if ($first === "\t" || $first === "\r" || $first === "\n") {
+			return "'" . $value;
+		}
+		if (in_array($first, ['=', '+', '-', '@'], true) && !is_numeric($value)) {
+			return "'" . $value;
+		}
+		return $value;
 	}
 }

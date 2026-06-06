@@ -133,15 +133,20 @@ Verified: value rows are intact after the atomic create/update path.
   and `ensureUnique` checks only live rows — so a deleted name can be reused and a stale rule
   silently re-binds to a new, unrelated field. *Fix:* tombstone deleted machine-names; sweep
   dependent metadata on delete.
-- **M3 — Relation label resolution leaks values across the sharing boundary**
-  (`RecordService::resolveRelations`/`labelsForRecords`) resolves labels for a relation's
-  `targetRegisterId` with **no** read gate (unlike `options()`). A Write user can store an
+- **M3 — Relation label resolution leaks values across the sharing boundary** ✅ **FIXED (0.27.0)**
+  (`RecordService::resolveRelations`/`labelsForRecords`) resolved labels for a relation's
+  `targetRegisterId` with **no** read gate (unlike `options()`). A Write user could store an
   arbitrary `target_record_id` into a relation and read back a display-field value from a
-  register they can't access. *Fix:* add the read gate; anonymise on `NotFoundException`;
-  validate relation target ids on write.
-- **M4 — CSV formula injection in exports** (`ExportController`) values/labels written
-  verbatim; a stored `=HYPERLINK(...)`/`=cmd|...` executes when a victim opens the export.
-  *Fix:* prefix cells beginning with `= + - @`/tab/CR with a single quote (data + headers).
+  register they can't access. *Fixed:* `resolveRelations` now takes the viewing user and
+  resolves labels only for target registers they can read (memoised `canRead`), anonymising
+  to `#id` otherwise; `storeRefs` validates every target id is a live record in the field's
+  configured target register (`RecordMapper::existingIdsInRegister`) and rejects others.
+  Verified: a non-reader sees `#id`, not the value; invalid/wrong-register ids rejected on write.
+- **M4 — CSV formula injection in exports** ✅ **FIXED (0.27.0)** (`ExportController`) values/labels
+  were written verbatim; a stored `=HYPERLINK(...)`/`=cmd|...` executes when a victim opens the
+  export. *Fixed:* a `csvSafe()` helper prefixes cells beginning with `= + - @` or a control
+  char (tab/CR/LF) with a single quote, applied to both headers and data; genuine numbers
+  (incl. negatives/decimals) pass through. Verified against 9 payload/number cases.
 - **M5 — Synchronous SMTP + per-recipient notify add write-path latency** — subsumed by H2's
   queue; cap recipient-list and automations-per-register.
 - **M6 — Per-register record search runs an unindexed leading-wildcard LIKE over
@@ -217,7 +222,9 @@ M7/M8 read-path indexes) are degradation, not instance threats, and stay on the 
 - [x] **H4** — `atomically()` transaction around `create/update/delete`; events dispatched after commit.
 
 **Should-fix before submission:**
-- [ ] **M3** read gate in `resolveRelations` · **M4** CSV formula neutralisation · **M1/M2** cascade/purge + tombstone field names · **M8/M6/M7** add `[register_id, updated]` index, field-scope record search, single-JOIN search provider · **M5** cap automations/recipients.
+- [x] **M3** read gate in `resolveRelations` + target-id validation on write *(0.27.0)*.
+- [x] **M4** CSV formula neutralisation in exports *(0.27.0)*.
+- [ ] **M1/M2** cascade/purge + tombstone field names · **M8/M6/M7** add `[register_id, updated]` index, field-scope record search, single-JOIN search provider · **M5** cap automations/recipients.
 
 **App-Store metadata (`info.xml`):**
 - [x] **H5** — removed `REPLACE_ME` donation URLs, the broken screenshot reference, and the empty author `mail` attribute; version bumped to 0.26.0.

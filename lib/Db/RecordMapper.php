@@ -33,6 +33,32 @@ class RecordMapper extends QBMapper {
 	}
 
 	/**
+	 * Of the given record ids, return those that are live (not soft-deleted) and
+	 * belong to the given register. Used to validate relation target ids on write.
+	 *
+	 * @param int[] $ids
+	 * @return int[] the subset of $ids that exist in $registerId
+	 */
+	public function existingIdsInRegister(array $ids, int $registerId): array {
+		if ($ids === []) {
+			return [];
+		}
+		$qb = $this->db->getQueryBuilder();
+		$qb->select('id')
+			->from($this->getTableName())
+			->where($qb->expr()->eq('register_id', $qb->createNamedParameter($registerId, IQueryBuilder::PARAM_INT)))
+			->andWhere($qb->expr()->in('id', $qb->createNamedParameter($ids, IQueryBuilder::PARAM_INT_ARRAY)))
+			->andWhere($qb->expr()->isNull('deleted_at'));
+		$result = $qb->executeQuery();
+		$out = [];
+		foreach ($result->fetchAll() as $row) {
+			$out[] = (int)$row['id'];
+		}
+		$result->closeCursor();
+		return $out;
+	}
+
+	/**
 	 * Paginated, optionally searched list of records in a register.
 	 *
 	 * @return Record[]

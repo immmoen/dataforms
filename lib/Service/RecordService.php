@@ -103,7 +103,7 @@ class RecordService {
 		foreach ($records as $record) {
 			$dtos[] = $this->toDto($record, $fields, $valuesByRecord[$record->getId()] ?? []);
 		}
-		$dtos = $this->resolveRelations($fields, $dtos);
+		$dtos = $this->resolveRelations($userId, $fields, $dtos);
 		$dtos = $this->resolveFiles($fields, $dtos, $userId);
 
 		return [
@@ -172,7 +172,7 @@ class RecordService {
 		$fields = $this->fieldMapper->findByRegister($record->getRegisterId());
 		$values = $this->valueMapper->findByRecordIds([$record->getId()]);
 		$dto = $this->toDto($record, $fields, $values[$record->getId()] ?? []);
-		$dto = $this->resolveRelations($fields, [$dto])[0];
+		$dto = $this->resolveRelations($userId, $fields, [$dto])[0];
 		return $this->resolveFiles($fields, [$dto], $userId)[0];
 	}
 
@@ -196,7 +196,7 @@ class RecordService {
 		$this->eventDispatcher->dispatchTyped(new RecordCreatedEvent($registerId, $record->getId(), $userId, $values));
 
 		$dto = $this->toDto($record, $fields, $this->valueMapper->findByRecordIds([$record->getId()])[$record->getId()] ?? []);
-		$dto = $this->resolveRelations($fields, [$dto])[0];
+		$dto = $this->resolveRelations($userId, $fields, [$dto])[0];
 		return $this->resolveFiles($fields, [$dto], $userId)[0];
 	}
 
@@ -277,7 +277,7 @@ class RecordService {
 		$this->eventDispatcher->dispatchTyped(new RecordUpdatedEvent($record->getRegisterId(), $record->getId(), $userId, $values, $changed));
 
 		$dto = $this->toDto($record, $fields, $this->valueMapper->findByRecordIds([$record->getId()])[$record->getId()] ?? []);
-		$dto = $this->resolveRelations($fields, [$dto])[0];
+		$dto = $this->resolveRelations($userId, $fields, [$dto])[0];
 		return $this->resolveFiles($fields, [$dto], $userId)[0];
 	}
 
@@ -489,6 +489,24 @@ class RecordService {
 	}
 
 	/**
+	 * Whether the user may read a register, memoised per call within $cache so a
+	 * batch of relations to the same target register costs one permission check.
+	 *
+	 * @param array<int,bool> $cache registerId => readable
+	 */
+	private function canRead(string $userId, int $registerId, array &$cache): bool {
+		if (array_key_exists($registerId, $cache)) {
+			return $cache[$registerId];
+		}
+		try {
+			$this->registerService->find($userId, $registerId); // throws if not readable
+			return $cache[$registerId] = true;
+		} catch (\Throwable) {
+			return $cache[$registerId] = false;
+		}
+	}
+
+	/**
 	 * Run the rule engine: compute computed fields, enforce required and
 	 * validation. Returns the value map with computed values applied.
 	 *
@@ -588,8 +606,15 @@ class RecordService {
 	/**
 	 * Persist a relation field's referenced record ids into the join table.
 	 *
+	 * Each target id is validated to be a live record in the field's configured
+	 * target register before it is stored — this stops an API caller from
+	 * pointing a relation at an arbitrary record in another register (a
+	 * data-integrity hole and the write half of the cross-register leak that
+	 * resolveRelations() guards on read).
+	 *
 	 * @param Field[] $fields
 	 * @param array<string,mixed> $values
+	 * @throws ValidationException on an invalid target id
 	 */
 	private function storeRefs(int $recordId, array $fields, array $values): void {
 		foreach ($fields as $field) {
@@ -599,12 +624,37 @@ class RecordService {
 			$this->refMapper->deleteForRecordField($recordId, $field->getId());
 			$value = $values[$field->getMachineName()] ?? null;
 			$list = is_array($value) && !isset($value['id']) ? $value : ($value === null || $value === '' ? [] : [$value]);
-			$position = 0;
+
+			// Candidate target ids, de-duplicated, order preserved.
+			$candidates = [];
 			foreach ($list as $item) {
 				$targetId = is_array($item) ? (int)($item['id'] ?? 0) : (int)$item;
-				if ($targetId > 0) {
-					$this->refMapper->insertRef($recordId, $field->getId(), $targetId, $position++);
+				if ($targetId > 0 && !in_array($targetId, $candidates, true)) {
+					$candidates[] = $targetId;
 				}
+			}
+			if ($candidates === []) {
+				continue;
+			}
+
+			// Integrity gate: reject any id that is not a live record in the
+			// field's configured target register.
+			$cfg = json_decode($field->getConfig() ?? '{}', true) ?: [];
+			$targetReg = (int)($cfg['targetRegisterId'] ?? 0);
+			if ($targetReg > 0) {
+				$valid = $this->recordMapper->existingIdsInRegister($candidates, $targetReg);
+				$invalid = array_values(array_diff($candidates, $valid));
+				if ($invalid !== []) {
+					throw new ValidationException(
+						$field->getLabel() . ': invalid relation target' . (count($invalid) > 1 ? 's' : '') . ' ' . implode(', ', $invalid),
+						[$field->getMachineName() => 'Invalid relation target']
+					);
+				}
+			}
+
+			$position = 0;
+			foreach ($candidates as $targetId) {
+				$this->refMapper->insertRef($recordId, $field->getId(), $targetId, $position++);
 			}
 		}
 	}
@@ -659,11 +709,17 @@ class RecordService {
 	/**
 	 * Replace raw relation target ids in DTOs with {id, label} objects.
 	 *
+	 * The display label is only resolved when the viewing user can read the
+	 * relation's target register; otherwise the value is anonymised to a bare
+	 * "#id" placeholder. Without this gate a Write user could store an arbitrary
+	 * target id and read back a display-field value from a register they have no
+	 * access to (cross-register information disclosure).
+	 *
 	 * @param Field[] $fields
 	 * @param array<int,array<string,mixed>> $dtos
 	 * @return array<int,array<string,mixed>>
 	 */
-	private function resolveRelations(array $fields, array $dtos): array {
+	private function resolveRelations(string $userId, array $fields, array $dtos): array {
 		$relationFields = array_filter($fields, static fn (Field $f) => $f->getType() === 'relation');
 		if (count($relationFields) === 0) {
 			return $dtos;
@@ -678,12 +734,14 @@ class RecordService {
 				$targetIdsByField[$row['field_id']][] = $row['target_record_id'];
 			}
 		}
+		$readableCache = [];
 		$labelsByField = [];
 		foreach ($relationFields as $field) {
 			$cfg = json_decode($field->getConfig() ?? '{}', true) ?: [];
 			$targetReg = (int)($cfg['targetRegisterId'] ?? 0);
 			$ids = array_values(array_unique($targetIdsByField[$field->getId()] ?? []));
-			$labelsByField[$field->getId()] = $targetReg > 0
+			// Read gate: resolve labels only for target registers this user can read.
+			$labelsByField[$field->getId()] = ($targetReg > 0 && $this->canRead($userId, $targetReg, $readableCache))
 				? $this->labelsForRecords($targetReg, $ids, (string)($cfg['displayField'] ?? ''))
 				: [];
 		}
