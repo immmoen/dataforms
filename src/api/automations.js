@@ -21,6 +21,7 @@ export const ACTION_TYPES = [
 	{ id: 'email', label: 'Send an email' },
 	{ id: 'set_field', label: 'Set a field' },
 	{ id: 'provision_folders', label: 'Create folders' },
+	{ id: 'add_calendar_event', label: 'Add a calendar event' },
 	{ id: 'webhook', label: 'Call a webhook' },
 ]
 

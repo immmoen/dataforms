@@ -185,6 +185,14 @@ class AutomationService {
 				}
 			}
 		}
+		if ($actionType === 'add_calendar_event') {
+			if (trim((string)($arr['title'] ?? '')) === '') {
+				throw new ValidationException('The event needs a title');
+			}
+			if (trim((string)($arr['startField'] ?? '')) === '') {
+				throw new ValidationException('Choose a date field for the event start');
+			}
+		}
 	}
 
 	private function encodeJson(mixed $value): ?string {

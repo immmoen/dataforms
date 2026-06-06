@@ -22,6 +22,8 @@
 		<UndefinedClass>
 			<errorLevel type="suppress">
 				<referencedClass name="OC" />
+				<!-- sabre/vobject is a Nextcloud core dependency, not in the app's analysis vendor. -->
+				<referencedClass name="Sabre\VObject\Component\VCalendar" />
 			</errorLevel>
 		</UndefinedClass>
 		<!--

@@ -94,6 +94,22 @@
 					</p>
 				</template>
 
+				<template v-else-if="draft.actionType === 'add_calendar_event'">
+					<label class="block-label">{{ t('dataforms', 'Event title') }}</label>
+					<NcTextField v-model="draft.eventTitle" :placeholder="t('dataforms', 'e.g. Kickoff: {client}')" />
+					<label class="block-label">{{ t('dataforms', 'Start date (from a field)') }}</label>
+					<NcSelect v-model="draft.startField" :options="dateFieldOptions" :reduce="(o) => o.id" label="label" :clearable="false" :placeholder="t('dataforms', 'Pick a date field')" />
+					<label class="block-label">{{ t('dataforms', 'Duration') }}</label>
+					<NcSelect v-model="draft.duration" :options="durationOptions" :reduce="(o) => o.id" label="label" :clearable="false" />
+					<label class="block-label">{{ t('dataforms', 'Calendar (optional)') }}</label>
+					<NcTextField v-model="draft.calendar" :placeholder="t('dataforms', 'Calendar name — blank for the author’s default')" />
+					<NcTextArea v-model="draft.eventDescription" :label="t('dataforms', 'Description (optional)')" />
+					<p class="hint">
+						{{ t('dataforms', 'Added to the record author’s calendar. Use {field} in the title/description.') }}
+						<br>{{ t('dataforms', 'Fields:') }} <code>{{ machineNames }}</code>
+					</p>
+				</template>
+
 				<template v-else-if="draft.actionType === 'webhook'">
 					<label class="block-label">{{ t('dataforms', 'Webhook URL') }}</label>
 					<NcTextField v-model="draft.url" placeholder="https://example.org/hook" />
@@ -137,7 +153,7 @@ import { listFields } from '../api/fields.js'
 import { searchSharees } from '../api/shares.js'
 import { FILTER_OPS } from '../api/rules.js'
 
-const blank = () => ({ name: '', trigger: 'create', conditions: [], actionType: 'notify', recipients: [], subject: '', message: '', setField: '', setValue: '', url: '', secret: '', basePath: '', folderLines: '' })
+const blank = () => ({ name: '', trigger: 'create', conditions: [], actionType: 'notify', recipients: [], subject: '', message: '', setField: '', setValue: '', url: '', secret: '', basePath: '', folderLines: '', eventTitle: '', startField: '', duration: 60, calendar: '', eventDescription: '' })
 
 export default {
 	name: 'AutomationsBuilder',
@@ -164,6 +180,12 @@ export default {
 			recipientOptions: [],
 			searching: false,
 			searchTimer: null,
+			durationOptions: [
+				{ id: 30, label: t('dataforms', '30 minutes') },
+				{ id: 60, label: t('dataforms', '1 hour') },
+				{ id: 120, label: t('dataforms', '2 hours') },
+				{ id: 0, label: t('dataforms', 'All day') },
+			],
 		}
 	},
 	computed: {
@@ -179,6 +201,12 @@ export default {
 		folderPlaceholder() {
 			const first = this.fields[0]?.machineName ?? 'name'
 			return '{' + first + '}\n{' + first + '}/Contracts\n{' + first + '}/Correspondence'
+		},
+		// Date/datetime fields usable as a calendar event's start.
+		dateFieldOptions() {
+			return this.fields
+				.filter((f) => ['date', 'datetime'].includes(f.type))
+				.map((f) => ({ id: f.machineName, label: f.label }))
 		},
 		// Fields the set-field action can write (excludes join-table & derived types).
 		settableFields() {
@@ -199,6 +227,9 @@ export default {
 			}
 			if (a === 'provision_folders') {
 				return this.draft.folderLines.split('\n').some((s) => s.trim() !== '')
+			}
+			if (a === 'add_calendar_event') {
+				return !!this.draft.eventTitle.trim() && !!this.draft.startField
 			}
 			if (a === 'webhook') {
 				return /^https?:\/\//i.test(this.draft.url.trim())
@@ -252,6 +283,11 @@ export default {
 				secret: cfg.secret || '',
 				basePath: cfg.basePath || '',
 				folderLines: Array.isArray(cfg.folders) ? cfg.folders.join('\n') : '',
+				eventTitle: cfg.title || '',
+				startField: cfg.startField || '',
+				duration: cfg.allDay ? 0 : (cfg.durationMinutes ?? 60),
+				calendar: cfg.calendar || '',
+				eventDescription: cfg.description || '',
 			}
 			this.recipientOptions = recipients
 			this.showDialog = true
@@ -287,6 +323,15 @@ export default {
 				config = {
 					basePath: this.draft.basePath.trim(),
 					folders: this.draft.folderLines.split('\n').map((s) => s.trim()).filter((s) => s !== ''),
+				}
+			} else if (this.draft.actionType === 'add_calendar_event') {
+				config = {
+					calendar: this.draft.calendar.trim(),
+					title: this.draft.eventTitle.trim(),
+					startField: this.draft.startField,
+					durationMinutes: this.draft.duration === 0 ? 0 : this.draft.duration,
+					allDay: this.draft.duration === 0,
+					description: this.draft.eventDescription,
 				}
 			} else if (this.draft.actionType === 'webhook') {
 				config = { url: this.draft.url.trim(), secret: this.draft.secret }

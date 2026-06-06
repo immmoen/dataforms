@@ -30,22 +30,33 @@ Automation = { register, trigger, condition?, action }
 
 trigger   : on_create | on_update | on_delete | on_field_change(field)
 condition : the existing Rule condition AST (reused — no new language)
-action    : notify | email | set_field | provision_folders | webhook
+action    : notify | email | set_field | provision_folders
+          | add_calendar_event | webhook
 ```
 
-### Provisioning actions (replacing an external flow runner)
+### Provisioning / cross-app actions (replacing an external flow runner)
 
-`provision_folders` is the first of the actions that let DataForms drive
-intake → workspace setup *without* an external engine (Windmill/n8n) or even
-Nextcloud Flow. It creates a folder tree in the **record author's** Files from
-`{machineName}` templates filled with the record's values (e.g. a client-intake
-form creates `Clients/{client_name}/Contracts`). Every path segment is sanitised
-(no `/`, `\`, `..`, control chars — a field value can never escape its segment),
-creation is `mkdir -p`/idempotent, and it runs only inside the author's own
-Files, so it can do nothing the author couldn't do by hand. Planned siblings:
-`apply_template` (copy template files in) and `set_share` (grant access) — each
-added the same way, a new `IAction` class in the registry, and each must clear
-the same hardening bar.
+These are the "guided" actions that let DataForms drive intake → workspace setup
+*without* an external engine (Windmill/n8n) or even Nextcloud Flow — each built on
+a **public** Nextcloud API (no fragile per-app coupling), each running as the
+record **owner**, deferred, and idempotent.
+
+**`provision_folders`** creates a folder tree in the owner's Files from
+`{machineName}` templates (e.g. `Clients/{client_name}/Contracts`). Every path
+segment is sanitised (no `/`, `\`, `..`, control/bidi chars, Windows reserved
+names — a value can never escape its segment), creation is `mkdir -p`, and it is
+bounded (≤ 50 templates, ≤ 10 deep, ≤ 200 folders/fire).
+
+**`add_calendar_event`** adds an event to one of the owner's calendars via the
+public `OCP\Calendar` API (`ICreateFromString`, built with VObject — no Calendar
+*app* dependency). The start comes from a date/datetime field; title/description
+are `{field}` templates; the event UID is derived from the record + automation, so
+re-firing updates rather than duplicates.
+
+Planned siblings: **`apply_template`** (copy template files in) and **`set_share`**
+(grant access) — each added the same way, a new `IAction` in the registry, and
+each must clear the same hardening bar (owner identity, deferred, bounded,
+adversarially reviewed).
 
 - **Storage:** an `automations` table holding `register_id`, `trigger`,
   `condition` (JSON, reusing the rule schema), `action_type`, `action_config`
@@ -73,8 +84,9 @@ write or exhaust the PHP worker pool:
   They run **synchronously** in `AutomationListener` — but only *after* the
   record's writes have committed (events are dispatched post-commit), so they
   never observe a half-written or rolled-back row.
-- **Deferred actions** (`email`, `webhook`, `provision_folders`) have slow or
-  external side effects (SMTP, outbound HTTP, filesystem I/O). The listener does
+- **Deferred actions** (`email`, `webhook`, `provision_folders`,
+  `add_calendar_event`) have slow or external side effects (SMTP, outbound HTTP,
+  filesystem I/O, calendar writes). The listener does
   **not** run them; it enqueues a single
   `OCA\Dataforms\BackgroundJob\RunAutomationsJob` (an `OCP\BackgroundJob`
   `QueuedJob`). The job re-reads the register's currently-enabled automations
