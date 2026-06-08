@@ -185,6 +185,11 @@ class AutomationService {
 				}
 			}
 		}
+		if ($actionType === 'apply_template') {
+			if (trim((string)($arr['source'] ?? '')) === '' || trim((string)($arr['destination'] ?? '')) === '') {
+				throw new ValidationException('Set both the template folder and the destination');
+			}
+		}
 		if ($actionType === 'add_calendar_event') {
 			if (trim((string)($arr['title'] ?? '')) === '') {
 				throw new ValidationException('The event needs a title');

@@ -109,6 +109,17 @@
 					</p>
 				</template>
 
+				<template v-else-if="draft.actionType === 'apply_template'">
+					<label class="block-label">{{ t('dataforms', 'Template folder') }}</label>
+					<NcTextField v-model="draft.templateSource" :placeholder="t('dataforms', 'e.g. Templates/Meeting')" />
+					<label class="block-label">{{ t('dataforms', 'Copy into') }}</label>
+					<NcTextField v-model="draft.templateDest" :placeholder="t('dataforms', 'e.g. Clients/{client}')" />
+					<p class="hint">
+						{{ t('dataforms', 'Copies the contents of the template folder into the destination, in the record author’s Files. Use {field} placeholders; existing files are kept.') }}
+						<br>{{ t('dataforms', 'Fields:') }} <code>{{ machineNames }}</code>
+					</p>
+				</template>
+
 				<template v-else-if="draft.actionType === 'add_calendar_event'">
 					<label class="block-label">{{ t('dataforms', 'Event title') }}</label>
 					<NcTextField v-model="draft.eventTitle" :placeholder="t('dataforms', 'e.g. Kickoff: {client}')" />
@@ -168,7 +179,7 @@ import { listFields } from '../api/fields.js'
 import { searchSharees } from '../api/shares.js'
 import { FILTER_OPS } from '../api/rules.js'
 
-const blank = () => ({ name: '', trigger: 'create', conditions: [], actionType: 'notify', recipients: [], subject: '', message: '', setField: '', setValue: '', url: '', secret: '', basePath: '', folderLines: '', eventTitle: '', startField: '', duration: 60, calendar: '', eventDescription: '' })
+const blank = () => ({ name: '', trigger: 'create', conditions: [], actionType: 'notify', recipients: [], subject: '', message: '', setField: '', setValue: '', url: '', secret: '', basePath: '', folderLines: '', templateSource: '', templateDest: '', eventTitle: '', startField: '', duration: 60, calendar: '', eventDescription: '' })
 
 export default {
 	name: 'AutomationsBuilder',
@@ -243,6 +254,9 @@ export default {
 			if (a === 'provision_folders') {
 				return this.draft.folderLines.split('\n').some((s) => s.trim() !== '')
 			}
+			if (a === 'apply_template') {
+				return !!this.draft.templateSource.trim() && !!this.draft.templateDest.trim()
+			}
 			if (a === 'add_calendar_event') {
 				return !!this.draft.eventTitle.trim() && !!this.draft.startField
 			}
@@ -304,6 +318,8 @@ export default {
 				secret: cfg.secret || '',
 				basePath: cfg.basePath || '',
 				folderLines: Array.isArray(cfg.folders) ? cfg.folders.join('\n') : '',
+				templateSource: cfg.source || '',
+				templateDest: cfg.destination || '',
 				eventTitle: cfg.title || '',
 				startField: cfg.startField || '',
 				duration: cfg.allDay ? 0 : (cfg.durationMinutes ?? 60),
@@ -345,6 +361,8 @@ export default {
 					basePath: this.draft.basePath.trim(),
 					folders: this.draft.folderLines.split('\n').map((s) => s.trim()).filter((s) => s !== ''),
 				}
+			} else if (this.draft.actionType === 'apply_template') {
+				config = { source: this.draft.templateSource.trim(), destination: this.draft.templateDest.trim() }
 			} else if (this.draft.actionType === 'add_calendar_event') {
 				config = {
 					calendar: this.draft.calendar.trim(),

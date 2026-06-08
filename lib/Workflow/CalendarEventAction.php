@@ -38,6 +38,7 @@ class CalendarEventAction implements IAction {
 		private RecordMapper $recordMapper,
 		private IUserManager $userManager,
 		private ITimeFactory $time,
+		private ValueInterpolator $interpolator,
 		private LoggerInterface $logger,
 	) {
 	}
@@ -51,7 +52,7 @@ class CalendarEventAction implements IAction {
 	}
 
 	public function run(ActionContext $context): void {
-		$title = $this->interpolate(trim((string)($context->config['title'] ?? '')), $context->values);
+		$title = $this->interpolator->interpolate(trim((string)($context->config['title'] ?? '')), $context->values);
 		$startField = (string)($context->config['startField'] ?? '');
 		if ($title === '' || $startField === '') {
 			return;
@@ -87,7 +88,7 @@ class CalendarEventAction implements IAction {
 		$ics = $this->buildIcs(
 			$context,
 			mb_substr($title, 0, self::MAX_TITLE),
-			$this->interpolate((string)($context->config['description'] ?? ''), $context->values),
+			$this->interpolator->interpolate((string)($context->config['description'] ?? ''), $context->values),
 			$startDt,
 			$allDay,
 			max(0, (int)($context->config['durationMinutes'] ?? self::DEFAULT_DURATION)),
@@ -168,22 +169,4 @@ class CalendarEventAction implements IAction {
 		return $personal ?? $first;
 	}
 
-	/**
-	 * @param array<string,mixed> $values
-	 */
-	private function interpolate(string $template, array $values): string {
-		return (string)preg_replace_callback('/\{([a-z][a-z0-9_]*)\}/i', function (array $m) use ($values): string {
-			$v = $values[$m[1]] ?? '';
-			if (is_array($v)) {
-				$parts = [];
-				foreach ($v as $x) {
-					$parts[] = is_array($x) ? (string)($x['label'] ?? $x['id'] ?? '') : (string)$x;
-				}
-				$v = implode(', ', $parts);
-			} elseif (is_bool($v)) {
-				$v = $v ? 'yes' : 'no';
-			}
-			return (string)$v;
-		}, $template);
-	}
 }

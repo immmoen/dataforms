@@ -17,22 +17,20 @@ use Psr\Log\LoggerInterface;
  * — the first of the "provisioning" actions that let DataForms drive intake →
  * workspace setup without an external flow runner.
  *
- * Folder names are templates with {machineName} placeholders filled from the
- * record's values, e.g. a "Client intake" form can create
- *   Clients/{client_name}, Clients/{client_name}/Contracts, …
+ * Folder names are templates with {machineName} placeholders (and {field|format}
+ * date tokens) filled from the record's values, e.g. a "Client intake" form can
+ * create Clients/{client_name}, Clients/{client_name}/Contracts, …
  *
  * Security properties:
- * - **Identity:** provisioning happens in the *record owner's* (author's) Files,
- *   resolved from the record itself — NOT whoever triggered the event (a manager
- *   editing another user's record must not provision into the manager's home). A
- *   deleted or disabled owner is a clean no-op.
- * - **Confinement:** every path segment is sanitised (no "/", "\", "..", control/
- *   bidi chars, Windows reserved names) and created one segment at a time, so a
- *   field value can never escape its segment or the owner's folder.
- * - **Bounded:** at most MAX_FOLDERS templates, MAX_DEPTH levels each, and
- *   MAX_CREATED folders per fire — so one record event cannot fan out unbounded
- *   filesystem work or spam a quota.
- * - **Idempotent:** creation is mkdir -p; re-firing reuses the existing tree.
+ * - **Identity:** provisioning happens in the *record owner's* Files (resolved
+ *   from the record), NOT whoever triggered the event. A deleted/disabled owner
+ *   is a clean no-op.
+ * - **Confinement:** every path segment is sanitised by {@see PathSafety} (no
+ *   "/", "\", "..", control/bidi chars, Windows reserved names) and created one
+ *   segment at a time, so a value can never escape its segment or the folder.
+ * - **Bounded:** ≤ MAX_FOLDERS templates, ≤ PathSafety::MAX_DEPTH levels each,
+ *   ≤ MAX_CREATED folders per fire.
+ * - **Idempotent:** mkdir -p; re-firing reuses the existing tree.
  *
  * It is a deferred action (filesystem I/O) and runs off the request thread.
  *
@@ -40,21 +38,14 @@ use Psr\Log\LoggerInterface;
  */
 class ProvisionFoldersAction implements IAction {
 
-	/** Caps that bound the filesystem fan-out of a single fire. */
 	private const MAX_FOLDERS = 50;   // templates per automation
-	private const MAX_DEPTH = 10;     // path segments per template
 	private const MAX_CREATED = 200;  // folders newly created per fire
-
-	/** Windows reserved device names, refused as folder names. */
-	private const RESERVED = '/^(con|prn|aux|nul|com[1-9]|lpt[1-9])$/i';
-
-	/** Zero-width and bidirectional control characters (spoofing / confusables). */
-	private const BIDI = '/[\x{200B}-\x{200F}\x{202A}-\x{202E}\x{2066}-\x{2069}\x{FEFF}]/u';
 
 	public function __construct(
 		private IRootFolder $rootFolder,
 		private RecordMapper $recordMapper,
 		private IUserManager $userManager,
+		private ValueInterpolator $interpolator,
 		private LoggerInterface $logger,
 	) {
 	}
@@ -101,7 +92,12 @@ class ProvisionFoldersAction implements IAction {
 				$this->logger->warning('Dataforms provision-folders hit the per-run folder budget for record ' . $context->recordId);
 				break;
 			}
-			$segments = $this->safeSegments($base . '/' . $this->interpolate($template, $context->values));
+			$interpolated = $this->interpolator->interpolate(
+				$template,
+				$context->values,
+				static fn (string $s): string => PathSafety::pathSafeValue($s),
+			);
+			$segments = PathSafety::safeSegments($base . '/' . $interpolated);
 			if ($segments === []) {
 				continue;
 			}
@@ -114,67 +110,6 @@ class ProvisionFoldersAction implements IAction {
 		if ($created > 0) {
 			$this->logger->info('Dataforms provision-folders created ' . $created . ' folder(s) for record ' . $context->recordId);
 		}
-	}
-
-	/**
-	 * Replace {machineName} placeholders with the record's (path-safe) values.
-	 *
-	 * @param array<string,mixed> $values
-	 */
-	private function interpolate(string $template, array $values): string {
-		return (string)preg_replace_callback('/\{([a-z][a-z0-9_]*)\}/i', function (array $m) use ($values): string {
-			return $this->safeValue($values[$m[1]] ?? '');
-		}, $template);
-	}
-
-	/**
-	 * Stringify a field value for use inside a single path segment, stripping path
-	 * separators, control and bidi/zero-width characters so it cannot create extra
-	 * segments, traverse out, or spoof a sibling name (defence in depth).
-	 *
-	 * @param mixed $value
-	 */
-	private function safeValue($value): string {
-		if (is_bool($value)) {
-			$value = $value ? 'yes' : 'no';
-		} elseif (is_array($value)) {
-			$parts = [];
-			foreach ($value as $v) {
-				$parts[] = is_array($v) ? (string)($v['label'] ?? $v['id'] ?? '') : (string)$v;
-			}
-			$value = implode('-', $parts);
-		}
-		$s = str_replace(['/', '\\', "\0"], ' ', (string)$value);
-		$s = (string)preg_replace(self::BIDI, '', $s);
-		$s = (string)preg_replace('/[\x00-\x1F]/', '', $s);
-		return trim($s);
-	}
-
-	/**
-	 * Split a relative path into safe segments: each is trimmed, bidi/illegal/
-	 * reserved names are dropped, "." / ".." can never appear, and the depth is
-	 * capped — so the result can only ever descend a bounded distance within the
-	 * owner's folder.
-	 *
-	 * @return string[]
-	 */
-	private function safeSegments(string $path): array {
-		$out = [];
-		foreach (explode('/', str_replace('\\', '/', $path)) as $raw) {
-			$seg = trim($raw);
-			$seg = (string)preg_replace(self::BIDI, '', $seg);
-			$seg = trim($seg, '.'); // forbid leading/trailing dots → blocks "." / ".."
-			$seg = (string)preg_replace('#[\\\\/<>:"|?*\x00-\x1F]#', '', $seg);
-			$seg = trim($seg);
-			if ($seg === '' || preg_match(self::RESERVED, $seg)) {
-				continue;
-			}
-			$out[] = mb_substr($seg, 0, 250);
-			if (count($out) >= self::MAX_DEPTH) {
-				break;
-			}
-		}
-		return $out;
 	}
 
 	/**
