@@ -34,6 +34,7 @@ class ApplyTemplateAction implements IAction {
 		private RecordMapper $recordMapper,
 		private IUserManager $userManager,
 		private ValueInterpolator $interpolator,
+		private RelationResolver $relationResolver,
 		private LoggerInterface $logger,
 	) {
 	}
@@ -68,9 +69,10 @@ class ApplyTemplateAction implements IAction {
 			return;
 		}
 
+		$values = $this->relationResolver->enrich($owner, $context->registerId, $context->values);
 		$transform = static fn (string $s): string => PathSafety::pathSafeValue($s);
-		$srcSegments = PathSafety::safeSegments($this->interpolator->interpolate($sourceTpl, $context->values, $transform));
-		$dstSegments = PathSafety::safeSegments($this->interpolator->interpolate($destTpl, $context->values, $transform));
+		$srcSegments = PathSafety::safeSegments($this->interpolator->interpolate($sourceTpl, $values, $transform));
+		$dstSegments = PathSafety::safeSegments($this->interpolator->interpolate($destTpl, $values, $transform));
 		if ($srcSegments === [] || $dstSegments === []) {
 			return;
 		}

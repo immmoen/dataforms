@@ -31,8 +31,10 @@ class ValueInterpolator {
 	 * @param null|callable(string):string $valueTransform
 	 */
 	public function interpolate(string $template, array $values, ?callable $valueTransform = null): string {
+		// Field name, optionally a relation sub-field path (subgroup.code), and an
+		// optional |date-format suffix.
 		return (string)preg_replace_callback(
-			'/\{([a-z][a-z0-9_]*)(?:\|([^}|]+))?\}/i',
+			'/\{([a-z][a-z0-9_]*(?:\.[a-z][a-z0-9_]*)*)(?:\|([^}|]+))?\}/i',
 			function (array $m) use ($values, $valueTransform): string {
 				$raw = $values[$m[1]] ?? '';
 				$format = isset($m[2]) ? trim($m[2]) : '';

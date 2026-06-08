@@ -39,6 +39,7 @@ class CalendarEventAction implements IAction {
 		private IUserManager $userManager,
 		private ITimeFactory $time,
 		private ValueInterpolator $interpolator,
+		private RelationResolver $relationResolver,
 		private LoggerInterface $logger,
 	) {
 	}
@@ -52,9 +53,9 @@ class CalendarEventAction implements IAction {
 	}
 
 	public function run(ActionContext $context): void {
-		$title = $this->interpolator->interpolate(trim((string)($context->config['title'] ?? '')), $context->values);
+		$titleTpl = trim((string)($context->config['title'] ?? ''));
 		$startField = (string)($context->config['startField'] ?? '');
-		if ($title === '' || $startField === '') {
+		if ($titleTpl === '' || $startField === '') {
 			return;
 		}
 		$startRaw = trim((string)($context->values[$startField] ?? ''));
@@ -69,6 +70,12 @@ class CalendarEventAction implements IAction {
 		}
 		$user = $this->userManager->get($owner);
 		if ($user === null || !$user->isEnabled()) {
+			return;
+		}
+
+		$values = $this->relationResolver->enrich($owner, $context->registerId, $context->values);
+		$title = $this->interpolator->interpolate($titleTpl, $values);
+		if ($title === '') {
 			return;
 		}
 
@@ -88,7 +95,7 @@ class CalendarEventAction implements IAction {
 		$ics = $this->buildIcs(
 			$context,
 			mb_substr($title, 0, self::MAX_TITLE),
-			$this->interpolator->interpolate((string)($context->config['description'] ?? ''), $context->values),
+			$this->interpolator->interpolate((string)($context->config['description'] ?? ''), $values),
 			$startDt,
 			$allDay,
 			max(0, (int)($context->config['durationMinutes'] ?? self::DEFAULT_DURATION)),

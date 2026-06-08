@@ -46,6 +46,7 @@ class ProvisionFoldersAction implements IAction {
 		private RecordMapper $recordMapper,
 		private IUserManager $userManager,
 		private ValueInterpolator $interpolator,
+		private RelationResolver $relationResolver,
 		private LoggerInterface $logger,
 	) {
 	}
@@ -86,6 +87,8 @@ class ProvisionFoldersAction implements IAction {
 			return;
 		}
 
+		$values = $this->relationResolver->enrich($owner, $context->registerId, $context->values);
+
 		$created = 0;
 		foreach ($templates as $template) {
 			if ($created >= self::MAX_CREATED) {
@@ -94,7 +97,7 @@ class ProvisionFoldersAction implements IAction {
 			}
 			$interpolated = $this->interpolator->interpolate(
 				$template,
-				$context->values,
+				$values,
 				static fn (string $s): string => PathSafety::pathSafeValue($s),
 			);
 			$segments = PathSafety::safeSegments($base . '/' . $interpolated);
