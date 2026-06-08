@@ -55,6 +55,11 @@ class NextcloudApiClient {
 			'headers' => ['OCS-APIRequest' => 'true', 'Accept' => 'application/json'],
 			'auth' => [$cred['username'], $cred['password']],
 			'nextcloud' => ['allow_local_address' => true], // internal, same-host call
+			// Never follow redirects: with local addresses permitted and the
+			// service-account credentials attached, a 30x to a loopback/metadata
+			// host would be an SSRF + credential-leak (the host guard only checks
+			// the initial URL). All OCS/Deck calls are single-hop.
+			'allow_redirects' => false,
 			'timeout' => 15,
 			'connect_timeout' => 5,
 			'http_errors' => false,
@@ -79,7 +84,10 @@ class NextcloudApiClient {
 			$decoded = json_decode($body, true);
 			return ['status' => $res->getStatusCode(), 'data' => $decoded ?? $body];
 		} catch (\Throwable $e) {
-			$this->logger->warning('Dataforms cross-app call failed: ' . strtoupper($method) . ' ' . $path, ['exception' => $e]);
+			// Log only the class + message, never the full exception object (whose
+			// serialized request context could in principle carry the auth header).
+			$this->logger->warning('Dataforms cross-app call failed: ' . strtoupper($method) . ' ' . $path
+				. ' — ' . get_class($e) . ': ' . $e->getMessage());
 			return ['status' => 0, 'data' => null];
 		}
 	}

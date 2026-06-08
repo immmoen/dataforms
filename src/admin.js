@@ -45,14 +45,14 @@ document.addEventListener('DOMContentLoaded', () => {
 	saveBtn?.addEventListener('click', async () => {
 		saveBtn.disabled = true
 		try {
-			await axios.post(url('service-account'), {
+			const r = (await axios.post(url('service-account'), {
 				internalUrl: urlField.value.trim(),
 				username: userField.value.trim(),
 				password: passField.value,
-			}, cfg)
+			}, cfg)).data.ocs.data
 			passField.value = ''
-			setStatus(t('dataforms', 'Saved'), 'ok')
 			await refresh()
+			setStatus(r.configured ? t('dataforms', 'Saved') : t('dataforms', 'Saved — add the app password to finish'), r.configured ? 'ok' : 'err')
 		} catch (e) {
 			setStatus(t('dataforms', 'Save failed'), 'err')
 		} finally {

@@ -53,11 +53,13 @@ class AutomationService {
 
 		$actionType = $this->validAction($data['actionType'] ?? '');
 		$this->validateActionConfig($actionType, $data['actionConfig'] ?? []);
+		$trigger = $this->validTrigger($data['trigger'] ?? '');
+		$this->assertTriggerAllowed($trigger, $actionType);
 
 		$a = new Automation();
 		$a->setRegisterId($registerId);
 		$a->setName(trim((string)($data['name'] ?? '')) ?: 'Automation');
-		$a->setTrigger($this->validTrigger($data['trigger'] ?? ''));
+		$a->setTrigger($trigger);
 		$a->setActionType($actionType);
 		$a->setCondition($this->encodeJson($data['condition'] ?? null));
 		$a->setActionConfig($this->encodeJson($data['actionConfig'] ?? []));
@@ -93,12 +95,13 @@ class AutomationService {
 		if (array_key_exists('enabled', $changes)) {
 			$a->setEnabled((bool)$changes['enabled']);
 		}
-		// Re-validate the (possibly newly combined) action type + config.
+		// Re-validate the (possibly newly combined) action type + config + trigger.
 		$cfgJson = $a->getActionConfig();
 		$this->validateActionConfig(
 			$a->getActionType(),
 			($cfgJson !== null && $cfgJson !== '') ? (json_decode($cfgJson, true) ?: []) : []
 		);
+		$this->assertTriggerAllowed($a->getTrigger(), $a->getActionType());
 		$a->setUpdated($this->time->getTime());
 		return $this->mapper->update($a)->jsonSerialize();
 	}
@@ -131,6 +134,20 @@ class AutomationService {
 		}
 		$this->registerService->findManageable($userId, $a->getRegisterId());
 		return $a;
+	}
+
+	/**
+	 * Provisioning actions that make non-idempotent external side effects (a Talk
+	 * room, a Deck board) may only run on the 'create' trigger, so a record
+	 * provisions its workspace exactly once and repeated edits can't re-fire them.
+	 *
+	 * @throws ValidationException
+	 */
+	private function assertTriggerAllowed(string $trigger, string $actionType): void {
+		$createOnly = ['create_talk_room', 'create_deck_board'];
+		if (in_array($actionType, $createOnly, true) && $trigger !== 'create') {
+			throw new ValidationException('This action can only run when a record is created');
+		}
 	}
 
 	private function validTrigger(mixed $trigger): string {

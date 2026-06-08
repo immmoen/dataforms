@@ -8,6 +8,8 @@ namespace OCA\Dataforms\Workflow;
 
 use OCA\Dataforms\Db\FieldMapper;
 use OCA\Dataforms\Db\RecordMapper;
+use OCP\IGroupManager;
+use OCP\IUserManager;
 use Psr\Log\LoggerInterface;
 
 /**
@@ -30,6 +32,8 @@ class CreateTalkRoomAction implements IAction {
 		private FieldMapper $fieldMapper,
 		private ValueInterpolator $interpolator,
 		private RelationResolver $relationResolver,
+		private IUserManager $userManager,
+		private IGroupManager $groupManager,
 		private LoggerInterface $logger,
 	) {
 	}
@@ -52,10 +56,14 @@ class CreateTalkRoomAction implements IAction {
 			return;
 		}
 
-		// Reuse an existing listed room with this exact name, else create one.
-		$token = $this->findRoom($roomName) ?? $this->createRoom($roomName);
+		// Always create a fresh room. (Reusing a room found by display name would
+		// let a record's field value name an unrelated existing conversation and
+		// inject participants/messages into it — so we never reuse by name. These
+		// actions are restricted to the 'create' trigger, so each record provisions
+		// its own room exactly once.)
+		$token = $this->createRoom($roomName);
 		if ($token === null) {
-			$this->logger->warning('Dataforms Talk action: could not create or find room "' . $roomName . '"');
+			$this->logger->warning('Dataforms Talk action: could not create room "' . $roomName . '"');
 			return;
 		}
 
@@ -66,20 +74,6 @@ class CreateTalkRoomAction implements IAction {
 			$this->client->request('POST', '/ocs/v2.php/apps/spreed/api/v1/chat/' . rawurlencode($token) . '?format=json', ['message' => $message]);
 		}
 		$this->logger->info('Dataforms Talk room ready for record ' . $context->recordId);
-	}
-
-	private function findRoom(string $name): ?string {
-		$r = $this->client->request('GET', '/ocs/v2.php/apps/spreed/api/v4/listed-room?format=json&searchTerm=' . rawurlencode($name));
-		$rooms = $r['data']['ocs']['data'] ?? [];
-		if (!is_array($rooms)) {
-			return null;
-		}
-		foreach ($rooms as $room) {
-			if (is_array($room) && ($room['displayName'] ?? null) === $name && !empty($room['token'])) {
-				return (string)$room['token'];
-			}
-		}
-		return null;
 	}
 
 	private function createRoom(string $name): ?string {
@@ -107,6 +101,11 @@ class CreateTalkRoomAction implements IAction {
 		foreach ($this->idList($values[$pf] ?? null) as $id) {
 			if ($added >= self::MAX_PARTICIPANTS) {
 				break;
+			}
+			// Only add principals that actually exist — never relay an arbitrary
+			// id from a record value to the elevated service account verbatim.
+			if ($source === 'groups' ? !$this->groupManager->groupExists($id) : !$this->userManager->userExists($id)) {
+				continue;
 			}
 			$this->client->request(
 				'POST',
