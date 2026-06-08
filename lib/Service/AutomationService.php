@@ -190,6 +190,12 @@ class AutomationService {
 				throw new ValidationException('Set both the template folder and the destination');
 			}
 		}
+		if ($actionType === 'create_talk_room' && trim((string)($arr['roomName'] ?? '')) === '') {
+			throw new ValidationException('The conversation needs a name');
+		}
+		if ($actionType === 'create_deck_board' && trim((string)($arr['title'] ?? '')) === '') {
+			throw new ValidationException('The board needs a title');
+		}
 		if ($actionType === 'add_calendar_event') {
 			if (trim((string)($arr['title'] ?? '')) === '') {
 				throw new ValidationException('The event needs a title');

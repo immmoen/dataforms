@@ -23,6 +23,8 @@ export const ACTION_TYPES = [
 	{ id: 'provision_folders', label: 'Create folders' },
 	{ id: 'apply_template', label: 'Copy template files' },
 	{ id: 'add_calendar_event', label: 'Add a calendar event' },
+	{ id: 'create_talk_room', label: 'Create a Talk conversation' },
+	{ id: 'create_deck_board', label: 'Create a Deck board' },
 	{ id: 'webhook', label: 'Call a webhook' },
 ]
 

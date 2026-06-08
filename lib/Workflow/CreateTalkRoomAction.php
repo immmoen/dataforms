@@ -1,0 +1,159 @@
+<?php
+
+declare(strict_types=1);
+
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
+namespace OCA\Dataforms\Workflow;
+
+use OCA\Dataforms\Db\FieldMapper;
+use OCA\Dataforms\Db\RecordMapper;
+use Psr\Log\LoggerInterface;
+
+/**
+ * Creates (or reuses) a Talk conversation for the record, adds participants from
+ * a user/group field, and posts a welcome message — a *composite* action,
+ * because each call depends on the previous one's output (the room token). It
+ * runs through {@see NextcloudApiClient} as the configured service account, so it
+ * only works once an admin has set that up.
+ *
+ * action_config: { roomName: string, participantsField?: string, message?: string }.
+ */
+class CreateTalkRoomAction implements IAction {
+
+	private const MAX_PARTICIPANTS = 100;
+	private const ROOM_GROUP = 2; // spreed roomType: group conversation
+
+	public function __construct(
+		private NextcloudApiClient $client,
+		private RecordMapper $recordMapper,
+		private FieldMapper $fieldMapper,
+		private ValueInterpolator $interpolator,
+		private RelationResolver $relationResolver,
+		private LoggerInterface $logger,
+	) {
+	}
+
+	public function getType(): string {
+		return 'create_talk_room';
+	}
+
+	public function isDeferred(): bool {
+		return true; // outbound API calls: run off the request thread
+	}
+
+	public function run(ActionContext $context): void {
+		if (!$this->client->isConfigured()) {
+			return;
+		}
+		$values = $this->enrich($context);
+		$roomName = trim($this->interpolator->interpolate(trim((string)($context->config['roomName'] ?? '')), $values));
+		if ($roomName === '') {
+			return;
+		}
+
+		// Reuse an existing listed room with this exact name, else create one.
+		$token = $this->findRoom($roomName) ?? $this->createRoom($roomName);
+		if ($token === null) {
+			$this->logger->warning('Dataforms Talk action: could not create or find room "' . $roomName . '"');
+			return;
+		}
+
+		$this->addParticipants($context, $values, $token);
+
+		$message = trim($this->interpolator->interpolate((string)($context->config['message'] ?? ''), $values));
+		if ($message !== '') {
+			$this->client->request('POST', '/ocs/v2.php/apps/spreed/api/v1/chat/' . rawurlencode($token) . '?format=json', ['message' => $message]);
+		}
+		$this->logger->info('Dataforms Talk room ready for record ' . $context->recordId);
+	}
+
+	private function findRoom(string $name): ?string {
+		$r = $this->client->request('GET', '/ocs/v2.php/apps/spreed/api/v4/listed-room?format=json&searchTerm=' . rawurlencode($name));
+		$rooms = $r['data']['ocs']['data'] ?? [];
+		if (!is_array($rooms)) {
+			return null;
+		}
+		foreach ($rooms as $room) {
+			if (is_array($room) && ($room['displayName'] ?? null) === $name && !empty($room['token'])) {
+				return (string)$room['token'];
+			}
+		}
+		return null;
+	}
+
+	private function createRoom(string $name): ?string {
+		$r = $this->client->request('POST', '/ocs/v2.php/apps/spreed/api/v4/room?format=json', [
+			'roomType' => self::ROOM_GROUP,
+			'roomName' => mb_substr($name, 0, 254),
+		]);
+		if ($r === null || !in_array($r['status'], [200, 201], true)) {
+			return null;
+		}
+		$token = (string)($r['data']['ocs']['data']['token'] ?? '');
+		return $token !== '' ? $token : null;
+	}
+
+	/**
+	 * @param array<string,mixed> $values
+	 */
+	private function addParticipants(ActionContext $context, array $values, string $token): void {
+		$pf = trim((string)($context->config['participantsField'] ?? ''));
+		if ($pf === '') {
+			return;
+		}
+		$source = $this->participantSource($context->registerId, $pf);
+		$added = 0;
+		foreach ($this->idList($values[$pf] ?? null) as $id) {
+			if ($added >= self::MAX_PARTICIPANTS) {
+				break;
+			}
+			$this->client->request(
+				'POST',
+				'/ocs/v2.php/apps/spreed/api/v4/room/' . rawurlencode($token) . '/participants?format=json',
+				['newParticipant' => $id, 'source' => $source],
+			);
+			$added++;
+		}
+	}
+
+	/** 'groups' if the participants field is a group field, else 'users'. */
+	private function participantSource(int $registerId, string $machineName): string {
+		foreach ($this->fieldMapper->findByRegister($registerId) as $f) {
+			if ($f->getMachineName() === $machineName) {
+				return $f->getType() === 'group' ? 'groups' : 'users';
+			}
+		}
+		return 'users';
+	}
+
+	/**
+	 * @param mixed $raw
+	 * @return string[]
+	 */
+	private function idList($raw): array {
+		if (is_array($raw)) {
+			$out = [];
+			foreach ($raw as $x) {
+				$id = is_array($x) ? (string)($x['id'] ?? '') : trim((string)$x);
+				if ($id !== '') {
+					$out[] = $id;
+				}
+			}
+			return $out;
+		}
+		$s = trim((string)$raw);
+		return $s === '' ? [] : array_values(array_filter(array_map('trim', explode(',', $s)), static fn ($x) => $x !== ''));
+	}
+
+	/**
+	 * @return array<string,mixed>
+	 */
+	private function enrich(ActionContext $context): array {
+		$owner = $this->recordMapper->findOwnerById($context->recordId);
+		if ($owner === null || $owner === '') {
+			return $context->values;
+		}
+		return $this->relationResolver->enrich($owner, $context->registerId, $context->values);
+	}
+}

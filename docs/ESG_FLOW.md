@@ -118,7 +118,7 @@ Verified building exactly:
 - **Start:** `meeting_date`
 - **Calendar:** the team/subgroup shared calendar (by name; blank = author default).
 
-### A4 — Create Talk meeting  (composite, to build)
+### A4 — Create Talk meeting  (`create_talk_room`, ✅ built)
 
 One action, because each call needs the previous call's output (the room token):
 
@@ -133,7 +133,7 @@ One action, because each call needs the previous call's output (the room token):
 
 *(All three verbs proven in the spike — see Appendix.)*
 
-### A5 — Create Deck board  (composite, to build)
+### A5 — Create Deck board  (`create_deck_board`, ✅ built)
 
 One action (each stack needs the board id from step 1):
 
@@ -184,9 +184,11 @@ app-password** (the same model the Windmill script uses with `effectiveUser`):
    `RelationResolver`. *(0.32.0 / 0.33.0)*
 2. ✅ **`apply_template` action** — Files API copy; pure record-driven, no credentials. *(0.32.0)*
    *(Items 1–2 deliver A1–A3 fully, with zero credential/confidentiality risk.)*
-3. ⏳ **Service-account credential subsystem** — admin setting + encrypted store + host-scoped HTTP client.
-4. ⏳ **"Create Talk meeting" composite action** (A4).
-5. ⏳ **"Create Deck board" composite action** (A5).
+3. ✅ **Service-account credential subsystem** — admin setting (Admin → DataForms) +
+   encrypted `ICredentialsManager` store + host-gated `NextcloudApiClient`. *(0.34.0)*
+4. ✅ **`create_talk_room`** — create/reuse room → add participants (from a user/group
+   field) → post welcome message. *(0.35.0)*
+5. ✅ **`create_deck_board`** — create/reuse board → add columns. *(0.35.0)*
 6. ⏳ **`provision_folders` optional service-account identity** — only if submitters can't write the shared group folder.
 
 ## Explicitly out of scope

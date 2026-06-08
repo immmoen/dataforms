@@ -136,6 +136,23 @@
 					</p>
 				</template>
 
+				<template v-else-if="draft.actionType === 'create_talk_room'">
+					<label class="block-label">{{ t('dataforms', 'Conversation name') }}</label>
+					<NcTextField v-model="draft.roomName" :placeholder="t('dataforms', 'e.g. {client} meeting')" />
+					<label class="block-label">{{ t('dataforms', 'Add participants from (a user/group field)') }}</label>
+					<NcSelect v-model="draft.participantsField" :options="userGroupFields" :reduce="(o) => o.id" label="label" :clearable="true" :placeholder="t('dataforms', 'None')" />
+					<NcTextArea v-model="draft.roomMessage" :label="t('dataforms', 'Welcome message (optional)')" />
+					<p class="hint">{{ t('dataforms', 'Needs a service account (Admin → DataForms). Use {field} placeholders.') }}</p>
+				</template>
+
+				<template v-else-if="draft.actionType === 'create_deck_board'">
+					<label class="block-label">{{ t('dataforms', 'Board title') }}</label>
+					<NcTextField v-model="draft.boardTitle" :placeholder="t('dataforms', 'e.g. {client} onboarding')" />
+					<label class="block-label">{{ t('dataforms', 'Columns (one per line)') }}</label>
+					<NcTextArea v-model="draft.boardColumns" :placeholder="t('dataforms', 'To do\nDoing\nDone')" />
+					<p class="hint">{{ t('dataforms', 'Needs a service account (Admin → DataForms). Leave columns blank for To do / Doing / Done.') }}</p>
+				</template>
+
 				<template v-else-if="draft.actionType === 'webhook'">
 					<label class="block-label">{{ t('dataforms', 'Webhook URL') }}</label>
 					<NcTextField v-model="draft.url" placeholder="https://example.org/hook" />
@@ -179,7 +196,7 @@ import { listFields } from '../api/fields.js'
 import { searchSharees } from '../api/shares.js'
 import { FILTER_OPS } from '../api/rules.js'
 
-const blank = () => ({ name: '', trigger: 'create', conditions: [], actionType: 'notify', recipients: [], subject: '', message: '', setField: '', setValue: '', url: '', secret: '', basePath: '', folderLines: '', templateSource: '', templateDest: '', eventTitle: '', startField: '', duration: 60, calendar: '', eventDescription: '' })
+const blank = () => ({ name: '', trigger: 'create', conditions: [], actionType: 'notify', recipients: [], subject: '', message: '', setField: '', setValue: '', url: '', secret: '', basePath: '', folderLines: '', templateSource: '', templateDest: '', eventTitle: '', startField: '', duration: 60, calendar: '', eventDescription: '', roomName: '', participantsField: '', roomMessage: '', boardTitle: '', boardColumns: '' })
 
 export default {
 	name: 'AutomationsBuilder',
@@ -228,6 +245,12 @@ export default {
 			const first = this.fields[0]?.machineName ?? 'name'
 			return '{' + first + '}\n{' + first + '}/Contracts\n{' + first + '}/Correspondence'
 		},
+		// User/group fields, usable as a Talk room's participant source.
+		userGroupFields() {
+			return this.fields
+				.filter((f) => ['user', 'group'].includes(f.type))
+				.map((f) => ({ id: f.machineName, label: f.label }))
+		},
 		// Date/datetime fields usable as a calendar event's start.
 		dateFieldOptions() {
 			return this.fields
@@ -259,6 +282,12 @@ export default {
 			}
 			if (a === 'add_calendar_event') {
 				return !!this.draft.eventTitle.trim() && !!this.draft.startField
+			}
+			if (a === 'create_talk_room') {
+				return !!this.draft.roomName.trim()
+			}
+			if (a === 'create_deck_board') {
+				return !!this.draft.boardTitle.trim()
 			}
 			if (a === 'webhook') {
 				return /^https?:\/\//i.test(this.draft.url.trim())
@@ -325,6 +354,11 @@ export default {
 				duration: cfg.allDay ? 0 : (cfg.durationMinutes ?? 60),
 				calendar: cfg.calendar || '',
 				eventDescription: cfg.description || '',
+				roomName: cfg.roomName || '',
+				participantsField: cfg.participantsField || '',
+				roomMessage: cfg.message || '',
+				boardTitle: cfg.title || '',
+				boardColumns: cfg.columns || '',
 			}
 			this.recipientOptions = recipients
 			this.showDialog = true
@@ -372,6 +406,10 @@ export default {
 					allDay: this.draft.duration === 0,
 					description: this.draft.eventDescription,
 				}
+			} else if (this.draft.actionType === 'create_talk_room') {
+				config = { roomName: this.draft.roomName.trim(), participantsField: this.draft.participantsField || '', message: this.draft.roomMessage }
+			} else if (this.draft.actionType === 'create_deck_board') {
+				config = { title: this.draft.boardTitle.trim(), columns: this.draft.boardColumns }
 			} else if (this.draft.actionType === 'webhook') {
 				config = { url: this.draft.url.trim(), secret: this.draft.secret }
 			}
