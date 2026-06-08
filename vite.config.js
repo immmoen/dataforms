@@ -18,6 +18,9 @@ export default createAppConfig(
 		// Loaded wherever references render (Text, Talk, …) to draw the rich
 		// interactive form card. Kept separate from the SPA bundle.
 		reference: 'src/reference.js',
+		// Tiny enhancement for the Admin → DataForms settings page (service
+		// account form). No Vue — just wires the form to the OCS endpoints.
+		admin: 'src/admin.js',
 	},
 	{
 		extractLicenseInformation: false,

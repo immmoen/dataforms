@@ -16,6 +16,12 @@ return [
 		['name' => 'upload#upload', 'url' => '/upload', 'verb' => 'POST'],
 	],
 	'ocs' => [
+		// Admin: cross-app service account (Talk/Deck provisioning).
+		['name' => 'serviceAccount#status', 'url' => '/api/v1/service-account', 'verb' => 'GET'],
+		['name' => 'serviceAccount#save', 'url' => '/api/v1/service-account', 'verb' => 'POST'],
+		['name' => 'serviceAccount#test', 'url' => '/api/v1/service-account/test', 'verb' => 'POST'],
+		['name' => 'serviceAccount#clear', 'url' => '/api/v1/service-account', 'verb' => 'DELETE'],
+
 		['name' => 'register#index', 'url' => '/api/v1/registers', 'verb' => 'GET'],
 		['name' => 'register#create', 'url' => '/api/v1/registers', 'verb' => 'POST'],
 		['name' => 'register#show', 'url' => '/api/v1/registers/{id}', 'verb' => 'GET', 'requirements' => ['id' => '\d+']],

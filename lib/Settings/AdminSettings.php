@@ -10,6 +10,7 @@ use OCA\Dataforms\AppInfo\Application;
 use OCP\AppFramework\Http\TemplateResponse;
 use OCP\IURLGenerator;
 use OCP\Settings\ISettings;
+use OCP\Util;
 
 /**
  * Admin → DataForms: a small "API console" that documents the REST API and how
@@ -24,6 +25,7 @@ class AdminSettings implements ISettings {
 	}
 
 	public function getForm(): TemplateResponse {
+		Util::addScript(Application::APP_ID, 'dataforms-admin');
 		$params = [
 			'apiBase' => $this->urlGenerator->getAbsoluteURL('/ocs/v2.php/apps/dataforms/api/v1/'),
 			'securityUrl' => $this->urlGenerator->linkToRouteAbsolute('settings.PersonalSettings.index', ['section' => 'security']),
