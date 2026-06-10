@@ -1,11 +1,11 @@
 <!-- SPDX-License-Identifier: AGPL-3.0-or-later -->
 <!-- Read-only view of a single record: all fields, including relations. -->
 <template>
-	<NcDialog
-		:name="t('dataforms', 'Record details')"
+	<NcDialog :name="t('dataforms', 'Record details')"
 		size="normal"
 		@closing="$emit('close')">
 		<dl class="detail">
+			<!-- eslint-disable-next-line vue/no-v-for-template-key -- a key on <template v-for> wrapping a <dt>/<dd> pair is valid and idiomatic in Vue 3 -->
 			<template v-for="field in fields" :key="field.id">
 				<dt>{{ field.label }}</dt>
 				<dd>
@@ -28,21 +28,41 @@
 
 		<!-- Audit history -->
 		<div class="history">
-			<button type="button" class="history-toggle" :aria-expanded="showHistory" aria-controls="df-record-history" @click="toggleHistory">
+			<button type="button"
+				class="history-toggle"
+				:aria-expanded="showHistory"
+				aria-controls="df-record-history"
+				@click="toggleHistory">
 				<HistoryIcon :size="18" aria-hidden="true" />
 				{{ t('dataforms', 'History') }}
 				<span class="chev" :class="{ open: showHistory }" aria-hidden="true">▸</span>
 			</button>
-			<div v-if="showHistory" id="df-record-history" class="history-body" role="region" :aria-label="t('dataforms', 'History')" aria-live="polite">
+			<div v-if="showHistory"
+				id="df-record-history"
+				class="history-body"
+				role="region"
+				:aria-label="t('dataforms', 'History')"
+				aria-live="polite">
 				<NcLoadingIcon v-if="historyLoading" :size="22" />
-				<p v-else-if="history.length === 0" class="empty">{{ t('dataforms', 'No history recorded.') }}</p>
+				<p v-else-if="history.length === 0" class="empty">
+					{{ t('dataforms', 'No history recorded.') }}
+				</p>
 				<ul v-else class="timeline">
 					<li v-for="h in history" :key="h.id" class="event">
-						<span class="dot" :class="'dot-' + h.action" role="img" :aria-label="h.action" />
+						<span class="dot"
+							:class="'dot-' + h.action"
+							role="img"
+							:aria-label="h.action" />
 						<div class="event-main">
-							<div class="event-summary">{{ h.summary }}</div>
-							<div v-if="h.detail && h.detail.fields" class="event-detail">{{ h.detail.fields.join(', ') }}</div>
-							<div class="event-meta">{{ h.user }} · {{ formatTime(h.created) }}</div>
+							<div class="event-summary">
+								{{ h.summary }}
+							</div>
+							<div v-if="h.detail && h.detail.fields" class="event-detail">
+								{{ h.detail.fields.join(', ') }}
+							</div>
+							<div class="event-meta">
+								{{ h.user }} · {{ formatTime(h.created) }}
+							</div>
 						</div>
 					</li>
 				</ul>
@@ -50,7 +70,9 @@
 		</div>
 
 		<template #actions>
-			<NcButton @click="$emit('close')">{{ t('dataforms', 'Close') }}</NcButton>
+			<NcButton @click="$emit('close')">
+				{{ t('dataforms', 'Close') }}
+			</NcButton>
 			<NcButton v-if="canEdit" type="primary" @click="$emit('edit', record)">
 				{{ t('dataforms', 'Edit') }}
 			</NcButton>
@@ -162,7 +184,7 @@ export default {
 	padding: 10px 0;
 	border-bottom: 1px solid var(--color-border);
 	font-weight: 500;
-	word-break: break-word;
+	overflow-wrap: break-word;
 	min-width: 0;
 }
 
@@ -177,6 +199,7 @@ export default {
 .empty {
 	color: var(--color-text-maxcontrast);
 }
+
 .file-list {
 	display: flex;
 	flex-direction: column;
@@ -238,7 +261,9 @@ export default {
 }
 
 .dot-create { background: var(--color-success, #4f7355); }
+
 .dot-update { background: var(--color-primary-element); }
+
 .dot-delete { background: var(--color-error, #9d3a3a); }
 
 .event-summary {

@@ -4,6 +4,8 @@
 
 [package]
 before_cmds = [
+    # Remove stale hashed chunks from earlier builds so only current assets ship.
+    "rm -rf js css",
     "composer install --no-dev --optimize-autoloader",
     "npm ci",
     "npm run build",
@@ -20,7 +22,9 @@ exclude = [
     "/vendor/bin",
     "/.editorconfig",
     "/.eslintrc.cjs",
+    "/.gitattributes",
     "/.gitignore",
+    "/.npmrc",
     "/.php-cs-fixer.dist.php",
     "/composer.json",
     "/composer.lock",
@@ -28,8 +32,12 @@ exclude = [
     "/Makefile",
     "/package.json",
     "/package-lock.json",
+    "/playwright.config.js",
     "/psalm.xml",
     "/stylelint.config.cjs",
     "/tsconfig.json",
     "/vite.config.js",
+    "/vitest.config.js",
+    "/DataForms-User-Manual.docx",
+    "*.map",
 ]

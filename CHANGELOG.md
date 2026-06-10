@@ -7,6 +7,132 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.35.2] - Release-readiness hardening
+
+### Fixed
+- **`info.xml` element order** — moved `<settings>` before `<navigations>` so the
+  manifest validates against the App Store appinfo XSD (`xs:sequence` order);
+  the package previously would have been rejected at upload.
+- **JS lint gates restored** — added the missing `@nextcloud/eslint-config` and
+  `@nextcloud/stylelint-config` peer plugins (eslint-plugin-import/vue/n/…,
+  stylelint-config-recommended-scss/-vue, postcss-html). `npm run lint` and
+  `npm run stylelint` now run clean; the codebase was brought to conformance.
+
+### Changed
+- **Leaner build/package** — the production build no longer emits source maps,
+  and the `appstore`/krankerl packaging removes stale `js/`+`css/` chunks before
+  building and excludes `*.map` and dev-only config files, so the signed tarball
+  ships only current assets.
+- **Licensing** — `<licence>` now uses the SPDX id `AGPL-3.0-or-later`; added a
+  `LICENSES/` directory and `REUSE.toml`.
+- **Docs reconciled** with the shipped feature set (README, this changelog, and
+  the automations / admin guides now cover all nine actions and the cross-app
+  service-account setup).
+
+## [0.35.1] - Cross-app action security hardening
+
+### Fixed
+- Hardening from an adversarial review of the credentialed cross-app transport:
+  the internal API client never follows redirects (a 30x to a loopback/metadata
+  host would otherwise bypass the host guard) and logs only the exception
+  class+message (never the auth header); the Talk action **always creates a fresh
+  room** (no display-name reuse hijack) and **validates that each participant
+  exists** before relaying ids to the elevated service account; and
+  `create_talk_room` / `create_deck_board` are restricted to the **create**
+  trigger so these non-idempotent provisioning actions fire exactly once.
+
+## [0.35.0] - Talk & Deck provisioning actions
+
+### Added
+- **`create_talk_room`** — a composite action: create a Talk conversation, add
+  participants from a user/group field, and post a welcome message.
+- **`create_deck_board`** — create a Deck board and its columns.
+- Both run through the cross-app service account (background job), interpolate
+  `{field}` / `{relation.subfield}` tokens, and are idempotent where they can be
+  (the Deck board is reused if a board with the same title exists).
+
+## [0.34.0] - Cross-app service account
+
+### Added
+- An admin-configured, **encrypted** (`ICredentialsManager`) service account and
+  a **host-gated `NextcloudApiClient`**, so background-job actions can call the
+  instance's own OCS / Deck APIs as a service identity. New admin form under
+  **Settings → Administration → DataForms**; the password is stored encrypted and
+  never returned to the UI.
+
+## [0.33.0] - Relation sub-field tokens
+
+### Added
+- **`{relationField.targetField}` interpolation** (e.g. `{subgroup.code}`) via a
+  read-gated `RelationResolver`, so an action template can use the scalar fields
+  of a linked record. Only resolves targets in registers the record owner can
+  read.
+
+## [0.32.0] - Date tokens & template copy
+
+### Added
+- **`{field|dateFormat}` placeholders** (e.g. `{meeting_date|Ymd}` → `20260701`)
+  shared by every action, via a `ValueInterpolator`.
+- **`apply_template` action** — copies a template folder's contents into a
+  record's provisioned folder. Runs as the record owner, path-safe, bounded and
+  idempotent (an existing target is never overwritten).
+
+## [0.31.1] - Fix the condition value field
+
+### Fixed
+- The condition **value** field was unusable (squeezed to a sliver) in the
+  automation/rule dialogs. The condition row now reflows and a value **dropdown**
+  is offered for select fields.
+
+## [0.31.0] - Calendar event action
+
+### Added
+- **`add_calendar_event`** — a guided action built on the public `OCP\Calendar`
+  API: create an event in the record owner's calendar from a date field, with a
+  deterministic UID so re-firing never duplicates the event.
+
+## [0.30.0] - Folder provisioning action
+
+### Added
+- **`provision_folders`** — create a folder tree in the record owner's Files from
+  `{field}` name templates. Every path segment is sanitised (`PathSafety`: no
+  `/`, `\`, `..`, control/bidi chars, Windows reserved names), the action is
+  bounded and idempotent (`mkdir -p`), and it runs as the **record owner** off
+  the request thread.
+
+## [0.29.0] - Audit Medium cluster, CI & accessibility
+
+### Changed
+- **Audit Medium cluster (M1/M2/M6/M7/M8):** purge of soft-deleted registers and
+  their data (cascade); machine-name **tombstoning** so a reused field name can't
+  re-bind a stale rule; **field-scoped** record search; a **single-JOIN** unified
+  search; and `[register_id, updated]` / `[register_id, created]` indexes.
+- **CI:** the PHP quality gate (php-cs-fixer + psalm + phpunit) now runs and
+  passes green.
+- **Accessibility:** WCAG 2.1 AA fixes across the Vue component layer.
+- **Performance** re-verified at 100k records (sub-second list/search).
+
+## [0.27.0] - Security mediums
+
+### Fixed
+- Closed a **cross-register relation information leak** — a relation's display
+  label is only resolved when the viewing user can read the target register
+  (M3) — and **CSV-formula injection** on export (M4).
+
+## [0.26.0] - Automation engine hardening (High audit blockers)
+
+### Fixed
+- **Webhook SSRF guard** — refuse internal/loopback targets and never follow
+  redirects (H1).
+- **Background-job offload** — webhook/email actions run off the request thread,
+  so a slow or hung endpoint can't block the record write or exhaust the worker
+  pool (H2).
+- **No automation amplification on import** — bulk CSV import never fires per-row
+  automations/webhooks (H3).
+- **Transaction-wrapped record writes** — a record header and its value/join
+  tables are written atomically; events dispatch only after commit (H4).
+- Cleared `info.xml` placeholder metadata (H5).
+
 ## [0.25.0] - Set-field & webhook actions
 
 ### Added

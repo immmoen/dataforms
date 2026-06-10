@@ -38,7 +38,8 @@ on your level:
 3. **[Managing registers](03-managing-registers.md)** — registers, fields, forms,
    rules, views, sharing, CSV import. *(managers)*
 4. **[Automations & workflow](04-automations.md)** — react to record changes:
-   notify, email, set a field, call a webhook. *(managers)*
+   notify, email, set a field, provision folders, copy a template, add a calendar
+   event, create a Talk room or Deck board, or call a webhook. *(managers)*
 5. **[Administrator & API](05-admin-and-integration.md)** — enabling the app,
    group restriction, the API, and inserting forms across Nextcloud. *(admins &
    integrators)*

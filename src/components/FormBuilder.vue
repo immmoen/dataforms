@@ -20,34 +20,42 @@
 						{{ t('dataforms', 'A form is a tailored data-entry layout: pick which fields appear, arrange them into sections, and drag them into the order you want. Records can be added with any form.') }}
 					</p>
 				</div>
-				<NcButton v-if="canManage" type="primary" :disabled="fields.length === 0" @click="openAdd">
-					<template #icon><PlusIcon :size="20" /></template>
+				<NcButton v-if="canManage"
+					type="primary"
+					:disabled="fields.length === 0"
+					@click="openAdd">
+					<template #icon>
+						<PlusIcon :size="20" />
+					</template>
 					{{ t('dataforms', 'New form') }}
 				</NcButton>
 			</div>
 
 			<NcLoadingIcon v-if="loading" class="centered" :size="32" />
 
-			<NcEmptyContent
-				v-else-if="fields.length === 0"
+			<NcEmptyContent v-else-if="fields.length === 0"
 				:name="t('dataforms', 'Add fields first')"
 				:description="t('dataforms', 'Forms arrange a register\'s fields, so define the schema before building forms.')">
-				<template #icon><FormIcon :size="20" /></template>
+				<template #icon>
+					<FormIcon :size="20" />
+				</template>
 			</NcEmptyContent>
 
-			<NcEmptyContent
-				v-else-if="forms.length === 0"
+			<NcEmptyContent v-else-if="forms.length === 0"
 				:name="t('dataforms', 'No forms yet')"
 				:description="t('dataforms', 'Without a form, the New record button shows every field. Build a form to present a tailored subset in sections.')">
-				<template #icon><FormIcon :size="20" /></template>
+				<template #icon>
+					<FormIcon :size="20" />
+				</template>
 				<template #action>
-					<NcButton v-if="canManage" type="primary" @click="openAdd">{{ t('dataforms', 'Build your first form') }}</NcButton>
+					<NcButton v-if="canManage" type="primary" @click="openAdd">
+						{{ t('dataforms', 'Build your first form') }}
+					</NcButton>
 				</template>
 			</NcEmptyContent>
 
 			<ul v-else class="form-list">
-				<li
-					v-for="form in forms"
+				<li v-for="form in forms"
 					:key="form.id"
 					class="form-row"
 					:role="canManage ? 'button' : null"
@@ -64,11 +72,15 @@
 					<span class="spacer" />
 					<NcActions v-if="canManage" @click.stop>
 						<NcActionButton @click="openEdit(form)">
-							<template #icon><PencilIcon :size="20" /></template>
+							<template #icon>
+								<PencilIcon :size="20" />
+							</template>
 							{{ t('dataforms', 'Edit') }}
 						</NcActionButton>
 						<NcActionButton @click="remove(form)">
-							<template #icon><DeleteIcon :size="20" /></template>
+							<template #icon>
+								<DeleteIcon :size="20" />
+							</template>
 							{{ t('dataforms', 'Delete') }}
 						</NcActionButton>
 					</NcActions>
@@ -80,41 +92,43 @@
 		<div v-else class="builder">
 			<div class="builder-bar">
 				<NcButton type="tertiary" @click="cancelEdit">
-					<template #icon><ArrowLeftIcon :size="20" /></template>
+					<template #icon>
+						<ArrowLeftIcon :size="20" />
+					</template>
 					{{ t('dataforms', 'Back') }}
 				</NcButton>
-				<input
-					v-model="draft.title"
+				<input v-model="draft.title"
 					class="title-input"
 					:placeholder="t('dataforms', 'Untitled form')"
 					:aria-label="t('dataforms', 'Form name')">
 				<span class="spacer" />
 				<span class="placed-count">{{ n('dataforms', '%n field placed', '%n fields placed', placedCount) }}</span>
 				<NcButton type="primary" :disabled="saving || draft.title.trim() === ''" @click="submit">
-					<template #icon><ContentSaveIcon :size="20" /></template>
+					<template #icon>
+						<ContentSaveIcon :size="20" />
+					</template>
 					{{ saving ? t('dataforms', 'Saving…') : t('dataforms', 'Save form') }}
 				</NcButton>
 			</div>
 
 			<div class="builder-body">
 				<!-- palette -->
-				<aside
-					class="palette"
+				<aside class="palette"
 					:class="{ 'drop-active': dragItem && dragItem.from === 'section' }"
 					@dragover.prevent
 					@drop.prevent="onDropPalette">
 					<h4>{{ t('dataforms', 'Available fields') }}</h4>
-					<p class="palette-hint">{{ t('dataforms', 'Drag a field into a section. Drag a field back here to remove it.') }}</p>
-					<input
-						v-if="fields.length > 8"
+					<p class="palette-hint">
+						{{ t('dataforms', 'Drag a field into a section. Drag a field back here to remove it.') }}
+					</p>
+					<input v-if="fields.length > 8"
 						v-model="paletteSearch"
 						class="palette-search"
 						type="search"
 						:placeholder="t('dataforms', 'Search fields…')"
 						:aria-label="t('dataforms', 'Search fields')">
 					<ul class="palette-list">
-						<li
-							v-for="f in palette"
+						<li v-for="f in palette"
 							:key="f.machineName"
 							class="chip"
 							draggable="true"
@@ -123,8 +137,7 @@
 							<DragIcon :size="16" class="grip" aria-hidden="true" />
 							<span class="chip-label">{{ f.label }}</span>
 							<span class="chip-type">{{ typeLabel(f.type) }}</span>
-							<button
-								type="button"
+							<button type="button"
 								class="chip-add"
 								:aria-label="t('dataforms', 'Add {field} to the form', { field: f.label })"
 								:title="t('dataforms', 'Add to the form')"
@@ -140,8 +153,7 @@
 
 				<!-- canvas -->
 				<div class="canvas">
-					<div
-						v-for="(section, si) in draft.sections"
+					<div v-for="(section, si) in draft.sections"
 						:key="si"
 						class="section"
 						:class="{ 'drop-active': dragItem && dragOverSection === si }"
@@ -149,20 +161,31 @@
 						@dragleave="onSectionLeave(si)"
 						@drop.prevent="onDropSection(si)">
 						<div class="section-head">
-							<input
-								v-model="section.title"
+							<input v-model="section.title"
 								class="section-title"
 								:placeholder="t('dataforms', 'Section title (optional)')"
 								:aria-label="t('dataforms', 'Section title')">
 							<div class="section-tools">
-								<NcButton type="tertiary-no-background" :aria-label="t('dataforms', 'Move section up')" :disabled="si === 0" @click="moveSection(si, -1)">
-									<template #icon><ChevronUpIcon :size="20" /></template>
+								<NcButton type="tertiary-no-background"
+									:aria-label="t('dataforms', 'Move section up')"
+									:disabled="si === 0"
+									@click="moveSection(si, -1)">
+									<template #icon>
+										<ChevronUpIcon :size="20" />
+									</template>
 								</NcButton>
-								<NcButton type="tertiary-no-background" :aria-label="t('dataforms', 'Move section down')" :disabled="si === draft.sections.length - 1" @click="moveSection(si, 1)">
-									<template #icon><ChevronDownIcon :size="20" /></template>
+								<NcButton type="tertiary-no-background"
+									:aria-label="t('dataforms', 'Move section down')"
+									:disabled="si === draft.sections.length - 1"
+									@click="moveSection(si, 1)">
+									<template #icon>
+										<ChevronDownIcon :size="20" />
+									</template>
 								</NcButton>
 								<NcButton type="tertiary-no-background" :aria-label="t('dataforms', 'Remove section')" @click="removeSection(si)">
-									<template #icon><DeleteIcon :size="18" /></template>
+									<template #icon>
+										<DeleteIcon :size="18" />
+									</template>
 								</NcButton>
 							</div>
 						</div>
@@ -172,8 +195,7 @@
 						</div>
 
 						<ul v-else class="placed-list">
-							<li
-								v-for="(mn, idx) in section.fields"
+							<li v-for="(mn, idx) in section.fields"
 								:key="mn"
 								class="placed"
 								draggable="true"
@@ -213,13 +235,20 @@
 										</template>
 									</div>
 								</div>
-								<button type="button" class="placed-x" :aria-label="t('dataforms', 'Remove field')" @click="removeFromSection(si, mn)">×</button>
+								<button type="button"
+									class="placed-x"
+									:aria-label="t('dataforms', 'Remove field')"
+									@click="removeFromSection(si, mn)">
+									×
+								</button>
 							</li>
 						</ul>
 					</div>
 
 					<NcButton type="secondary" class="add-section" @click="addSection">
-						<template #icon><PlusIcon :size="18" /></template>
+						<template #icon>
+							<PlusIcon :size="18" />
+						</template>
 						{{ t('dataforms', 'Add section') }}
 					</NcButton>
 
@@ -258,8 +287,20 @@ import { listFields, typeLabel } from '../api/fields.js'
 export default {
 	name: 'FormBuilder',
 	components: {
-		NcActions, NcActionButton, NcButton, NcEmptyContent, NcLoadingIcon,
-		PlusIcon, PencilIcon, DeleteIcon, FormIcon, DragIcon, ArrowLeftIcon, ContentSaveIcon, ChevronUpIcon, ChevronDownIcon,
+		NcActions,
+		NcActionButton,
+		NcButton,
+		NcEmptyContent,
+		NcLoadingIcon,
+		PlusIcon,
+		PencilIcon,
+		DeleteIcon,
+		FormIcon,
+		DragIcon,
+		ArrowLeftIcon,
+		ContentSaveIcon,
+		ChevronUpIcon,
+		ChevronDownIcon,
 	},
 	props: {
 		registerId: { type: Number, required: true },
@@ -270,11 +311,11 @@ export default {
 			forms: [],
 			fields: [],
 			loading: true,
-			editing: null,        // null = list mode; a form object or {} = edit mode
+			editing: null, // null = list mode; a form object or {} = edit mode
 			saving: false,
 			draft: { title: '', sections: [] },
 			paletteSearch: '',
-			dragItem: null,       // { from: 'palette'|'section', machineName, si? }
+			dragItem: null, // { from: 'palette'|'section', machineName, si? }
 			dragOverSection: null,
 		}
 	},
@@ -438,20 +479,27 @@ export default {
 				return 'input'
 			}
 			switch (f.type) {
-				case 'boolean': return 'bool'
-				case 'select': case 'relation': case 'user': case 'group': return 'select'
-				case 'multiselect': return 'multiselect'
-				case 'file': return 'file'
-				case 'longtext': return 'textarea'
-				case 'computed': case 'auto': return 'readonly'
-				default: return 'input'
+			case 'boolean': return 'bool'
+			case 'select': case 'relation': case 'user': case 'group': return 'select'
+			case 'multiselect': return 'multiselect'
+			case 'file': return 'file'
+			case 'longtext': return 'textarea'
+			case 'computed': case 'auto': return 'readonly'
+			default: return 'input'
 			}
 		},
 		previewPlaceholder(machineName) {
 			const f = this.fieldByName[machineName]
 			const map = {
-				date: t('dataforms', 'dd/mm/yyyy'), datetime: t('dataforms', 'dd/mm/yyyy, --:--'), time: '--:--',
-				number: '0', currency: '0.00', percentage: '0', email: 'name@example.org', url: 'https://…', phone: '+ …',
+				date: t('dataforms', 'dd/mm/yyyy'),
+				datetime: t('dataforms', 'dd/mm/yyyy, --:--'),
+				time: '--:--',
+				number: '0',
+				currency: '0.00',
+				percentage: '0',
+				email: 'name@example.org',
+				url: 'https://…',
+				phone: '+ …',
 			}
 			return (f && map[f.type]) || ''
 		},
@@ -508,28 +556,42 @@ export default {
 
 <style scoped>
 .form-builder { max-width: 1100px; margin: 0 auto; padding: 20px 24px 48px; }
+
 .header { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; margin-bottom: 16px; }
+
 .header h3 { margin: 0; }
+
 .hint { color: var(--color-text-maxcontrast); font-size: 0.9em; margin: 2px 0 0; max-width: 620px; }
+
 .centered { margin: 60px auto; }
 
 /* list */
 .form-list { border: 1px solid var(--color-border); border-radius: var(--border-radius-large, 8px); overflow: hidden; }
+
 .form-row { display: flex; align-items: center; gap: 12px; padding: 12px 14px; border-bottom: 1px solid var(--color-border); cursor: pointer; }
+
 .form-row:last-child { border-bottom: none; }
+
 .form-row:hover { background: var(--color-background-hover); }
+
 .row-icon { color: var(--color-primary-element); flex: none; }
+
 .form-title { font-weight: 600; }
+
 .form-meta { color: var(--color-text-maxcontrast); font-size: 0.85em; }
+
 .spacer { flex: 1; }
 
 /* builder */
 .builder-bar { display: flex; align-items: center; gap: 12px; margin-bottom: 16px; }
+
 .title-input {
 	font-size: 1.25em; font-weight: 600; border: none; border-bottom: 2px solid var(--color-border);
 	background: transparent; color: var(--color-main-text); padding: 4px 2px; min-width: 240px; flex: 0 1 380px;
 }
+
 .title-input:focus { outline: none; border-bottom-color: var(--color-primary-element); }
+
 .placed-count { color: var(--color-text-maxcontrast); font-size: 0.86em; }
 
 .builder-body { display: grid; grid-template-columns: 260px 1fr; gap: 18px; align-items: start; }
@@ -538,39 +600,58 @@ export default {
 	position: sticky; top: 8px; border: 1px solid var(--color-border); border-radius: var(--border-radius-large, 8px);
 	padding: 12px; background: var(--color-main-background); max-height: calc(100vh - 200px); overflow-y: auto;
 }
+
 .palette.drop-active { border-color: var(--color-error); background: var(--color-error, #9d3a3a11); }
+
 .palette h4 { margin: 0 0 4px; }
+
 .palette-hint { color: var(--color-text-maxcontrast); font-size: 0.8em; margin: 0 0 10px; }
+
 .palette-search { width: 100%; margin-bottom: 10px; padding: 6px 10px; border: 2px solid var(--color-border-maxcontrast); border-radius: var(--border-radius, 6px); background: var(--color-main-background); color: var(--color-main-text); }
+
 .palette-list { display: flex; flex-direction: column; gap: 6px; }
+
 .palette-empty { color: var(--color-text-maxcontrast); font-size: 0.85em; padding: 8px 2px; }
 
 .chip {
 	display: flex; align-items: center; gap: 6px; padding: 7px 8px; border: 1px solid var(--color-border);
 	border-radius: var(--border-radius, 6px); background: var(--color-background-hover); cursor: grab;
 }
+
 .chip:active { cursor: grabbing; }
+
 .chip-label { font-weight: 500; font-size: 0.9em; }
-.chip-type { margin-left: auto; color: var(--color-text-maxcontrast); font-size: 0.72em; text-transform: uppercase; letter-spacing: 0.02em; }
+
+.chip-type { margin-inline-start: auto; color: var(--color-text-maxcontrast); font-size: 0.72em; text-transform: uppercase; letter-spacing: 0.02em; }
+
 .grip { color: var(--color-text-maxcontrast); flex: none; }
+
 .chip-add {
 	display: inline-flex; align-items: center; justify-content: center; flex: none;
 	width: 24px; height: 24px; border: none; border-radius: 50%; cursor: pointer;
 	background: var(--color-primary-element-light, var(--color-background-dark));
 	color: var(--color-primary-element); padding: 0;
 }
+
 .chip-add:hover { background: var(--color-primary-element); color: var(--color-primary-element-text, #fff); }
+
 .chip-add:focus-visible { outline: 2px solid var(--color-primary-element); outline-offset: 1px; }
 
 .canvas { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
+
 .section {
 	border: 1px solid var(--color-border); border-radius: var(--border-radius-large, 8px);
 	padding: 12px 14px; background: var(--color-main-background); transition: border-color 0.12s, background 0.12s;
 }
+
 .section.drop-active { border-color: var(--color-primary-element); background: var(--color-primary-element-light, var(--color-background-hover)); }
+
 .section-head { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
+
 .section-title { flex: 1; font-weight: 600; border: none; border-bottom: 1px dashed var(--color-border); background: transparent; color: var(--color-main-text); padding: 4px 2px; }
+
 .section-title:focus { outline: none; border-bottom-style: solid; border-bottom-color: var(--color-primary-element); }
+
 .section-tools { display: flex; align-items: center; flex: none; }
 
 .section-empty {
@@ -579,30 +660,44 @@ export default {
 }
 
 .placed-list { display: flex; flex-direction: column; gap: 8px; }
+
 .placed {
 	display: flex; align-items: flex-start; gap: 8px; padding: 9px 10px; border: 1px solid var(--color-border);
 	border-radius: var(--border-radius, 6px); background: var(--color-main-background); cursor: grab;
 }
+
 .placed:hover { border-color: var(--color-primary-element); }
+
 .placed:active { cursor: grabbing; }
+
 .placed-main { flex: 1; min-width: 0; }
+
 .placed-label { font-weight: 500; font-size: 0.92em; margin-bottom: 5px; }
+
 .req { color: var(--color-error-text, var(--color-error)); }
+
 .placed-x { border: none; background: none; cursor: pointer; font-size: 1.25em; line-height: 1; color: var(--color-text-maxcontrast); padding: 0 4px; }
+
 .placed-x:hover { color: var(--color-error-text, var(--color-error)); }
 
 /* faux control previews */
 .preview { font-size: 0.84em; color: var(--color-text-maxcontrast); }
+
 .faux-input, .faux-select, .faux-readonly {
 	display: block; border: 1.5px solid var(--color-border-maxcontrast); border-radius: var(--border-radius, 6px);
 	padding: 5px 8px; background: var(--color-background-hover); max-width: 320px;
 }
+
 .faux-area { display: block; height: 38px; border: 1.5px solid var(--color-border-maxcontrast); border-radius: var(--border-radius, 6px); background: var(--color-background-hover); max-width: 320px; }
+
 .faux-readonly { background: var(--color-background-dark); font-style: italic; }
+
 .faux-btn { display: inline-block; border: 1.5px solid var(--color-border-maxcontrast); border-radius: var(--border-radius, 6px); padding: 4px 10px; background: var(--color-background-hover); }
-.preview-bool .radio { margin-right: 14px; }
+
+.preview-bool .radio { margin-inline-end: 14px; }
 
 .add-section { align-self: flex-start; }
+
 .canvas-hint { color: var(--color-text-maxcontrast); font-size: 0.88em; margin: 4px 0 0; }
 
 @media (max-width: 720px) {

@@ -8,7 +8,10 @@
 					{{ t('dataforms', 'Show/hide fields, make them required, set defaults, validate, or compute values. Rules run live in the form and are re-checked on the server.') }}
 				</p>
 			</div>
-			<NcButton v-if="canManage" type="primary" :disabled="fields.length === 0" @click="openAdd">
+			<NcButton v-if="canManage"
+				type="primary"
+				:disabled="fields.length === 0"
+				@click="openAdd">
 				<template #icon>
 					<PlusIcon :size="20" />
 				</template>
@@ -18,18 +21,20 @@
 
 		<NcLoadingIcon v-if="loading" class="centered" :size="32" />
 
-		<NcEmptyContent
-			v-else-if="fields.length === 0"
+		<NcEmptyContent v-else-if="fields.length === 0"
 			:name="t('dataforms', 'Add fields first')"
 			:description="t('dataforms', 'Rules act on fields, so define the schema before adding rules.')">
-			<template #icon><FlashIcon :size="20" /></template>
+			<template #icon>
+				<FlashIcon :size="20" />
+			</template>
 		</NcEmptyContent>
 
-		<NcEmptyContent
-			v-else-if="rules.length === 0"
+		<NcEmptyContent v-else-if="rules.length === 0"
 			:name="t('dataforms', 'No rules yet')"
 			:description="t('dataforms', 'Add a rule to make this form smart — e.g. compute a score, or require a field only when another has a certain value.')">
-			<template #icon><FlashIcon :size="20" /></template>
+			<template #icon>
+				<FlashIcon :size="20" />
+			</template>
 		</NcEmptyContent>
 
 		<ul v-else class="rule-list">
@@ -39,11 +44,15 @@
 				<span class="spacer" />
 				<NcActions v-if="canManage">
 					<NcActionButton @click="openEdit(rule)">
-						<template #icon><PencilIcon :size="20" /></template>
+						<template #icon>
+							<PencilIcon :size="20" />
+						</template>
 						{{ t('dataforms', 'Edit') }}
 					</NcActionButton>
 					<NcActionButton @click="remove(rule)">
-						<template #icon><DeleteIcon :size="20" /></template>
+						<template #icon>
+							<DeleteIcon :size="20" />
+						</template>
 						{{ t('dataforms', 'Delete') }}
 					</NcActionButton>
 				</NcActions>
@@ -51,8 +60,7 @@
 		</ul>
 
 		<!-- Add rule dialog -->
-		<NcDialog
-			v-if="showAdd"
+		<NcDialog v-if="showAdd"
 			:name="editingRule ? t('dataforms', 'Edit rule') : t('dataforms', 'Add rule')"
 			size="large"
 			:can-close="!saving"
@@ -61,11 +69,21 @@
 				<div class="row2">
 					<div class="block">
 						<label class="block-label">{{ t('dataforms', 'Effect') }}</label>
-						<NcSelect v-model="draft.effect" :options="effects" :reduce="(o) => o.id" label="label" :aria-label="t('dataforms', 'Effect')" :clearable="false" />
+						<NcSelect v-model="draft.effect"
+							:options="effects"
+							:reduce="(o) => o.id"
+							label="label"
+							:aria-label="t('dataforms', 'Effect')"
+							:clearable="false" />
 					</div>
 					<div class="block">
 						<label class="block-label">{{ t('dataforms', 'Target field') }}</label>
-						<NcSelect v-model="draft.target" :options="fieldOptions" :reduce="(o) => o.id" label="label" :aria-label="t('dataforms', 'Target field')" :clearable="false" />
+						<NcSelect v-model="draft.target"
+							:options="fieldOptions"
+							:reduce="(o) => o.id"
+							label="label"
+							:aria-label="t('dataforms', 'Target field')"
+							:clearable="false" />
 					</div>
 				</div>
 
@@ -73,14 +91,29 @@
 				<div v-if="usesConditions" class="conditions">
 					<div class="cond-head">
 						<span class="block-label">{{ t('dataforms', 'When') }}</span>
-						<NcSelect v-model="draft.logic" :options="['and', 'or']" :aria-label="t('dataforms', 'Condition logic')" :clearable="false" class="logic-sel" />
+						<NcSelect v-model="draft.logic"
+							:options="['and', 'or']"
+							:aria-label="t('dataforms', 'Condition logic')"
+							:clearable="false"
+							class="logic-sel" />
 					</div>
 					<div v-for="(c, i) in draft.conditions" :key="i" class="cond-row">
-						<NcSelect v-model="c.field" :options="fieldOptions" :reduce="(o) => o.id" label="label" :aria-label="t('dataforms', 'Condition field')" :clearable="false" class="cond-field" />
-						<NcSelect v-model="c.op" :options="ops" :reduce="(o) => o.id" label="label" :aria-label="t('dataforms', 'Operator')" :clearable="false" class="cond-op" />
+						<NcSelect v-model="c.field"
+							:options="fieldOptions"
+							:reduce="(o) => o.id"
+							label="label"
+							:aria-label="t('dataforms', 'Condition field')"
+							:clearable="false"
+							class="cond-field" />
+						<NcSelect v-model="c.op"
+							:options="ops"
+							:reduce="(o) => o.id"
+							label="label"
+							:aria-label="t('dataforms', 'Operator')"
+							:clearable="false"
+							class="cond-op" />
 						<template v-if="!['isEmpty', 'isNotEmpty'].includes(c.op)">
-							<NcSelect
-								v-if="optionsForField(c.field).length"
+							<NcSelect v-if="optionsForField(c.field).length"
 								v-model="c.value"
 								:options="optionsForField(c.field)"
 								:clearable="false"
@@ -88,14 +121,21 @@
 								:aria-label="t('dataforms', 'Value')"
 								:placeholder="t('dataforms', 'Value')"
 								class="cond-val" />
-							<NcTextField v-else v-model="c.value" :label="t('dataforms', 'Value')" class="cond-val" />
+							<NcTextField v-else
+								v-model="c.value"
+								:label="t('dataforms', 'Value')"
+								class="cond-val" />
 						</template>
 						<NcButton type="tertiary" :aria-label="t('dataforms', 'Remove condition')" @click="draft.conditions.splice(i, 1)">
-							<template #icon><DeleteIcon :size="18" /></template>
+							<template #icon>
+								<DeleteIcon :size="18" />
+							</template>
 						</NcButton>
 					</div>
 					<NcButton type="tertiary" @click="addCondition">
-						<template #icon><PlusIcon :size="18" /></template>
+						<template #icon>
+							<PlusIcon :size="18" />
+						</template>
 						{{ t('dataforms', 'Add condition') }}
 					</NcButton>
 				</div>
@@ -118,7 +158,10 @@
 				<div v-if="draft.effect === 'validate'" class="validation">
 					<div class="block">
 						<label class="block-label">{{ t('dataforms', 'Check') }}</label>
-						<NcSelect v-model="draft.validation.kind" :options="['regex', 'range', 'expression']" :aria-label="t('dataforms', 'Validation check')" :clearable="false" />
+						<NcSelect v-model="draft.validation.kind"
+							:options="['regex', 'range', 'expression']"
+							:aria-label="t('dataforms', 'Validation check')"
+							:clearable="false" />
 					</div>
 					<NcTextField v-if="draft.validation.kind === 'regex'" v-model="draft.validation.pattern" :label="t('dataforms', 'Pattern (regex)')" />
 					<div v-if="draft.validation.kind === 'range'" class="row2">
@@ -131,8 +174,12 @@
 			</div>
 
 			<template #actions>
-				<NcButton :disabled="saving" @click="showAdd = false">{{ t('dataforms', 'Cancel') }}</NcButton>
-				<NcButton type="primary" :disabled="saving || !draft.target" @click="submit">{{ editingRule ? t('dataforms', 'Save') : t('dataforms', 'Add rule') }}</NcButton>
+				<NcButton :disabled="saving" @click="showAdd = false">
+					{{ t('dataforms', 'Cancel') }}
+				</NcButton>
+				<NcButton type="primary" :disabled="saving || !draft.target" @click="submit">
+					{{ editingRule ? t('dataforms', 'Save') : t('dataforms', 'Add rule') }}
+				</NcButton>
 			</template>
 		</NcDialog>
 	</div>
@@ -172,8 +219,18 @@ const emptyDraft = () => ({
 export default {
 	name: 'RuleBuilder',
 	components: {
-		NcActions, NcActionButton, NcButton, NcDialog, NcEmptyContent, NcLoadingIcon,
-		NcSelect, NcTextField, PlusIcon, PencilIcon, DeleteIcon, FlashIcon,
+		NcActions,
+		NcActionButton,
+		NcButton,
+		NcDialog,
+		NcEmptyContent,
+		NcLoadingIcon,
+		NcSelect,
+		NcTextField,
+		PlusIcon,
+		PencilIcon,
+		DeleteIcon,
+		FlashIcon,
 	},
 	props: {
 		registerId: { type: Number, required: true },
@@ -310,12 +367,12 @@ export default {
 		},
 		ruleSummary(rule) {
 			switch (rule.effect) {
-				case 'show': return t('dataforms', 'Show {target} when {cond}', { target: rule.target, cond: this.conditionsText(rule) })
-				case 'require': return t('dataforms', 'Require {target} when {cond}', { target: rule.target, cond: this.conditionsText(rule) })
-				case 'set_value': return t('dataforms', 'Set {target} = "{value}" when {cond}', { target: rule.target, value: rule.value, cond: this.conditionsText(rule) })
-				case 'compute': return `${rule.target} = ${rule.expression}`
-				case 'validate': return t('dataforms', 'Validate {target} ({kind})', { target: rule.target, kind: rule.validation?.kind ?? '' })
-				default: return rule.target
+			case 'show': return t('dataforms', 'Show {target} when {cond}', { target: rule.target, cond: this.conditionsText(rule) })
+			case 'require': return t('dataforms', 'Require {target} when {cond}', { target: rule.target, cond: this.conditionsText(rule) })
+			case 'set_value': return t('dataforms', 'Set {target} = "{value}" when {cond}', { target: rule.target, value: rule.value, cond: this.conditionsText(rule) })
+			case 'compute': return `${rule.target} = ${rule.expression}`
+			case 'validate': return t('dataforms', 'Validate {target} ({kind})', { target: rule.target, kind: rule.validation?.kind ?? '' })
+			default: return rule.target
 			}
 		},
 	},
@@ -324,32 +381,57 @@ export default {
 
 <style scoped>
 .rule-builder { max-width: 860px; margin: 0 auto; padding: 24px; }
+
 .header { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; margin-bottom: 16px; }
+
 .header h3 { margin: 0; }
+
 .hint { color: var(--color-text-maxcontrast); font-size: 0.9em; margin: 2px 0 0; max-width: 560px; }
+
 .centered { margin: 60px auto; }
+
 .rule-list { border: 1px solid var(--color-border); border-radius: var(--border-radius-large, 8px); overflow: hidden; }
+
 .rule-row { display: flex; align-items: center; gap: 12px; padding: 11px 14px; border-bottom: 1px solid var(--color-border); }
+
 .rule-row:last-child { border-bottom: none; }
+
 .effect-badge { font-size: 0.72em; font-weight: 700; padding: 2px 9px; border-radius: 12px; text-transform: uppercase; letter-spacing: 0.03em; background: var(--color-background-dark); color: var(--color-text-maxcontrast); white-space: nowrap; }
+
 .e-compute { background: var(--color-primary-element-light); color: var(--color-primary-element); }
+
 .e-show { background: #e6f4ea; color: #2d7d46; }
+
 .e-require { background: #fbf3e0; color: #a06800; }
+
 .e-validate { background: #fbe9ea; color: #c5343a; }
+
 .summary { font-size: 0.92em; }
+
 .spacer { flex: 1; }
+
 .add-form { display: flex; flex-direction: column; gap: 16px; min-width: min(560px, 84vw); padding: 8px 2px; }
+
 .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+
 .block-label { display: block; font-weight: 600; font-size: 0.88em; margin-bottom: 4px; }
-.conditions { border-left: 3px solid var(--color-primary-element); padding-left: 14px; display: flex; flex-direction: column; gap: 8px; }
+
+.conditions { border-inline-start: 3px solid var(--color-primary-element); padding-inline-start: 14px; display: flex; flex-direction: column; gap: 8px; }
+
 .cond-head { display: flex; align-items: center; gap: 10px; }
+
 .logic-sel { width: 90px; }
 /* Wrap so the value control keeps a usable width in the narrow dialog: the
    field takes the first line, operator + value + remove flow onto the next. */
 .cond-row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-bottom: 10px; }
+
 .cond-row .cond-field { flex: 1 1 100%; }
+
 .cond-row .cond-op { flex: 0 1 150px; min-width: 110px; }
+
 .cond-row .cond-val { flex: 1 1 160px; min-width: 140px; }
+
 .expr-hint { color: var(--color-text-maxcontrast); font-size: 0.8em; margin: 6px 0 0; }
+
 .validation { display: flex; flex-direction: column; gap: 12px; }
 </style>

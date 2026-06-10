@@ -9,6 +9,10 @@
  * over the full dependency tree is extremely slow on some platforms (minutes).
  * Re-enable it for REUSE-compliant release tarballs:
  *   createAppConfig({ main: 'src/main.js' }, { extractLicenseInformation: true })
+ *
+ * Source maps are disabled for the shipped build: they add >5 MB of *.map files
+ * with no value to end users (the App Store tarball must stay lean). Re-enable
+ * locally by setting build.sourcemap back to true if you need to debug a bundle.
  */
 import { createAppConfig } from '@nextcloud/vite-config'
 
@@ -24,5 +28,11 @@ export default createAppConfig(
 	},
 	{
 		extractLicenseInformation: false,
+		// Merged last over the preset, so this wins: no source maps in the build.
+		config: {
+			build: {
+				sourcemap: false,
+			},
+		},
 	},
 )

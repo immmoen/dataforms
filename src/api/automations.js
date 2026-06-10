@@ -28,18 +28,36 @@ export const ACTION_TYPES = [
 	{ id: 'webhook', label: 'Call a webhook' },
 ]
 
+/**
+ *
+ * @param registerId
+ */
 export async function listAutomations(registerId) {
 	return unwrap(await axios.get(url(`registers/${registerId}/automations`), config))
 }
 
+/**
+ *
+ * @param registerId
+ * @param data
+ */
 export async function createAutomation(registerId, data) {
 	return unwrap(await axios.post(url(`registers/${registerId}/automations`), data, config))
 }
 
+/**
+ *
+ * @param id
+ * @param changes
+ */
 export async function updateAutomation(id, changes) {
 	return unwrap(await axios.put(url(`automations/${id}`), { changes }, config))
 }
 
+/**
+ *
+ * @param id
+ */
 export async function deleteAutomation(id) {
 	await axios.delete(url(`automations/${id}`), config)
 }

@@ -1,8 +1,10 @@
 <!-- SPDX-License-Identifier: AGPL-3.0-or-later -->
 <!--
 	Automations (workflow): when a record is created/updated/deleted and an
-	optional condition holds, run an action (notify or email). Manager-only.
-	Conditions reuse the same field/operator/value shape as rules and filters.
+	optional condition holds, run one of nine actions — notify, email, set a
+	field, create folders, copy a template, add a calendar event, create a Talk
+	room, create a Deck board, or call a webhook. Manager-only. Conditions reuse
+	the same field/operator/value shape as rules and filters.
 -->
 <template>
 	<div class="automations">
@@ -14,49 +16,83 @@
 				</p>
 			</div>
 			<NcButton v-if="canManage" type="primary" @click="openAdd">
-				<template #icon><PlusIcon :size="20" /></template>
+				<template #icon>
+					<PlusIcon :size="20" />
+				</template>
 				{{ t('dataforms', 'New automation') }}
 			</NcButton>
 		</div>
 
 		<NcLoadingIcon v-if="loading" class="centered" :size="32" />
 
-		<NcEmptyContent
-			v-else-if="automations.length === 0"
+		<NcEmptyContent v-else-if="automations.length === 0"
 			:name="t('dataforms', 'No automations yet')"
 			:description="t('dataforms', 'Add one to notify people or send an email when records change.')">
-			<template #icon><RobotIcon :size="20" /></template>
+			<template #icon>
+				<RobotIcon :size="20" />
+			</template>
 		</NcEmptyContent>
 
 		<ul v-else class="auto-list">
 			<li v-for="a in automations" :key="a.id" class="auto-row">
-				<NcCheckboxRadioSwitch :model-value="a.enabled" type="switch" :disabled="!canManage" @update:model-value="toggle(a)" />
+				<NcCheckboxRadioSwitch :model-value="a.enabled"
+					type="switch"
+					:disabled="!canManage"
+					@update:model-value="toggle(a)" />
 				<span class="auto-main">
 					<span class="auto-name">{{ a.name }}</span>
 					<span class="auto-desc">{{ triggerLabel(a.trigger) }} · {{ actionLabel(a.actionType) }}<span v-if="a.condition"> · {{ n('dataforms', '%n condition', '%n conditions', a.condition.rules.length) }}</span></span>
 				</span>
 				<span class="spacer" />
 				<NcActions v-if="canManage">
-					<NcActionButton @click="openEdit(a)"><template #icon><PencilIcon :size="20" /></template>{{ t('dataforms', 'Edit') }}</NcActionButton>
-					<NcActionButton @click="remove(a)"><template #icon><DeleteIcon :size="20" /></template>{{ t('dataforms', 'Delete') }}</NcActionButton>
+					<NcActionButton @click="openEdit(a)">
+						<template #icon>
+							<PencilIcon :size="20" />
+						</template>{{ t('dataforms', 'Edit') }}
+					</NcActionButton>
+					<NcActionButton @click="remove(a)">
+						<template #icon>
+							<DeleteIcon :size="20" />
+						</template>{{ t('dataforms', 'Delete') }}
+					</NcActionButton>
 				</NcActions>
 			</li>
 		</ul>
 
-		<NcDialog v-if="showDialog" :name="editing ? t('dataforms', 'Edit automation') : t('dataforms', 'New automation')" size="normal" :can-close="!saving" @closing="showDialog = false">
+		<NcDialog v-if="showDialog"
+			:name="editing ? t('dataforms', 'Edit automation') : t('dataforms', 'New automation')"
+			size="normal"
+			:can-close="!saving"
+			@closing="showDialog = false">
 			<div class="auto-form">
 				<NcTextField v-model="draft.name" :label="t('dataforms', 'Name')" :required="true" />
 
 				<label class="block-label">{{ t('dataforms', 'When') }}</label>
-				<NcSelect v-model="draft.trigger" :options="triggers" :reduce="(o) => o.id" label="label" :clearable="false" />
+				<NcSelect v-model="draft.trigger"
+					:options="triggers"
+					:reduce="(o) => o.id"
+					label="label"
+					:clearable="false" />
 
 				<label class="block-label">{{ t('dataforms', 'Only if (optional)') }}</label>
 				<div v-for="(c, i) in draft.conditions" :key="i" class="cond-row">
-					<NcSelect v-model="c.field" :options="fieldOptions" :reduce="(o) => o.id" label="label" :clearable="false" class="c-field" :aria-label="t('dataforms', 'Condition field')" :placeholder="t('dataforms', 'Field')" />
+					<NcSelect v-model="c.field"
+						:options="fieldOptions"
+						:reduce="(o) => o.id"
+						label="label"
+						:clearable="false"
+						class="c-field"
+						:aria-label="t('dataforms', 'Condition field')"
+						:placeholder="t('dataforms', 'Field')" />
 					<div class="cond-row-2">
-						<NcSelect v-model="c.op" :options="ops" :reduce="(o) => o.id" label="label" :clearable="false" class="c-op" :aria-label="t('dataforms', 'Operator')" />
-						<NcSelect
-							v-if="!['isEmpty', 'isNotEmpty'].includes(c.op) && optionsForField(c.field).length"
+						<NcSelect v-model="c.op"
+							:options="ops"
+							:reduce="(o) => o.id"
+							label="label"
+							:clearable="false"
+							class="c-op"
+							:aria-label="t('dataforms', 'Operator')" />
+						<NcSelect v-if="!['isEmpty', 'isNotEmpty'].includes(c.op) && optionsForField(c.field).length"
 							v-model="c.value"
 							:options="optionsForField(c.field)"
 							:clearable="false"
@@ -64,23 +100,33 @@
 							:aria-label="t('dataforms', 'Value')"
 							:placeholder="t('dataforms', 'Value')"
 							class="c-val" />
-						<NcTextField
-							v-else-if="!['isEmpty', 'isNotEmpty'].includes(c.op)"
+						<NcTextField v-else-if="!['isEmpty', 'isNotEmpty'].includes(c.op)"
 							v-model="c.value"
 							:label="t('dataforms', 'Value')"
 							class="c-val" />
-						<NcButton type="tertiary" :aria-label="t('dataforms', 'Remove condition')" @click="draft.conditions.splice(i, 1)"><template #icon><CloseIcon :size="18" /></template></NcButton>
+						<NcButton type="tertiary" :aria-label="t('dataforms', 'Remove condition')" @click="draft.conditions.splice(i, 1)">
+							<template #icon>
+								<CloseIcon :size="18" />
+							</template>
+						</NcButton>
 					</div>
 				</div>
-				<NcButton type="tertiary" @click="addCondition"><template #icon><PlusIcon :size="16" /></template>{{ t('dataforms', 'Add condition') }}</NcButton>
+				<NcButton type="tertiary" @click="addCondition">
+					<template #icon>
+						<PlusIcon :size="16" />
+					</template>{{ t('dataforms', 'Add condition') }}
+				</NcButton>
 
 				<label class="block-label">{{ t('dataforms', 'Then') }}</label>
-				<NcSelect v-model="draft.actionType" :options="actionTypes" :reduce="(o) => o.id" label="label" :clearable="false" />
+				<NcSelect v-model="draft.actionType"
+					:options="actionTypes"
+					:reduce="(o) => o.id"
+					label="label"
+					:clearable="false" />
 
 				<template v-if="['notify', 'email'].includes(draft.actionType)">
 					<label class="block-label">{{ t('dataforms', 'Recipients') }}</label>
-					<NcSelect
-						v-model="draft.recipients"
+					<NcSelect v-model="draft.recipients"
 						:options="recipientOptions"
 						:loading="searching"
 						:multiple="true"
@@ -94,7 +140,12 @@
 
 				<template v-else-if="draft.actionType === 'set_field'">
 					<label class="block-label">{{ t('dataforms', 'Field to set') }}</label>
-					<NcSelect v-model="draft.setField" :options="settableFields" :reduce="(o) => o.id" label="label" :clearable="false" :placeholder="t('dataforms', 'Field')" />
+					<NcSelect v-model="draft.setField"
+						:options="settableFields"
+						:reduce="(o) => o.id"
+						label="label"
+						:clearable="false"
+						:placeholder="t('dataforms', 'Field')" />
 					<NcTextField v-model="draft.setValue" :label="t('dataforms', 'Value')" />
 				</template>
 
@@ -124,9 +175,18 @@
 					<label class="block-label">{{ t('dataforms', 'Event title') }}</label>
 					<NcTextField v-model="draft.eventTitle" :placeholder="t('dataforms', 'e.g. Kickoff: {client}')" />
 					<label class="block-label">{{ t('dataforms', 'Start date (from a field)') }}</label>
-					<NcSelect v-model="draft.startField" :options="dateFieldOptions" :reduce="(o) => o.id" label="label" :clearable="false" :placeholder="t('dataforms', 'Pick a date field')" />
+					<NcSelect v-model="draft.startField"
+						:options="dateFieldOptions"
+						:reduce="(o) => o.id"
+						label="label"
+						:clearable="false"
+						:placeholder="t('dataforms', 'Pick a date field')" />
 					<label class="block-label">{{ t('dataforms', 'Duration') }}</label>
-					<NcSelect v-model="draft.duration" :options="durationOptions" :reduce="(o) => o.id" label="label" :clearable="false" />
+					<NcSelect v-model="draft.duration"
+						:options="durationOptions"
+						:reduce="(o) => o.id"
+						label="label"
+						:clearable="false" />
 					<label class="block-label">{{ t('dataforms', 'Calendar (optional)') }}</label>
 					<NcTextField v-model="draft.calendar" :placeholder="t('dataforms', 'Calendar name — blank for the author’s default')" />
 					<NcTextArea v-model="draft.eventDescription" :label="t('dataforms', 'Description (optional)')" />
@@ -140,9 +200,16 @@
 					<label class="block-label">{{ t('dataforms', 'Conversation name') }}</label>
 					<NcTextField v-model="draft.roomName" :placeholder="t('dataforms', 'e.g. {client} meeting')" />
 					<label class="block-label">{{ t('dataforms', 'Add participants from (a user/group field)') }}</label>
-					<NcSelect v-model="draft.participantsField" :options="userGroupFields" :reduce="(o) => o.id" label="label" :clearable="true" :placeholder="t('dataforms', 'None')" />
+					<NcSelect v-model="draft.participantsField"
+						:options="userGroupFields"
+						:reduce="(o) => o.id"
+						label="label"
+						:clearable="true"
+						:placeholder="t('dataforms', 'None')" />
 					<NcTextArea v-model="draft.roomMessage" :label="t('dataforms', 'Welcome message (optional)')" />
-					<p class="hint">{{ t('dataforms', 'Needs a service account (Admin → DataForms). Use {field} placeholders.') }}</p>
+					<p class="hint">
+						{{ t('dataforms', 'Needs a service account (Admin → DataForms). Use {field} placeholders.') }}
+					</p>
 				</template>
 
 				<template v-else-if="draft.actionType === 'create_deck_board'">
@@ -150,18 +217,24 @@
 					<NcTextField v-model="draft.boardTitle" :placeholder="t('dataforms', 'e.g. {client} onboarding')" />
 					<label class="block-label">{{ t('dataforms', 'Columns (one per line)') }}</label>
 					<NcTextArea v-model="draft.boardColumns" :placeholder="t('dataforms', 'To do\nDoing\nDone')" />
-					<p class="hint">{{ t('dataforms', 'Needs a service account (Admin → DataForms). Leave columns blank for To do / Doing / Done.') }}</p>
+					<p class="hint">
+						{{ t('dataforms', 'Needs a service account (Admin → DataForms). Leave columns blank for To do / Doing / Done.') }}
+					</p>
 				</template>
 
 				<template v-else-if="draft.actionType === 'webhook'">
 					<label class="block-label">{{ t('dataforms', 'Webhook URL') }}</label>
 					<NcTextField v-model="draft.url" placeholder="https://example.org/hook" />
 					<NcTextField v-model="draft.secret" :label="t('dataforms', 'Shared secret (optional)')" />
-					<p class="hint">{{ t('dataforms', 'A POST with the record data is sent here. If a secret is set, the body is signed (HMAC-SHA256) in the X-DataForms-Signature header.') }}</p>
+					<p class="hint">
+						{{ t('dataforms', 'A POST with the record data is sent here. If a secret is set, the body is signed (HMAC-SHA256) in the X-DataForms-Signature header.') }}
+					</p>
 				</template>
 			</div>
 			<template #actions>
-				<NcButton :disabled="saving" @click="showDialog = false">{{ t('dataforms', 'Cancel') }}</NcButton>
+				<NcButton :disabled="saving" @click="showDialog = false">
+					{{ t('dataforms', 'Cancel') }}
+				</NcButton>
 				<NcButton type="primary" :disabled="saving || !canSave" @click="submit">
 					{{ editing ? t('dataforms', 'Save') : t('dataforms', 'Add') }}
 				</NcButton>
@@ -201,8 +274,21 @@ const blank = () => ({ name: '', trigger: 'create', conditions: [], actionType: 
 export default {
 	name: 'AutomationsBuilder',
 	components: {
-		NcActions, NcActionButton, NcButton, NcCheckboxRadioSwitch, NcDialog, NcEmptyContent, NcLoadingIcon, NcSelect, NcTextField, NcTextArea,
-		PlusIcon, PencilIcon, DeleteIcon, CloseIcon, RobotIcon,
+		NcActions,
+		NcActionButton,
+		NcButton,
+		NcCheckboxRadioSwitch,
+		NcDialog,
+		NcEmptyContent,
+		NcLoadingIcon,
+		NcSelect,
+		NcTextField,
+		NcTextArea,
+		PlusIcon,
+		PencilIcon,
+		DeleteIcon,
+		CloseIcon,
+		RobotIcon,
 	},
 	props: {
 		registerId: { type: Number, required: true },
@@ -468,23 +554,39 @@ export default {
 
 <style scoped>
 .automations { max-width: 820px; margin: 0 auto; padding: 24px; }
+
 .header { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; margin-bottom: 16px; }
+
 .header h3 { margin: 0; }
+
 .hint { color: var(--color-text-maxcontrast); font-size: 0.9em; margin: 2px 0 0; max-width: 580px; }
+
 .centered { margin: 60px auto; }
+
 .auto-list { border: 1px solid var(--color-border); border-radius: var(--border-radius-large, 8px); overflow: hidden; }
+
 .auto-row { display: flex; align-items: center; gap: 12px; padding: 10px 14px; border-bottom: 1px solid var(--color-border); }
+
 .auto-row:last-child { border-bottom: none; }
+
 .auto-main { display: flex; flex-direction: column; min-width: 0; }
+
 .auto-name { font-weight: 600; }
+
 .auto-desc { color: var(--color-text-maxcontrast); font-size: 0.85em; }
+
 .spacer { flex: 1; }
+
 .auto-form { display: flex; flex-direction: column; gap: 10px; min-width: min(520px, 84vw); padding: 8px 2px; }
+
 .block-label { font-weight: 600; font-size: 0.85em; margin-top: 6px; }
 /* Field on its own line; operator + value + remove on a second line, so the
    value control always keeps a usable width in the narrow dialog. */
 .cond-row { display: flex; flex-direction: column; gap: 6px; margin-bottom: 12px; }
+
 .cond-row-2 { display: flex; gap: 6px; align-items: center; }
+
 .cond-row-2 .c-op { flex: 0 1 150px; min-width: 110px; }
+
 .cond-row-2 .c-val { flex: 1 1 auto; min-width: 140px; }
 </style>

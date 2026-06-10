@@ -1,7 +1,6 @@
 <!-- SPDX-License-Identifier: AGPL-3.0-or-later -->
 <template>
-	<NcDialog
-		:name="t('dataforms', 'Share “{title}”', { title: register.title })"
+	<NcDialog :name="t('dataforms', 'Share “{title}”', { title: register.title })"
 		size="normal"
 		@closing="$emit('close')">
 		<div class="share-dialog">
@@ -10,8 +9,7 @@
 			</p>
 
 			<div class="add-row">
-				<NcSelect
-					class="who"
+				<NcSelect class="who"
 					:model-value="selectedSharee"
 					:options="shareeOptions"
 					:loading="searching"
@@ -32,8 +30,16 @@
 						{{ lastQuery.length < 1 ? t('dataforms', 'Type a name to search…') : t('dataforms', 'No matching users or groups') }}
 					</template>
 				</NcSelect>
-				<NcSelect v-model="newRole" :options="roles" :reduce="(o) => o.id" label="label" :clearable="false" class="role" />
-				<NcButton class="add-btn" type="primary" :disabled="saving || !selectedSharee" @click="add">
+				<NcSelect v-model="newRole"
+					:options="roles"
+					:reduce="(o) => o.id"
+					label="label"
+					:clearable="false"
+					class="role" />
+				<NcButton class="add-btn"
+					type="primary"
+					:disabled="saving || !selectedSharee"
+					@click="add">
 					{{ t('dataforms', 'Add') }}
 				</NcButton>
 			</div>
@@ -53,8 +59,7 @@
 						<span class="owner-tag">{{ t('dataforms', 'Owner') }}</span>
 					</template>
 					<template v-else>
-						<NcSelect
-							:model-value="roleOf(share.permissions)"
+						<NcSelect :model-value="roleOf(share.permissions)"
 							:options="roles"
 							:reduce="(o) => o.id"
 							label="label"
@@ -62,7 +67,9 @@
 							class="role-sel"
 							@update:model-value="changeRole(share, $event)" />
 						<NcButton type="tertiary" @click="remove(share)">
-							<template #icon><DeleteIcon :size="18" /></template>
+							<template #icon>
+								<DeleteIcon :size="18" />
+							</template>
 						</NcButton>
 					</template>
 				</li>
@@ -96,7 +103,7 @@ export default {
 			shares: [],
 			loading: true,
 			saving: false,
-			selectedSharee: null,   // { id, label, sub, type } picked from search
+			selectedSharee: null, // { id, label, sub, type } picked from search
 			shareeOptions: [],
 			searching: false,
 			searchTimer: null,
@@ -187,6 +194,7 @@ export default {
 
 <style scoped>
 .share-dialog { min-width: min(480px, 86vw); max-width: 100%; padding: 8px 2px; box-sizing: border-box; }
+
 .hint { color: var(--color-text-maxcontrast); font-size: 0.85em; margin: 0 0 14px; }
 
 /* Deterministic 2x2 layout so it fits any dialog width:
@@ -203,29 +211,46 @@ export default {
 	align-items: end;
 	margin-bottom: 16px;
 }
+
 .add-row .who { grid-area: who; }
+
 .add-row .role { grid-area: role; }
+
 .add-row .add-btn { grid-area: add; justify-self: end; }
 
 /* search result rows */
 .opt { display: flex; align-items: center; gap: 8px; width: 100%; }
+
 .opt-avatar { width: 26px; height: 26px; border-radius: 50%; display: grid; place-items: center; color: #fff; font-size: 10px; font-weight: 600; flex: none; background: var(--color-primary-element); }
+
 .opt-avatar.group { background: var(--color-success, #2d7d46); }
+
 .opt-label { font-weight: 500; }
-.opt-tag { margin-left: auto; color: var(--color-text-maxcontrast); font-size: 0.78em; }
+
+.opt-tag { margin-inline-start: auto; color: var(--color-text-maxcontrast); font-size: 0.78em; }
 
 /* Allow the @nextcloud/vue selects to shrink to their container. */
 .share-dialog :deep(.v-select) { min-width: 0; }
+
 .share-dialog :deep(.input-field) { min-width: 0; }
 
 .centered { margin: 30px auto; }
+
 .share-list { display: flex; flex-direction: column; }
+
 .share-row { display: flex; align-items: center; gap: 10px; padding: 8px 0; border-top: 1px solid var(--color-border); min-width: 0; }
+
 .avatar { width: 32px; height: 32px; border-radius: 50%; display: grid; place-items: center; color: #fff; font-size: 11px; font-weight: 600; background: var(--color-primary-element); flex: none; }
+
 .avatar.group { background: var(--color-success, #2d7d46); }
+
 .who-name { font-weight: 500; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
-.type-tag { color: var(--color-text-maxcontrast); font-size: 0.78em; margin-left: 6px; }
+
+.type-tag { color: var(--color-text-maxcontrast); font-size: 0.78em; margin-inline-start: 6px; }
+
 .owner-tag { color: var(--color-text-maxcontrast); font-size: 0.85em; font-weight: 600; }
+
 .spacer { flex: 1; }
+
 .role-sel { width: 130px; flex: none; }
 </style>

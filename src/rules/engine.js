@@ -17,27 +17,37 @@ const asString = (v) => {
 	return v == null ? '' : String(v)
 }
 
+/**
+ *
+ * @param a
+ * @param b
+ */
 function looseEq(a, b) {
 	if (isNumeric(a) && isNumeric(b)) return parseFloat(a) === parseFloat(b)
 	return asString(a) === asString(b)
 }
 
+/**
+ *
+ * @param cond
+ * @param values
+ */
 function testCondition(cond, values) {
 	const left = values[cond.field] ?? null
 	const right = cond.value ?? null
 	switch (cond.op) {
-		case 'eq': return looseEq(left, right)
-		case 'neq': return !looseEq(left, right)
-		case 'gt': return parseFloat(left) > parseFloat(right)
-		case 'lt': return parseFloat(left) < parseFloat(right)
-		case 'gte': return parseFloat(left) >= parseFloat(right)
-		case 'lte': return parseFloat(left) <= parseFloat(right)
-		case 'contains': return asString(left).includes(asString(right))
-		case 'in': return Array.isArray(right) && right.some((x) => looseEq(x, left))
-		case 'isEmpty': return isEmpty(left)
-		case 'isNotEmpty': return !isEmpty(left)
-		case 'matches': try { return asString(right) !== '' && new RegExp(asString(right)).test(asString(left)) } catch { return false }
-		default: return false
+	case 'eq': return looseEq(left, right)
+	case 'neq': return !looseEq(left, right)
+	case 'gt': return parseFloat(left) > parseFloat(right)
+	case 'lt': return parseFloat(left) < parseFloat(right)
+	case 'gte': return parseFloat(left) >= parseFloat(right)
+	case 'lte': return parseFloat(left) <= parseFloat(right)
+	case 'contains': return asString(left).includes(asString(right))
+	case 'in': return Array.isArray(right) && right.some((x) => looseEq(x, left))
+	case 'isEmpty': return isEmpty(left)
+	case 'isNotEmpty': return !isEmpty(left)
+	case 'matches': try { return asString(right) !== '' && new RegExp(asString(right)).test(asString(left)) } catch { return false }
+	default: return false
 	}
 }
 
@@ -54,22 +64,28 @@ export function matches(conditions, values) {
 		: results.every(Boolean)
 }
 
+/**
+ *
+ * @param validation
+ * @param value
+ * @param values
+ */
 function runValidation(validation, value, values) {
 	const message = validation.message || 'Invalid value'
 	if (isEmpty(value)) return null
 	switch (validation.kind) {
-		case 'regex':
-			if (!validation.pattern) return null
-			try { return new RegExp(validation.pattern).test(asString(value)) ? null : message } catch { return message }
-		case 'range': {
-			const n = parseFloat(value)
-			if (validation.min !== '' && validation.min != null && n < parseFloat(validation.min)) return message
-			if (validation.max !== '' && validation.max != null && n > parseFloat(validation.max)) return message
-			return null
-		}
-		case 'expression':
-			try { return truthy(evaluateExpression(validation.expression || 'true', values)) ? null : message } catch (e) { return e instanceof ExpressionError ? message : message }
-		default: return null
+	case 'regex':
+		if (!validation.pattern) return null
+		try { return new RegExp(validation.pattern).test(asString(value)) ? null : message } catch { return message }
+	case 'range': {
+		const n = parseFloat(value)
+		if (validation.min !== '' && validation.min != null && n < parseFloat(validation.min)) return message
+		if (validation.max !== '' && validation.max != null && n > parseFloat(validation.max)) return message
+		return null
+	}
+	case 'expression':
+		try { return truthy(evaluateExpression(validation.expression || 'true', values)) ? null : message } catch (e) { return e instanceof ExpressionError ? message : message }
+	default: return null
 	}
 }
 

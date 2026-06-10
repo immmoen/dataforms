@@ -6,8 +6,7 @@
 	the chosen form, then opening the data-entry dialog over the current page.
 -->
 <template>
-	<RecordForm
-		v-if="ready"
+	<RecordForm v-if="ready"
 		:register-id="registerId"
 		:fields="fields"
 		:rules="rules"

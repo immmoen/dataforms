@@ -25,8 +25,8 @@ the **forms** that feed them, entirely from the browser, with no code.
 
 Free and open source (AGPL-3.0-or-later). Development is funded by voluntary donations.
 	]]></description>
-	<version>0.35.1</version>
-	<licence>agpl</licence>
+	<version>0.35.2</version>
+	<licence>AGPL-3.0-or-later</licence>
 	<author>The Dataforms contributors</author>
 	<namespace>Dataforms</namespace>
 	<category>tools</category>
@@ -48,6 +48,16 @@ Free and open source (AGPL-3.0-or-later). Development is funded by voluntary don
 		<nextcloud min-version="30" max-version="32"/>
 	</dependencies>
 
+	<!--
+	  Element order matters: the appinfo XSD is an xs:sequence, so <settings>
+	  (schema position 23) MUST precede <navigations> (position 27), or the
+	  App Store rejects the upload at validation time.
+	-->
+	<settings>
+		<admin>OCA\Dataforms\Settings\AdminSettings</admin>
+		<admin-section>OCA\Dataforms\Settings\AdminSection</admin-section>
+	</settings>
+
 	<navigations>
 		<navigation>
 			<name>Dataforms</name>
@@ -56,9 +66,4 @@ Free and open source (AGPL-3.0-or-later). Development is funded by voluntary don
 			<order>80</order>
 		</navigation>
 	</navigations>
-
-	<settings>
-		<admin>OCA\Dataforms\Settings\AdminSettings</admin>
-		<admin-section>OCA\Dataforms\Settings\AdminSection</admin-section>
-	</settings>
 </info>

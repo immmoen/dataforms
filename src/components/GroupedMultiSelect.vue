@@ -12,17 +12,23 @@
 		<div v-if="selected.length" class="gms-chips">
 			<span v-for="val in selected" :key="val" class="gms-chip">
 				{{ val }}
-				<button v-if="!disabled" type="button" class="gms-chip-x" :aria-label="t('dataforms', 'Remove {item}', { item: val })" @click="toggleOption(val)">×</button>
+				<button v-if="!disabled"
+					type="button"
+					class="gms-chip-x"
+					:aria-label="t('dataforms', 'Remove {item}', { item: val })"
+					@click="toggleOption(val)">×</button>
 			</span>
-			<button v-if="!disabled && selected.length" type="button" class="gms-clear" @click="clearAll">
+			<button v-if="!disabled && selected.length"
+				type="button"
+				class="gms-clear"
+				@click="clearAll">
 				{{ t('dataforms', 'Clear all') }}
 			</button>
 		</div>
 
 		<!-- search -->
 		<div class="gms-search">
-			<input
-				v-model="query"
+			<input v-model="query"
 				type="text"
 				class="native-input"
 				:disabled="disabled"
@@ -35,12 +41,14 @@
 		<div class="gms-list" role="group" :aria-label="label">
 			<div v-for="g in visibleGroups" :key="g.label" class="gms-group">
 				<div class="gms-group-head">
-					<button type="button" class="gms-toggle" :aria-expanded="isOpen(g.label)" @click="toggleOpen(g.label)">
+					<button type="button"
+						class="gms-toggle"
+						:aria-expanded="isOpen(g.label)"
+						@click="toggleOpen(g.label)">
 						<span class="gms-chevron" :class="{ open: isOpen(g.label) }">▸</span>
 					</button>
 					<label class="gms-group-label">
-						<input
-							type="checkbox"
+						<input type="checkbox"
 							:checked="g.all"
 							:indeterminate.prop="g.some && !g.all"
 							:disabled="disabled"
@@ -52,13 +60,18 @@
 				<ul v-if="isOpen(g.label)" class="gms-options">
 					<li v-for="opt in g.options" :key="opt">
 						<label class="gms-option">
-							<input type="checkbox" :checked="selectedSet.has(opt)" :disabled="disabled" @change="toggleOption(opt)">
+							<input type="checkbox"
+								:checked="selectedSet.has(opt)"
+								:disabled="disabled"
+								@change="toggleOption(opt)">
 							<span>{{ opt }}</span>
 						</label>
 					</li>
 				</ul>
 			</div>
-			<p v-if="visibleGroups.length === 0" class="gms-empty">{{ t('dataforms', 'No matching options') }}</p>
+			<p v-if="visibleGroups.length === 0" class="gms-empty">
+				{{ t('dataforms', 'No matching options') }}
+			</p>
 		</div>
 	</div>
 </template>
@@ -235,7 +248,7 @@ export default {
 	color: var(--color-primary-element);
 	cursor: pointer;
 	font-size: 0.86em;
-	margin-left: auto;
+	margin-inline-start: auto;
 }
 
 .gms-search {
@@ -302,7 +315,7 @@ export default {
 }
 
 .gms-count {
-	margin-left: auto;
+	margin-inline-start: auto;
 	font-weight: normal;
 	color: var(--color-text-maxcontrast);
 	font-size: 0.85em;

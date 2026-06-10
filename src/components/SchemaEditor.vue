@@ -18,8 +18,7 @@
 
 		<NcLoadingIcon v-if="loading" class="centered" :size="32" />
 
-		<NcEmptyContent
-			v-else-if="fields.length === 0"
+		<NcEmptyContent v-else-if="fields.length === 0"
 			:name="t('dataforms', 'No fields yet')"
 			:description="t('dataforms', 'Add the first field to define what this register stores.')">
 			<template #icon>
@@ -39,11 +38,21 @@
 				</span>
 				<span class="spacer" />
 				<template v-if="canManage">
-					<NcButton type="tertiary-no-background" :disabled="index === 0" :aria-label="t('dataforms', 'Move up')" @click="move(index, -1)">
-						<template #icon><ChevronUpIcon :size="20" /></template>
+					<NcButton type="tertiary-no-background"
+						:disabled="index === 0"
+						:aria-label="t('dataforms', 'Move up')"
+						@click="move(index, -1)">
+						<template #icon>
+							<ChevronUpIcon :size="20" />
+						</template>
 					</NcButton>
-					<NcButton type="tertiary-no-background" :disabled="index === fields.length - 1" :aria-label="t('dataforms', 'Move down')" @click="move(index, 1)">
-						<template #icon><ChevronDownIcon :size="20" /></template>
+					<NcButton type="tertiary-no-background"
+						:disabled="index === fields.length - 1"
+						:aria-label="t('dataforms', 'Move down')"
+						@click="move(index, 1)">
+						<template #icon>
+							<ChevronDownIcon :size="20" />
+						</template>
 					</NcButton>
 					<NcActions>
 						<NcActionButton @click="openEdit(field)">
@@ -64,22 +73,19 @@
 		</ul>
 
 		<!-- Add field dialog -->
-		<NcDialog
-			v-if="showAdd"
+		<NcDialog v-if="showAdd"
 			:name="editingField ? t('dataforms', 'Edit field') : t('dataforms', 'Add field')"
 			size="normal"
 			:can-close="!saving"
 			@closing="showAdd = false">
 			<div class="add-form">
-				<NcTextField
-					v-model="draft.label"
+				<NcTextField v-model="draft.label"
 					:label="t('dataforms', 'Label')"
 					:required="true" />
 
 				<div class="field-block">
 					<label class="block-label">{{ t('dataforms', 'Type') }}</label>
-					<NcSelect
-						v-model="draft.type"
+					<NcSelect v-model="draft.type"
 						:options="typeOptions"
 						:reduce="(o) => o.id"
 						label="label"
@@ -93,23 +99,20 @@
 
 				<div v-if="needsOptions" class="field-block">
 					<label class="block-label">{{ t('dataforms', 'Options (one per line)') }}</label>
-					<NcTextArea
-						v-model="draft.optionsText"
+					<NcTextArea v-model="draft.optionsText"
 						:aria-label="t('dataforms', 'Options (one per line)')"
 						:placeholder="t('dataforms', 'Consent\nContract\nLegal obligation')" />
 				</div>
 
 				<div v-if="needsOptions && optionLineCount > 12" class="field-block">
 					<label class="block-label">{{ t('dataforms', 'Group options in the form') }}</label>
-					<NcSelect
-						v-model="draft.groupPreset"
+					<NcSelect v-model="draft.groupPreset"
 						:options="groupPresets"
 						:reduce="(o) => o.id"
 						label="label"
 						:aria-label="t('dataforms', 'Group options in the form')"
 						:clearable="false" />
-					<NcTextField
-						v-if="draft.groupPreset === 'custom'"
+					<NcTextField v-if="draft.groupPreset === 'custom'"
 						v-model="draft.groupPatternCustom"
 						:label="t('dataforms', 'Custom pattern (regular expression)')"
 						placeholder="^Art\s*\d+" />
@@ -136,14 +139,20 @@
 
 				<div v-if="draft.type === 'auto'" class="field-block">
 					<label class="block-label">{{ t('dataforms', 'Records') }}</label>
-					<NcSelect v-model="draft.autoKind" :options="autoKinds" :reduce="(o) => o.id" label="label" :aria-label="t('dataforms', 'Records')" :clearable="false" />
-					<p class="block-hint">{{ t('dataforms', 'Filled automatically; read-only in the form.') }}</p>
+					<NcSelect v-model="draft.autoKind"
+						:options="autoKinds"
+						:reduce="(o) => o.id"
+						label="label"
+						:aria-label="t('dataforms', 'Records')"
+						:clearable="false" />
+					<p class="block-hint">
+						{{ t('dataforms', 'Filled automatically; read-only in the form.') }}
+					</p>
 				</div>
 
 				<div v-if="draft.type === 'relation'" class="field-block">
 					<label class="block-label">{{ t('dataforms', 'Linked register') }}</label>
-					<NcSelect
-						v-model="draft.target"
+					<NcSelect v-model="draft.target"
 						:options="registerOptions"
 						:reduce="(o) => o.id"
 						label="label"
@@ -151,8 +160,7 @@
 						:clearable="false"
 						:placeholder="t('dataforms', 'Pick a register to link to')" />
 					<label class="block-label" style="margin-top:12px">{{ t('dataforms', 'Display field') }}</label>
-					<NcSelect
-						v-model="draft.displayField"
+					<NcSelect v-model="draft.displayField"
 						:options="targetFieldOptions"
 						:reduce="(o) => o.id"
 						label="label"
@@ -163,8 +171,7 @@
 						{{ t('dataforms', 'Allow linking several records') }}
 					</NcCheckboxRadioSwitch>
 					<label class="block-label" style="margin-top:12px">{{ t('dataforms', 'When a linked record is deleted') }}</label>
-					<NcSelect
-						v-model="draft.onDelete"
+					<NcSelect v-model="draft.onDelete"
 						:options="onDeleteOptions"
 						:reduce="(o) => o.id"
 						label="label"
@@ -172,13 +179,11 @@
 						:clearable="false" />
 				</div>
 
-				<NcTextField
-					v-model="draft.help"
+				<NcTextField v-model="draft.help"
 					:label="t('dataforms', 'Help text (optional)')"
 					:placeholder="t('dataforms', 'Shown under the field in the form')" />
 
-				<NcTextField
-					v-if="!['boolean', 'file', 'relation', 'multiselect', 'computed', 'auto'].includes(draft.type)"
+				<NcTextField v-if="!['boolean', 'file', 'relation', 'multiselect', 'computed', 'auto'].includes(draft.type)"
 					v-model="draft.default"
 					:label="t('dataforms', 'Default value (optional)')" />
 
@@ -194,8 +199,7 @@
 				<NcButton :disabled="saving" @click="showAdd = false">
 					{{ t('dataforms', 'Cancel') }}
 				</NcButton>
-				<NcButton
-					type="primary"
+				<NcButton type="primary"
 					:disabled="saving || draft.label.trim() === '' || (draft.type === 'relation' && !draft.target)"
 					@click="submit">
 					{{ editingField ? t('dataforms', 'Save') : t('dataforms', 'Add field') }}

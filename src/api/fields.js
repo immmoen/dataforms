@@ -113,6 +113,8 @@ export const GROUP_PRESETS = [
 /**
  * Compute the group label for an option given a RegExp source. Returns 'Other'
  * when the pattern does not match, and the option itself when no pattern is set.
+ * @param option
+ * @param patternSource
  */
 export function groupForOption(option, patternSource) {
 	if (!patternSource) {

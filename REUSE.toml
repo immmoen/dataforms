@@ -1,0 +1,32 @@
+version = 1
+SPDX-PackageName = "dataforms"
+SPDX-PackageSupplier = "The Dataforms contributors"
+SPDX-PackageDownloadLocation = "https://github.com/immmoen/dataforms"
+
+# Files that cannot carry an inline SPDX header (binaries, generated lockfiles,
+# data-only JSON) are licensed here. All hand-written source files carry their
+# own `SPDX-License-Identifier: AGPL-3.0-or-later` header.
+
+[[annotations]]
+path = ["img/app.svg", "img/app-color.svg"]
+precedence = "aggregate"
+SPDX-FileCopyrightText = "2026 The Dataforms contributors"
+SPDX-License-Identifier = "AGPL-3.0-or-later"
+
+[[annotations]]
+path = "DataForms-User-Manual.docx"
+precedence = "aggregate"
+SPDX-FileCopyrightText = "2026 The Dataforms contributors"
+SPDX-License-Identifier = "AGPL-3.0-or-later"
+
+[[annotations]]
+path = ["composer.json", "composer.lock", "package.json", "package-lock.json", "tsconfig.json"]
+precedence = "aggregate"
+SPDX-FileCopyrightText = "2026 The Dataforms contributors"
+SPDX-License-Identifier = "AGPL-3.0-or-later"
+
+[[annotations]]
+path = "COPYING"
+precedence = "override"
+SPDX-FileCopyrightText = "2007 Free Software Foundation, Inc. <https://fsf.org/>"
+SPDX-License-Identifier = "AGPL-3.0-or-later"

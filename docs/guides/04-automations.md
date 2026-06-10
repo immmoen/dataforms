@@ -20,17 +20,33 @@ register into a workflow (e.g. *"when a case is marked High, alert the reviewer"
    (the same field / operator / value rows used in filters and rules). Leave empty
    to fire on every change. Multiple conditions must **all** match.
 
-3. **Then** — the action:
+3. **Then** — the action. There are **nine**, grouped below:
 
    | Action | What it does | You provide |
    |--------|--------------|-------------|
    | **Send a notification** | A Nextcloud notification | Recipients, a message |
    | **Send an email** | An email to users (their NC address) | Recipients, subject, body |
    | **Set a field** | Sets a field on the record (e.g. advance a status) | Field + value |
+   | **Create folders** | A folder tree in the record owner's Files | Base folder + one folder path per line |
+   | **Copy a template** | Copies a template folder's contents into a folder | Source folder + destination |
+   | **Add a calendar event** | An event in the owner's calendar | Title, the date field to start from, (optional) calendar name + duration |
+   | **Create a Talk room** | A Talk conversation, its participants, a welcome message | Room name, the user/group field for participants, message |
+   | **Create a Deck board** | A Deck board and its columns | Board title, columns |
    | **Call a webhook** | POSTs the record data to a URL | URL, optional secret |
 
 Click **Add**. The automation appears in the list with a **switch** to
 enable/disable it, and **Edit / Delete** actions.
+
+## Placeholders (tokens)
+
+Text fields in an action (folder paths, the event/room/board title, the message)
+can include **placeholders** filled from the record:
+
+- `{machineName}` — a field's value, e.g. `{title}`.
+- `{field|format}` — a date reformatted, e.g. `{meeting_date|Ymd}` → `20260701`,
+  `{meeting_date|d-m-Y}` → `01-07-2026`.
+- `{relation.subfield}` — a field from a **linked** record, e.g. `{subgroup.code}`
+  when the record relates to an "ESG Subgroups" register that has a `code` field.
 
 ## Notes per action
 
@@ -39,8 +55,20 @@ enable/disable it, and **Edit / Delete** actions.
 - **Set field** — writes the value directly, so it never triggers more
   automations (no loops). Relation, file and automatic fields can't be set this
   way.
+- **Create folders / Copy a template / Add a calendar event** run as the **record
+  owner** (the person who created the record), in *their* Files / calendar — never
+  as whoever triggered the change. They are **idempotent**: re-running reuses the
+  existing folders / event instead of duplicating them.
+- **Create a Talk room / Create a Deck board** are **composite** actions (they make
+  several API calls in one step) and run as a shared **service account** that an
+  administrator configures first — see *5. Admin & integration*. If it isn't
+  configured, these two actions simply do nothing. They only run on the **create**
+  trigger, so each record gets its workspace exactly once. Participants are added
+  only if they actually exist.
 - **Webhook** — the only action that leaves your instance, so it's deliberate:
   - **http(s) URLs only**, with a short timeout, and every call is logged.
+  - It refuses internal/loopback addresses and never follows redirects (SSRF
+    protection).
   - If you set a **shared secret**, the request body is signed
     (`X-DataForms-Signature: sha256=…`, HMAC‑SHA256) so the receiver can verify it.
   - The POST body is JSON: `{ automation, registerId, recordId, userId, values }`.

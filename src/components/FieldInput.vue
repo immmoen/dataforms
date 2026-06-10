@@ -7,8 +7,7 @@
 -->
 <template>
 	<div class="field-input">
-		<input
-			v-if="['text', 'email', 'url', 'phone'].includes(field.type)"
+		<input v-if="['text', 'email', 'url', 'phone'].includes(field.type)"
 			:type="htmlType"
 			:value="modelValue ?? ''"
 			:disabled="disabled"
@@ -16,8 +15,7 @@
 			class="native-input"
 			@input="emit($event.target.value)">
 
-		<textarea
-			v-else-if="field.type === 'longtext'"
+		<textarea v-else-if="field.type === 'longtext'"
 			:value="modelValue ?? ''"
 			:disabled="disabled"
 			v-bind="ariaAttrs"
@@ -25,8 +23,7 @@
 			class="native-input native-textarea"
 			@input="emit($event.target.value)" />
 
-		<input
-			v-else-if="['number', 'currency', 'percentage'].includes(field.type)"
+		<input v-else-if="['number', 'currency', 'percentage'].includes(field.type)"
 			type="number"
 			:value="modelValue ?? ''"
 			:disabled="disabled"
@@ -35,8 +32,7 @@
 			@input="emit($event.target.value === '' ? null : Number($event.target.value))">
 
 		<div v-else-if="field.type === 'boolean'" class="bool-group">
-			<NcCheckboxRadioSwitch
-				:model-value="boolChoice"
+			<NcCheckboxRadioSwitch :model-value="boolChoice"
 				value="yes"
 				:name="radioName"
 				type="radio"
@@ -44,8 +40,7 @@
 				@update:model-value="emit(true)">
 				{{ t('dataforms', 'Yes') }}
 			</NcCheckboxRadioSwitch>
-			<NcCheckboxRadioSwitch
-				:model-value="boolChoice"
+			<NcCheckboxRadioSwitch :model-value="boolChoice"
 				value="no"
 				:name="radioName"
 				type="radio"
@@ -55,8 +50,7 @@
 			</NcCheckboxRadioSwitch>
 		</div>
 
-		<input
-			v-else-if="['date', 'datetime', 'time'].includes(field.type)"
+		<input v-else-if="['date', 'datetime', 'time'].includes(field.type)"
 			:type="htmlType"
 			:value="modelValue ?? ''"
 			:disabled="disabled"
@@ -64,8 +58,7 @@
 			class="native-input"
 			@input="emit($event.target.value)">
 
-		<NcSelect
-			v-else-if="field.type === 'select'"
+		<NcSelect v-else-if="field.type === 'select'"
 			:model-value="modelValue"
 			:options="options"
 			:disabled="disabled"
@@ -74,8 +67,7 @@
 			:placeholder="t('dataforms', 'Choose…')"
 			@update:model-value="emit($event)" />
 
-		<GroupedMultiSelect
-			v-else-if="field.type === 'multiselect' && field.config?.groupPattern"
+		<GroupedMultiSelect v-else-if="field.type === 'multiselect' && field.config?.groupPattern"
 			:model-value="Array.isArray(modelValue) ? modelValue : []"
 			:options="options"
 			:group-pattern="field.config.groupPattern"
@@ -83,8 +75,7 @@
 			:disabled="disabled"
 			@update:model-value="emit($event)" />
 
-		<NcSelect
-			v-else-if="field.type === 'multiselect'"
+		<NcSelect v-else-if="field.type === 'multiselect'"
 			:model-value="Array.isArray(modelValue) ? modelValue : []"
 			:options="options"
 			:multiple="true"
@@ -93,8 +84,7 @@
 			:placeholder="t('dataforms', 'Choose…')"
 			@update:model-value="emit($event)" />
 
-		<NcSelect
-			v-else-if="field.type === 'relation'"
+		<NcSelect v-else-if="field.type === 'relation'"
 			:model-value="relationModel"
 			:options="relationOptions"
 			label="label"
@@ -111,20 +101,34 @@
 		<div v-else-if="field.type === 'file'" class="file-field">
 			<ul v-if="fileList.length" class="attached-files">
 				<li v-for="f in fileList" :key="f.id" class="attached-file">
-					<a :href="fileUrl(f.id)" target="_blank" rel="noopener noreferrer" class="file-link"><span aria-hidden="true">📎 </span>{{ f.name }}</a>
-					<NcButton v-if="!disabled" type="tertiary-no-background" :aria-label="t('dataforms', 'Remove file')" @click.prevent="removeFile(f.id)">
-						<template #icon><CloseIcon :size="16" /></template>
+					<a :href="fileUrl(f.id)"
+						target="_blank"
+						rel="noopener noreferrer"
+						class="file-link"><span aria-hidden="true">📎 </span>{{ f.name }}</a>
+					<NcButton v-if="!disabled"
+						type="tertiary-no-background"
+						:aria-label="t('dataforms', 'Remove file')"
+						@click.prevent="removeFile(f.id)">
+						<template #icon>
+							<CloseIcon :size="16" />
+						</template>
 					</NcButton>
 				</li>
 			</ul>
 			<span v-else class="no-file">{{ t('dataforms', 'No files attached') }}</span>
 			<div v-if="!disabled" class="file-row">
 				<NcButton @click.prevent="triggerUpload">
-					<template #icon><UploadIcon :size="18" /></template>
+					<template #icon>
+						<UploadIcon :size="18" />
+					</template>
 					{{ t('dataforms', 'Add file(s)') }}
 				</NcButton>
 				<NcLoadingIcon v-if="uploading" :size="20" />
-				<input ref="fileInput" type="file" multiple class="hidden-input" @change="onLocalFile">
+				<input ref="fileInput"
+					type="file"
+					multiple
+					class="hidden-input"
+					@change="onLocalFile">
 			</div>
 		</div>
 
@@ -135,8 +139,7 @@
 			</span>
 		</div>
 
-		<input
-			v-else
+		<input v-else
 			type="text"
 			:value="modelValue ?? ''"
 			:disabled="disabled"
@@ -198,8 +201,12 @@ export default {
 		},
 		htmlType() {
 			return {
-				email: 'email', url: 'url', phone: 'tel',
-				date: 'date', datetime: 'datetime-local', time: 'time',
+				email: 'email',
+				url: 'url',
+				phone: 'tel',
+				date: 'date',
+				datetime: 'datetime-local',
+				time: 'time',
 			}[this.field.type] ?? 'text'
 		},
 		options() {

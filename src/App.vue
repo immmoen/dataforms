@@ -3,8 +3,7 @@
 	<NcContent app-name="dataforms">
 		<NcAppNavigation>
 			<template #list>
-				<NcAppNavigationNew
-					:text="t('dataforms', 'New register')"
+				<NcAppNavigationNew :text="t('dataforms', 'New register')"
 					@click="openCreate">
 					<template #icon>
 						<PlusIcon :size="20" />
@@ -12,8 +11,7 @@
 				</NcAppNavigationNew>
 
 				<NcAppNavigationCaption v-if="favoriteRegisters.length" :name="t('dataforms', 'Favourites')" />
-				<NcAppNavigationItem
-					v-for="register in favoriteRegisters"
+				<NcAppNavigationItem v-for="register in favoriteRegisters"
 					:key="'fav-' + register.id"
 					:name="register.title"
 					:active="register.id === selectedId"
@@ -24,19 +22,22 @@
 					</template>
 					<template #actions>
 						<NcActionButton @click="toggleFavorite(register)">
-							<template #icon><StarIcon :size="20" /></template>
+							<template #icon>
+								<StarIcon :size="20" />
+							</template>
 							{{ t('dataforms', 'Remove from favourites') }}
 						</NcActionButton>
 						<NcActionButton v-if="register.canManage" @click="confirmDelete(register)">
-							<template #icon><DeleteIcon :size="20" /></template>
+							<template #icon>
+								<DeleteIcon :size="20" />
+							</template>
 							{{ t('dataforms', 'Delete') }}
 						</NcActionButton>
 					</template>
 				</NcAppNavigationItem>
 
 				<NcAppNavigationCaption v-if="favoriteRegisters.length" :name="t('dataforms', 'All registers')" />
-				<NcAppNavigationItem
-					v-for="register in otherRegisters"
+				<NcAppNavigationItem v-for="register in otherRegisters"
 					:key="register.id"
 					:name="register.title"
 					:active="register.id === selectedId"
@@ -47,11 +48,15 @@
 					</template>
 					<template #actions>
 						<NcActionButton @click="toggleFavorite(register)">
-							<template #icon><StarOutlineIcon :size="20" /></template>
+							<template #icon>
+								<StarOutlineIcon :size="20" />
+							</template>
 							{{ t('dataforms', 'Add to favourites') }}
 						</NcActionButton>
 						<NcActionButton v-if="register.canManage" @click="confirmDelete(register)">
-							<template #icon><DeleteIcon :size="20" /></template>
+							<template #icon>
+								<DeleteIcon :size="20" />
+							</template>
 							{{ t('dataforms', 'Delete') }}
 						</NcActionButton>
 					</template>
@@ -62,8 +67,7 @@
 		<NcAppContent>
 			<NcLoadingIcon v-if="loading" class="centered" :size="44" />
 
-			<NcEmptyContent
-				v-else-if="registers.length === 0"
+			<NcEmptyContent v-else-if="registers.length === 0"
 				:name="t('dataforms', 'No registers yet')"
 				:description="t('dataforms', 'Create your first register to start collecting structured records.')">
 				<template #icon>
@@ -79,11 +83,12 @@
 			<div v-else-if="!selected" class="dashboard">
 				<div class="dash-head">
 					<h2>{{ t('dataforms', 'Registers') }}</h2>
-					<p class="dash-sub">{{ t('dataforms', 'Pick a register to view its records, or create a new one.') }}</p>
+					<p class="dash-sub">
+						{{ t('dataforms', 'Pick a register to view its records, or create a new one.') }}
+					</p>
 				</div>
 				<div class="reg-grid">
-					<button
-						v-for="register in registers"
+					<button v-for="register in registers"
 						:key="register.id"
 						class="reg-card"
 						@click="select(register.id)">
@@ -131,8 +136,7 @@
 				</div>
 
 				<div v-if="tabs.length > 1" class="tabs">
-					<button
-						v-for="tab in tabs"
+					<button v-for="tab in tabs"
 						:key="tab.id"
 						class="tab"
 						:class="{ active: activeTab === tab.id }"
@@ -141,31 +145,26 @@
 					</button>
 				</div>
 
-				<RecordsView
-					v-if="activeTab === 'records'"
+				<RecordsView v-if="activeTab === 'records'"
 					:key="'rec-' + selected.id"
 					:register-id="selected.id"
 					:can-write="selected.canWrite"
 					:can-manage="selected.canManage"
 					:open-form-id="deepLinkFormId"
 					@form-consumed="deepLinkFormId = null" />
-				<SchemaEditor
-					v-else-if="activeTab === 'fields'"
+				<SchemaEditor v-else-if="activeTab === 'fields'"
 					:key="'fld-' + selected.id"
 					:register-id="selected.id"
 					:can-manage="selected.canManage" />
-				<FormBuilder
-					v-else-if="activeTab === 'forms'"
+				<FormBuilder v-else-if="activeTab === 'forms'"
 					:key="'frm-' + selected.id"
 					:register-id="selected.id"
 					:can-manage="selected.canManage" />
-				<RuleBuilder
-					v-else-if="activeTab === 'rules'"
+				<RuleBuilder v-else-if="activeTab === 'rules'"
 					:key="'rul-' + selected.id"
 					:register-id="selected.id"
 					:can-manage="selected.canManage" />
-				<AutomationsBuilder
-					v-else
+				<AutomationsBuilder v-else
 					:key="'aut-' + selected.id"
 					:register-id="selected.id"
 					:can-manage="selected.canManage" />
@@ -175,27 +174,23 @@
 		</NcAppContent>
 
 		<!-- Create dialog -->
-		<NcDialog
-			v-if="showCreate"
+		<NcDialog v-if="showCreate"
 			:name="t('dataforms', 'New register')"
 			:can-close="!saving"
 			@closing="showCreate = false">
 			<div class="create-form">
-				<NcTextField
-					ref="titleField"
+				<NcTextField ref="titleField"
 					v-model="draft.title"
 					:label="t('dataforms', 'Title')"
 					:required="true"
 					@keydown.enter="submitCreate" />
-				<NcTextArea
-					v-model="draft.description"
+				<NcTextArea v-model="draft.description"
 					:label="t('dataforms', 'Description')"
 					:placeholder="t('dataforms', 'What does this register track?')" />
 				<div class="color-field">
 					<label class="color-label">{{ t('dataforms', 'Colour') }}</label>
 					<div class="swatches">
-						<button
-							v-for="c in colors"
+						<button v-for="c in colors"
 							:key="c"
 							class="swatch"
 							:class="{ selected: draft.color === c }"
@@ -209,8 +204,7 @@
 				<NcButton :disabled="saving" @click="showCreate = false">
 					{{ t('dataforms', 'Cancel') }}
 				</NcButton>
-				<NcButton
-					type="primary"
+				<NcButton type="primary"
 					:disabled="saving || draft.title.trim() === ''"
 					@click="submitCreate">
 					{{ t('dataforms', 'Create') }}
@@ -324,6 +318,11 @@ export default {
 			return tabs
 		},
 	},
+	watch: {
+		activeTab() {
+			this.syncHash()
+		},
+	},
 	async mounted() {
 		await this.load()
 		this.applyDeepLink() // ?register=&form= from the Smart Picker / a shared link
@@ -332,11 +331,6 @@ export default {
 	},
 	beforeUnmount() {
 		window.removeEventListener('hashchange', this.applyHash)
-	},
-	watch: {
-		activeTab() {
-			this.syncHash()
-		},
 	},
 	methods: {
 		n,
@@ -495,7 +489,7 @@ export default {
 	display: flex;
 	flex-direction: column;
 	gap: 6px;
-	text-align: left;
+	text-align: start;
 	background: var(--color-main-background);
 	border: 1px solid var(--color-border);
 	border-radius: var(--border-radius-large, 12px);

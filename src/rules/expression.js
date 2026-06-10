@@ -10,12 +10,26 @@
  */
 
 const FUNCTIONS = {
-	sum: -1, min: -1, max: -1, concat: -1, coalesce: -1,
-	round: -2, abs: 1, len: 1, lower: 1, upper: 1, if: 3, number: 1,
+	sum: -1,
+	min: -1,
+	max: -1,
+	concat: -1,
+	coalesce: -1,
+	round: -2,
+	abs: 1,
+	len: 1,
+	lower: 1,
+	upper: 1,
+	if: 3,
+	number: 1,
 }
 
 export class ExpressionError extends Error {}
 
+/**
+ *
+ * @param s
+ */
 function tokenize(s) {
 	const tokens = []
 	let i = 0
@@ -83,6 +97,9 @@ export function evaluateExpression(expression, values) {
 	const peek = () => tokens[pos] ?? null
 	const isOp = (op) => { const t = peek(); return t && t.type === 'op' && t.value === op }
 
+	/**
+	 *
+	 */
 	function parseExpr() {
 		const left = parseAdd()
 		const t = peek()
@@ -92,6 +109,9 @@ export function evaluateExpression(expression, values) {
 		}
 		return left
 	}
+	/**
+	 *
+	 */
 	function parseAdd() {
 		let left = parseMul()
 		let t
@@ -106,6 +126,9 @@ export function evaluateExpression(expression, values) {
 		}
 		return left
 	}
+	/**
+	 *
+	 */
 	function parseMul() {
 		let left = parseUnary()
 		let t
@@ -119,10 +142,16 @@ export function evaluateExpression(expression, values) {
 		}
 		return left
 	}
+	/**
+	 *
+	 */
 	function parseUnary() {
 		if (isOp('-')) { pos++; return -1 * num(parseUnary()) }
 		return parsePrimary()
 	}
+	/**
+	 *
+	 */
 	function parsePrimary() {
 		const t = peek()
 		if (!t) throw new ExpressionError('Unexpected end of expression')
@@ -144,6 +173,10 @@ export function evaluateExpression(expression, values) {
 		}
 		throw new ExpressionError('Unexpected token')
 	}
+	/**
+	 *
+	 * @param name
+	 */
 	function callFunction(name) {
 		if (!(name in FUNCTIONS)) throw new ExpressionError('Unknown function: ' + name)
 		pos++ // '('
@@ -164,33 +197,44 @@ export function evaluateExpression(expression, values) {
 	return result
 }
 
+/**
+ *
+ * @param name
+ * @param a
+ */
 function applyFunction(name, a) {
 	switch (name) {
-		case 'sum': return a.reduce((s, x) => s + num(x), 0)
-		case 'min': return a.length ? Math.min(...a.map(num)) : 0
-		case 'max': return a.length ? Math.max(...a.map(num)) : 0
-		case 'abs': return Math.abs(num(a[0]))
-		case 'round': { const d = parseInt(a[1] ?? 0, 10) || 0; const f = 10 ** d; return Math.round(num(a[0]) * f) / f }
-		case 'len': return toStr(a[0]).length
-		case 'lower': return toStr(a[0]).toLowerCase()
-		case 'upper': return toStr(a[0]).toUpperCase()
-		case 'number': return isNumeric(a[0]) ? num(a[0]) : 0
-		case 'concat': return a.map(toStr).join('')
-		case 'coalesce': return a.find((x) => x !== null && x !== undefined && x !== '') ?? null
-		case 'if': return truthy(a[0]) ? a[1] : a[2]
+	case 'sum': return a.reduce((s, x) => s + num(x), 0)
+	case 'min': return a.length ? Math.min(...a.map(num)) : 0
+	case 'max': return a.length ? Math.max(...a.map(num)) : 0
+	case 'abs': return Math.abs(num(a[0]))
+	case 'round': { const d = parseInt(a[1] ?? 0, 10) || 0; const f = 10 ** d; return Math.round(num(a[0]) * f) / f }
+	case 'len': return toStr(a[0]).length
+	case 'lower': return toStr(a[0]).toLowerCase()
+	case 'upper': return toStr(a[0]).toUpperCase()
+	case 'number': return isNumeric(a[0]) ? num(a[0]) : 0
+	case 'concat': return a.map(toStr).join('')
+	case 'coalesce': return a.find((x) => x !== null && x !== undefined && x !== '') ?? null
+	case 'if': return truthy(a[0]) ? a[1] : a[2]
 	}
 	throw new ExpressionError('Unhandled function: ' + name)
 }
 
+/**
+ *
+ * @param op
+ * @param l
+ * @param r
+ */
 function compare(op, l, r) {
 	if (isNumeric(l) && isNumeric(r)) { l = num(l); r = num(r) }
 	switch (op) {
-		case '==': return l == r // eslint-disable-line eqeqeq
-		case '!=': return l != r // eslint-disable-line eqeqeq
-		case '<': return l < r
-		case '>': return l > r
-		case '<=': return l <= r
-		case '>=': return l >= r
+	case '==': return l == r // eslint-disable-line eqeqeq
+	case '!=': return l != r // eslint-disable-line eqeqeq
+	case '<': return l < r
+	case '>': return l > r
+	case '<=': return l <= r
+	case '>=': return l >= r
 	}
 	return false
 }

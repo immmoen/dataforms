@@ -2,15 +2,13 @@
 <template>
 	<div class="records-view">
 		<div class="toolbar">
-			<NcTextField
-				v-model="search"
+			<NcTextField v-model="search"
 				class="search"
 				:label="t('dataforms', 'Search records')"
 				label-visible
 				type="search"
 				@update:model-value="onSearch" />
-			<NcSelect
-				v-if="fields.length && views.length"
+			<NcSelect v-if="fields.length && views.length"
 				:model-value="activeView"
 				:options="viewOptions"
 				label="title"
@@ -19,41 +17,61 @@
 				class="view-select"
 				@update:model-value="onSelectView" />
 			<NcButton :type="activeFilters.length ? 'secondary' : 'tertiary'" @click="toggleFilterBar">
-				<template #icon><FilterIcon :size="20" /></template>
+				<template #icon>
+					<FilterIcon :size="20" />
+				</template>
 				{{ activeFilters.length ? t('dataforms', 'Filter ({n})', { n: activeFilters.length }) : t('dataforms', 'Filter') }}
 			</NcButton>
 			<span class="spacer" />
-			<input ref="importInput" type="file" accept=".csv,text/csv" class="hidden-file" @change="onImportFile">
+			<input ref="importInput"
+				type="file"
+				accept=".csv,text/csv"
+				class="hidden-file"
+				@change="onImportFile">
 
 			<!-- One tidy menu for everything secondary. -->
 			<NcActions :menu-name="t('dataforms', 'More')" :force-name="false">
-				<template #icon><DotsIcon :size="20" /></template>
+				<template #icon>
+					<DotsIcon :size="20" />
+				</template>
 				<NcActionButton close-after-click @click="load()">
-					<template #icon><RefreshIcon :size="20" /></template>
+					<template #icon>
+						<RefreshIcon :size="20" />
+					</template>
 					{{ t('dataforms', 'Refresh') }}
 				</NcActionButton>
 				<NcActionButton v-if="fields.length" close-after-click @click="openSaveView">
-					<template #icon><ContentSaveIcon :size="20" /></template>
+					<template #icon>
+						<ContentSaveIcon :size="20" />
+					</template>
 					{{ t('dataforms', 'Save current view…') }}
 				</NcActionButton>
 				<NcActionButton v-if="activeView && activeView.isOwner" close-after-click @click="removeActiveView">
-					<template #icon><DeleteIcon :size="20" /></template>
+					<template #icon>
+						<DeleteIcon :size="20" />
+					</template>
 					{{ t('dataforms', 'Delete this view') }}
 				</NcActionButton>
 				<NcActionSeparator />
-				<NcActionButton v-if="canWrite" :disabled="fields.length === 0 || importing" close-after-click @click="showImport = true">
-					<template #icon><UploadIcon :size="20" /></template>
+				<NcActionButton v-if="canWrite"
+					:disabled="fields.length === 0 || importing"
+					close-after-click
+					@click="showImport = true">
+					<template #icon>
+						<UploadIcon :size="20" />
+					</template>
 					{{ importing ? t('dataforms', 'Importing…') : t('dataforms', 'Import from CSV…') }}
 				</NcActionButton>
 				<NcActionButton :disabled="fields.length === 0 || records.length === 0" close-after-click @click="exportCsv">
-					<template #icon><DownloadIcon :size="20" /></template>
+					<template #icon>
+						<DownloadIcon :size="20" />
+					</template>
 					{{ t('dataforms', 'Export to CSV') }}
 				</NcActionButton>
 				<template v-if="fields.length">
 					<NcActionSeparator />
 					<NcActionCaption :name="t('dataforms', 'Columns')" />
-					<NcActionCheckbox
-						v-for="field in fields"
+					<NcActionCheckbox v-for="field in fields"
 						:key="field.id"
 						:model-value="isColumnVisible(field)"
 						@update:model-value="toggleColumn(field)">
@@ -62,12 +80,13 @@
 				</template>
 			</NcActions>
 
-			<NcActions
-				v-if="canWrite && forms.length"
+			<NcActions v-if="canWrite && forms.length"
 				type="primary"
 				:menu-name="t('dataforms', 'New record')"
 				:disabled="fields.length === 0">
-				<template #icon><PlusIcon :size="20" /></template>
+				<template #icon>
+					<PlusIcon :size="20" />
+				</template>
 				<NcActionButton @click="openNew(null)">
 					{{ t('dataforms', 'Blank (all fields)') }}
 				</NcActionButton>
@@ -75,7 +94,10 @@
 					{{ f.title }}
 				</NcActionButton>
 			</NcActions>
-			<NcButton v-else-if="canWrite" type="primary" :disabled="fields.length === 0" @click="openNew(null)">
+			<NcButton v-else-if="canWrite"
+				type="primary"
+				:disabled="fields.length === 0"
+				@click="openNew(null)">
 				<template #icon>
 					<PlusIcon :size="20" />
 				</template>
@@ -85,40 +107,57 @@
 
 		<div v-if="showFilter" class="filter-bar">
 			<div v-for="(f, i) in draftFilters" :key="i" class="filter-row">
-				<NcSelect :model-value="f.field" :options="filterFieldOptions" :reduce="(o) => o.id" label="label" :clearable="false" class="f-field" :placeholder="t('dataforms', 'Field')" @update:model-value="onFilterFieldChange(f, $event)" />
-				<NcSelect v-model="f.op" :options="filterOps" :reduce="(o) => o.id" label="label" :clearable="false" class="f-op" />
-				<NcSelect
-					v-if="!['isEmpty', 'isNotEmpty'].includes(f.op) && fieldOptions(f.field).length"
+				<NcSelect :model-value="f.field"
+					:options="filterFieldOptions"
+					:reduce="(o) => o.id"
+					label="label"
+					:clearable="false"
+					class="f-field"
+					:placeholder="t('dataforms', 'Field')"
+					@update:model-value="onFilterFieldChange(f, $event)" />
+				<NcSelect v-model="f.op"
+					:options="filterOps"
+					:reduce="(o) => o.id"
+					label="label"
+					:clearable="false"
+					class="f-op" />
+				<NcSelect v-if="!['isEmpty', 'isNotEmpty'].includes(f.op) && fieldOptions(f.field).length"
 					v-model="f.value"
 					:options="fieldOptions(f.field)"
 					:clearable="false"
 					class="f-val"
 					:placeholder="t('dataforms', 'Value')" />
-				<NcTextField
-					v-else-if="!['isEmpty', 'isNotEmpty'].includes(f.op)"
+				<NcTextField v-else-if="!['isEmpty', 'isNotEmpty'].includes(f.op)"
 					v-model="f.value"
 					:type="fieldInputType(f.field)"
 					:label="t('dataforms', 'Value')"
 					class="f-val" />
 				<NcButton type="tertiary" :aria-label="t('dataforms', 'Remove')" @click="draftFilters.splice(i, 1)">
-					<template #icon><CloseIcon :size="18" /></template>
+					<template #icon>
+						<CloseIcon :size="18" />
+					</template>
 				</NcButton>
 			</div>
 			<div class="filter-actions">
 				<NcButton type="tertiary" @click="addFilter">
-					<template #icon><PlusIcon :size="18" /></template>
+					<template #icon>
+						<PlusIcon :size="18" />
+					</template>
 					{{ t('dataforms', 'Add condition') }}
 				</NcButton>
 				<span class="spacer" />
-				<NcButton @click="clearFilters">{{ t('dataforms', 'Clear') }}</NcButton>
-				<NcButton type="primary" @click="applyFilters">{{ t('dataforms', 'Apply') }}</NcButton>
+				<NcButton @click="clearFilters">
+					{{ t('dataforms', 'Clear') }}
+				</NcButton>
+				<NcButton type="primary" @click="applyFilters">
+					{{ t('dataforms', 'Apply') }}
+				</NcButton>
 			</div>
 		</div>
 
 		<NcLoadingIcon v-if="loading" class="centered" :size="32" />
 
-		<NcEmptyContent
-			v-else-if="fields.length === 0"
+		<NcEmptyContent v-else-if="fields.length === 0"
 			:name="t('dataforms', 'Define fields first')"
 			:description="t('dataforms', 'This register has no fields yet. Add some in the Fields tab, then you can enter records.')">
 			<template #icon>
@@ -126,8 +165,7 @@
 			</template>
 		</NcEmptyContent>
 
-		<NcEmptyContent
-			v-else-if="records.length === 0"
+		<NcEmptyContent v-else-if="records.length === 0"
 			:name="t('dataforms', 'No records yet')"
 			:description="t('dataforms', 'Add the first record with the New record button.')">
 			<template #icon>
@@ -140,8 +178,7 @@
 				<table :aria-label="t('dataforms', 'Records')">
 					<thead>
 						<tr>
-							<th
-								v-for="field in columns"
+							<th v-for="field in columns"
 								:key="field.id"
 								scope="col"
 								class="sortable"
@@ -161,8 +198,7 @@
 					</thead>
 					<tbody>
 						<tr v-for="record in records" :key="record.id">
-							<td
-								v-for="field in columns"
+							<td v-for="field in columns"
 								:key="field.id"
 								:class="{ editable: canModify(record) && isInlineEditable(field), editing: isEditingCell(record, field) }"
 								:tabindex="canModify(record) && isInlineEditable(field) ? 0 : null"
@@ -170,8 +206,7 @@
 								@dblclick="onCellDblClick(record, field)"
 								@keydown.enter.prevent="!isEditingCell(record, field) && canModify(record) && isInlineEditable(field) && onCellDblClick(record, field)">
 								<template v-if="isEditingCell(record, field)">
-									<select
-										v-if="field.type === 'select'"
+									<select v-if="field.type === 'select'"
 										ref="inlineInput"
 										v-model="editValue"
 										class="inline-input"
@@ -180,10 +215,11 @@
 										@keydown.esc="cancelInline"
 										@blur="saveInline(record, field)">
 										<option value="" />
-										<option v-for="o in (field.config.options || [])" :key="o" :value="o">{{ o }}</option>
+										<option v-for="o in (field.config.options || [])" :key="o" :value="o">
+											{{ o }}
+										</option>
 									</select>
-									<select
-										v-else-if="field.type === 'boolean'"
+									<select v-else-if="field.type === 'boolean'"
 										ref="inlineInput"
 										v-model="editValue"
 										class="inline-input"
@@ -192,11 +228,14 @@
 										@keydown.esc="cancelInline"
 										@blur="saveInline(record, field)">
 										<option value="" />
-										<option value="true">{{ t('dataforms', 'Yes') }}</option>
-										<option value="false">{{ t('dataforms', 'No') }}</option>
+										<option value="true">
+											{{ t('dataforms', 'Yes') }}
+										</option>
+										<option value="false">
+											{{ t('dataforms', 'No') }}
+										</option>
 									</select>
-									<input
-										v-else
+									<input v-else
 										ref="inlineInput"
 										v-model="editValue"
 										:type="inlineInputType(field)"
@@ -239,13 +278,16 @@
 
 			<div class="pager">
 				<span>{{ rangeLabel }}</span>
-				<NcButton :disabled="page === 0" @click="prev">{{ t('dataforms', 'Previous') }}</NcButton>
-				<NcButton :disabled="(page + 1) * limit >= total" @click="next">{{ t('dataforms', 'Next') }}</NcButton>
+				<NcButton :disabled="page === 0" @click="prev">
+					{{ t('dataforms', 'Previous') }}
+				</NcButton>
+				<NcButton :disabled="(page + 1) * limit >= total" @click="next">
+					{{ t('dataforms', 'Next') }}
+				</NcButton>
 			</div>
 		</template>
 
-		<RecordForm
-			v-if="showForm"
+		<RecordForm v-if="showForm"
 			:register-id="registerId"
 			:fields="fields"
 			:rules="rules"
@@ -254,34 +296,37 @@
 			@saved="onSaved"
 			@close="showForm = false" />
 
-		<RecordDetail
-			v-if="showDetail"
+		<RecordDetail v-if="showDetail"
 			:fields="fields"
 			:record="detailRecord"
 			:can-edit="canModify(detailRecord)"
 			@edit="onDetailEdit"
 			@close="showDetail = false" />
 
-		<NcDialog
-			v-if="showSaveView"
+		<NcDialog v-if="showSaveView"
 			:name="t('dataforms', 'Save as view')"
 			size="normal"
 			@closing="showSaveView = false">
 			<div class="save-view-form">
 				<NcTextField v-model="newView.title" :label="t('dataforms', 'View name')" :required="true" />
-				<p class="hint">{{ t('dataforms', 'Saves the current columns, filters, sort and search.') }}</p>
+				<p class="hint">
+					{{ t('dataforms', 'Saves the current columns, filters, sort and search.') }}
+				</p>
 				<NcCheckboxRadioSwitch v-model="newView.shared">
 					{{ t('dataforms', 'Share with everyone who can see this register') }}
 				</NcCheckboxRadioSwitch>
 			</div>
 			<template #actions>
-				<NcButton @click="showSaveView = false">{{ t('dataforms', 'Cancel') }}</NcButton>
-				<NcButton type="primary" :disabled="newView.title.trim() === ''" @click="saveView">{{ t('dataforms', 'Save') }}</NcButton>
+				<NcButton @click="showSaveView = false">
+					{{ t('dataforms', 'Cancel') }}
+				</NcButton>
+				<NcButton type="primary" :disabled="newView.title.trim() === ''" @click="saveView">
+					{{ t('dataforms', 'Save') }}
+				</NcButton>
 			</template>
 		</NcDialog>
 
-		<NcDialog
-			v-if="showImport"
+		<NcDialog v-if="showImport"
 			:name="t('dataforms', 'Import records from CSV')"
 			size="normal"
 			@closing="showImport = false">
@@ -299,12 +344,16 @@
 				<div v-if="importResult" class="import-result">
 					<p><strong>{{ t('dataforms', 'Imported {ok}, {failed} failed', { ok: importResult.imported, failed: importResult.failed }) }}</strong></p>
 					<ul v-if="importResult.errors && importResult.errors.length">
-						<li v-for="(err, i) in importResult.errors" :key="i" class="err-row">{{ err }}</li>
+						<li v-for="(err, i) in importResult.errors" :key="i" class="err-row">
+							{{ err }}
+						</li>
 					</ul>
 				</div>
 			</div>
 			<template #actions>
-				<NcButton @click="downloadTemplate">{{ t('dataforms', 'Download template') }}</NcButton>
+				<NcButton @click="downloadTemplate">
+					{{ t('dataforms', 'Download template') }}
+				</NcButton>
 				<NcButton type="primary" :disabled="importing" @click="$refs.importInput.click()">
 					{{ importing ? t('dataforms', 'Importing…') : t('dataforms', 'Choose CSV file') }}
 				</NcButton>
@@ -354,8 +403,32 @@ import { listForms } from '../api/forms.js'
 export default {
 	name: 'RecordsView',
 	components: {
-		NcActions, NcActionButton, NcActionCheckbox, NcActionCaption, NcActionSeparator, NcButton, NcCheckboxRadioSwitch, NcDialog, NcEmptyContent, NcLoadingIcon, NcSelect, NcTextField,
-		PlusIcon, FilterIcon, CloseIcon, PencilIcon, DeleteIcon, DownloadIcon, UploadIcon, TableIcon, ContentSaveIcon, EyeIcon, DotsIcon, RefreshIcon, RecordForm, RecordDetail,
+		NcActions,
+		NcActionButton,
+		NcActionCheckbox,
+		NcActionCaption,
+		NcActionSeparator,
+		NcButton,
+		NcCheckboxRadioSwitch,
+		NcDialog,
+		NcEmptyContent,
+		NcLoadingIcon,
+		NcSelect,
+		NcTextField,
+		PlusIcon,
+		FilterIcon,
+		CloseIcon,
+		PencilIcon,
+		DeleteIcon,
+		DownloadIcon,
+		UploadIcon,
+		TableIcon,
+		ContentSaveIcon,
+		EyeIcon,
+		DotsIcon,
+		RefreshIcon,
+		RecordForm,
+		RecordDetail,
 	},
 	props: {
 		registerId: { type: Number, required: true },
@@ -706,9 +779,15 @@ export default {
 		},
 		inlineInputType(field) {
 			return {
-				email: 'email', url: 'url', phone: 'tel',
-				number: 'number', currency: 'number', percentage: 'number',
-				date: 'date', datetime: 'datetime-local', time: 'time',
+				email: 'email',
+				url: 'url',
+				phone: 'tel',
+				number: 'number',
+				currency: 'number',
+				percentage: 'number',
+				date: 'date',
+				datetime: 'datetime-local',
+				time: 'time',
 			}[field.type] ?? 'text'
 		},
 		isEditingCell(record, field) {
@@ -914,7 +993,7 @@ export default {
 	padding: 0;
 	margin: -1px;
 	overflow: hidden;
-	clip: rect(0, 0, 0, 0);
+	clip-path: inset(50%);
 	white-space: nowrap;
 	border: 0;
 }
@@ -952,7 +1031,7 @@ thead th {
 	position: sticky;
 	top: 0;
 	z-index: 2;
-	text-align: left;
+	text-align: start;
 	font-size: 0.78em;
 	text-transform: uppercase;
 	letter-spacing: 0.03em;
@@ -1015,9 +1094,9 @@ tbody tr:last-child td {
 /* Keep the row actions reachable no matter how wide the table scrolls. */
 .actions-col {
 	width: 44px;
-	text-align: right;
+	text-align: end;
 	position: sticky;
-	right: 0;
+	inset-inline-end: 0;
 	background: var(--color-main-background);
 }
 
@@ -1093,7 +1172,7 @@ th.sortable:hover {
 
 .sort-ind {
 	font-size: 0.8em;
-	margin-left: 4px;
+	margin-inline-start: 4px;
 }
 
 .pager {

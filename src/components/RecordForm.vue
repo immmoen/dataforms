@@ -3,20 +3,20 @@
      required, and computed values recompute as you type — using the shared
      rule engine. The server re-validates everything on save. -->
 <template>
-	<NcDialog
-		:name="record ? t('dataforms', 'Edit record') : t('dataforms', 'New record')"
+	<NcDialog :name="record ? t('dataforms', 'Edit record') : t('dataforms', 'New record')"
 		size="normal"
 		:can-close="!saving"
 		@closing="$emit('close')">
 		<div class="record-form">
-			<NcEmptyContent
-				v-if="fields.length === 0"
+			<NcEmptyContent v-if="fields.length === 0"
 				:name="t('dataforms', 'This register has no fields')"
 				:description="t('dataforms', 'Add fields in the Fields tab first.')" />
 
 			<template v-else>
 				<div v-for="(section, si) in sections" :key="si" class="form-section">
-					<h3 v-if="section.title" class="section-title">{{ section.title }}</h3>
+					<h3 v-if="section.title" class="section-title">
+						{{ section.title }}
+					</h3>
 					<div v-for="field in section.fields" :key="field.id" class="form-field">
 						<div class="label-row">
 							<span class="lbl">{{ field.label }}</span>
@@ -25,8 +25,7 @@
 								{{ t('dataforms', 'computed') }}
 							</span>
 						</div>
-						<FieldInput
-							:field="field"
+						<FieldInput :field="field"
 							:label="field.label"
 							:model-value="valueFor(field)"
 							:disabled="computedTargets.has(field.machineName)"
@@ -37,7 +36,10 @@
 						<p v-if="field.config && field.config.help" :id="'df-help-' + field.machineName" class="field-help">
 							{{ field.config.help }}
 						</p>
-						<p v-if="allErrors[field.machineName]" :id="'df-err-' + field.machineName" class="err" role="alert">
+						<p v-if="allErrors[field.machineName]"
+							:id="'df-err-' + field.machineName"
+							class="err"
+							role="alert">
 							{{ allErrors[field.machineName] }}
 						</p>
 					</div>

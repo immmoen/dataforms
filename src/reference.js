@@ -63,7 +63,8 @@ registerWidget('dataforms_form', (el, { richObject, accessible }) => {
 	fill.type = 'button'
 	fill.textContent = t('dataforms', 'Fill in')
 	fill.setAttribute('style', css({
-		border: 'none', cursor: 'pointer',
+		border: 'none',
+		cursor: 'pointer',
 		padding: '6px 14px',
 		'border-radius': 'var(--border-radius-element, 6px)',
 		background: 'var(--color-primary-element)',
@@ -79,8 +80,10 @@ registerWidget('dataforms_form', (el, { richObject, accessible }) => {
 	open.target = '_blank'
 	open.rel = 'noopener noreferrer'
 	open.setAttribute('style', css({
-		'text-decoration': 'none', padding: '6px 10px',
-		color: 'var(--color-primary-element)', 'font-weight': '500',
+		'text-decoration': 'none',
+		padding: '6px 10px',
+		color: 'var(--color-primary-element)',
+		'font-weight': '500',
 	}))
 
 	actions.append(fill, open)
@@ -94,6 +97,8 @@ registerWidget('dataforms_form', (el, { richObject, accessible }) => {
  * Open the data-entry form over the current page, without navigating away. The
  * heavy form code (RecordForm + deps) is dynamically imported, so it only loads
  * when the user actually clicks "Fill in".
+ * @param richObject
+ * @param triggerBtn
  */
 async function openInline(richObject, triggerBtn) {
 	const prev = triggerBtn.textContent

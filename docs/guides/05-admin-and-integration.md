@@ -32,6 +32,29 @@ The workflow **notify** action uses Nextcloud notifications (no setup). The
 (**Settings → Administration → Basic settings → Email server**); if email isn't
 configured, email actions are silently skipped.
 
+## Cross-app provisioning (Talk & Deck) — service account
+
+The **Create a Talk room** and **Create a Deck board** automation actions run from
+a background job that has no logged-in user, so they act as a **service account**
+you configure once:
+
+1. Create (or choose) a dedicated Nextcloud user for automation — e.g.
+   `dataforms-bot` — and generate an **app password** for it (its
+   **Settings → Security**, or `occ user:add-app-password <uid>`). The Talk and
+   Deck apps must be enabled, and this user must be allowed to use them.
+2. Open **Settings → Administration → DataForms** and fill in the service-account
+   form:
+   - **Internal URL** — the instance's *own* base URL as reached from the server
+     itself, usually `http://localhost` (the web server's internal port — **not**
+     the public `https://…` address). Background jobs call the instance over this.
+   - **Username** and **App password** of the service account.
+3. **Save**, then **Test** to confirm connectivity.
+
+The app password is stored **encrypted** (Nextcloud's credentials store), is never
+shown again, and is never returned to the browser. Until this is configured, the
+Talk and Deck actions simply log and skip. New rooms/boards are owned by this
+service account.
+
 ---
 
 ## The API
