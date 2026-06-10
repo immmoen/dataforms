@@ -1,0 +1,607 @@
+<!DOCTYPE html>
+<!-- SPDX-License-Identifier: AGPL-3.0-or-later -->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>DataForms — User Guide</title>
+<style>
+  :root{
+    --bg:#f6f7f9; --surface:#fff; --surface2:#fbfcfd;
+    --ink:#1d2733; --slate:#4a5a70; --muted:#6e7785;
+    --border:#e4e8ee; --border2:#d4dae3;
+    --accent:#3e5c76; --accent-ink:#27374d;
+    --tip:#2f7d57; --tip-bg:#eaf6f0;
+    --note:#3e5c76; --note-bg:#eef3f8;
+    --warn:#9a6314; --warn-bg:#fbf3e6;
+    --code-bg:#eef1f5; --shadow:0 1px 2px rgba(20,30,45,.05),0 4px 16px rgba(20,30,45,.06);
+    --radius:12px; --maxw:1180px;
+    --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+    --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    --serif:Georgia,"Times New Roman",serif;
+  }
+  @media (prefers-color-scheme:dark){
+    :root{
+      --bg:#11161d; --surface:#1a212b; --surface2:#161d26;
+      --ink:#e7ecf2; --slate:#aab6c6; --muted:#8693a4;
+      --border:#2a333f; --border2:#374252;
+      --accent:#7aa0c4; --accent-ink:#cfe0f0;
+      --tip:#7fcca5; --tip-bg:#15281f;
+      --note:#9bbada; --note-bg:#17222e;
+      --warn:#e0b277; --warn-bg:#2a2113;
+      --code-bg:#222b36; --shadow:0 1px 2px rgba(0,0,0,.3),0 6px 20px rgba(0,0,0,.35);
+    }
+  }
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.65 var(--sans);-webkit-font-smoothing:antialiased}
+  a{color:var(--accent);text-decoration:none}
+  a:hover{text-decoration:underline}
+  code{font-family:var(--mono);font-size:.86em;background:var(--code-bg);padding:.12em .4em;border-radius:5px}
+  kbd{font-family:var(--mono);font-size:.8em;background:var(--surface);border:1px solid var(--border2);border-bottom-width:2px;border-radius:5px;padding:.1em .45em;color:var(--ink)}
+  h1,h2,h3{font-family:var(--serif);color:var(--accent-ink);line-height:1.25;font-weight:600}
+  h2{font-size:1.6rem;margin:0 0 .3em;padding-top:.2em}
+  h3{font-size:1.18rem;margin:1.8em 0 .4em}
+  p{margin:.6em 0}
+  ul,ol{padding-left:1.3em}
+  li{margin:.25em 0}
+
+  /* Layout */
+  header.top{position:sticky;top:0;z-index:30;background:var(--accent-ink);color:#fff;border-bottom:1px solid rgba(255,255,255,.08)}
+  header.top .bar{max-width:var(--maxw);margin:0 auto;padding:12px 22px;display:flex;align-items:center;gap:14px}
+  header.top .logo{width:30px;height:30px;flex:0 0 auto;border-radius:7px;background:#fff;display:grid;place-items:center;color:var(--accent-ink);font-weight:700;font-family:var(--serif)}
+  header.top .title{font-family:var(--serif);font-size:1.15rem;font-weight:600}
+  header.top .sub{color:#c5d2e0;font-size:.86rem;margin-left:2px}
+  header.top .spacer{flex:1}
+  header.top a.gh{color:#cfe0f0;font-size:.85rem}
+  .menu-btn{display:none;background:rgba(255,255,255,.12);border:0;color:#fff;font-size:1.2rem;border-radius:8px;padding:4px 10px;cursor:pointer}
+
+  .wrap{max-width:var(--maxw);margin:0 auto;display:grid;grid-template-columns:264px 1fr;gap:34px;padding:26px 22px 80px}
+  nav.toc{position:sticky;top:74px;align-self:start;max-height:calc(100vh - 96px);overflow:auto;font-size:.92rem}
+  nav.toc ol{list-style:none;padding:0;margin:0}
+  nav.toc>ol>li>a{display:block;padding:6px 10px;border-radius:8px;color:var(--slate);font-weight:600}
+  nav.toc ol ol{padding-left:8px;margin:2px 0 6px;border-left:2px solid var(--border)}
+  nav.toc ol ol a{display:block;padding:4px 10px;border-radius:7px;color:var(--muted);font-weight:500;font-size:.88rem}
+  nav.toc a:hover{background:var(--surface);text-decoration:none;color:var(--ink)}
+  nav.toc a.active{background:var(--surface);color:var(--accent-ink);box-shadow:var(--shadow)}
+  nav.toc .toc-title{font-size:.72rem;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin:0 0 8px 10px;font-weight:700}
+
+  main{min-width:0}
+  section{scroll-margin-top:86px;margin-bottom:46px}
+  .lead{font-size:1.08rem;color:var(--slate)}
+
+  .card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow);padding:22px 26px}
+  .hero{background:linear-gradient(180deg,var(--surface),var(--surface2));border:1px solid var(--border);border-radius:var(--radius);padding:30px 30px 24px;box-shadow:var(--shadow)}
+  .hero h1{font-size:2.1rem;margin:0 0 6px}
+  .pill{display:inline-block;background:var(--note-bg);color:var(--note);border:1px solid var(--border);border-radius:999px;font-size:.74rem;font-weight:700;letter-spacing:.04em;text-transform:uppercase;padding:3px 11px}
+
+  /* Callouts */
+  .callout{border:1px solid var(--border);border-left-width:4px;border-radius:10px;padding:12px 16px;margin:16px 0;background:var(--surface)}
+  .callout .ttl{font-weight:700;font-size:.82rem;letter-spacing:.03em;text-transform:uppercase;margin-bottom:2px}
+  .callout p{margin:.25em 0}
+  .callout.tip{border-left-color:var(--tip);background:var(--tip-bg)} .callout.tip .ttl{color:var(--tip)}
+  .callout.note{border-left-color:var(--note);background:var(--note-bg)} .callout.note .ttl{color:var(--note)}
+  .callout.warn{border-left-color:var(--warn);background:var(--warn-bg)} .callout.warn .ttl{color:var(--warn)}
+
+  /* Screenshot placeholders */
+  figure.shot{margin:18px 0;border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;background:var(--surface2);box-shadow:var(--shadow)}
+  figure.shot img{display:none;width:100%;height:auto;border-bottom:1px solid var(--border)}
+  figure.shot.loaded img{display:block}
+  figure.shot.loaded .ph{display:none}
+  .ph{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;min-height:190px;padding:26px;
+      background:repeating-linear-gradient(45deg,var(--surface2),var(--surface2) 12px,var(--surface) 12px,var(--surface) 24px);
+      border-bottom:1px dashed var(--border2);color:var(--muted);text-align:center}
+  .ph .ph-icon{font-size:1.8rem;opacity:.8}
+  .ph .ph-name{font-family:var(--mono);font-size:.82rem;color:var(--slate);background:var(--code-bg);padding:2px 8px;border-radius:6px}
+  .ph .ph-hint{font-size:.78rem;text-transform:uppercase;letter-spacing:.08em}
+  figure.shot figcaption{padding:10px 16px;font-size:.88rem;color:var(--slate)}
+  figure.shot figcaption b{color:var(--ink)}
+
+  /* Tables */
+  table.t{width:100%;border-collapse:collapse;margin:14px 0;font-size:.93rem;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden}
+  table.t th,table.t td{text-align:left;padding:9px 13px;border-bottom:1px solid var(--border);vertical-align:top}
+  table.t th{background:var(--surface2);font-size:.78rem;letter-spacing:.04em;text-transform:uppercase;color:var(--muted)}
+  table.t tr:last-child td{border-bottom:0}
+  table.t td code{white-space:nowrap}
+
+  /* Steps */
+  ol.steps{counter-reset:s;list-style:none;padding:0;margin:14px 0}
+  ol.steps>li{position:relative;padding:2px 0 14px 44px;margin:0}
+  ol.steps>li::before{counter-increment:s;content:counter(s);position:absolute;left:0;top:0;width:30px;height:30px;border-radius:50%;
+      background:var(--accent);color:#fff;display:grid;place-items:center;font-weight:700;font-family:var(--serif);box-shadow:var(--shadow)}
+  ol.steps>li:not(:last-child)::after{content:"";position:absolute;left:15px;top:32px;bottom:0;width:2px;background:var(--border)}
+
+  /* Field chips */
+  .chips{display:flex;flex-wrap:wrap;gap:8px;margin:12px 0}
+  .chip{display:inline-flex;align-items:center;gap:6px;background:var(--surface);border:1px solid var(--border);border-radius:999px;padding:5px 12px;font-size:.85rem;box-shadow:var(--shadow)}
+  .chip .dot{width:8px;height:8px;border-radius:50%}
+  .badge{display:inline-block;font-size:.74rem;font-weight:700;border-radius:6px;padding:1px 7px;border:1px solid var(--border2);color:var(--slate);background:var(--surface2)}
+
+  details.adv{border:1px solid var(--border);border-radius:10px;background:var(--surface);margin:14px 0;overflow:hidden}
+  details.adv>summary{cursor:pointer;padding:11px 16px;font-weight:600;color:var(--accent-ink);list-style:none;background:var(--surface2)}
+  details.adv>summary::-webkit-details-marker{display:none}
+  details.adv>summary::before{content:"▸ ";color:var(--accent)}
+  details.adv[open]>summary::before{content:"▾ "}
+  details.adv .body{padding:4px 16px 14px}
+
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+  hr.sep{border:0;border-top:1px solid var(--border);margin:34px 0}
+
+  #toTop{position:fixed;right:20px;bottom:20px;z-index:40;background:var(--accent);color:#fff;border:0;border-radius:50%;width:46px;height:46px;font-size:1.2rem;cursor:pointer;box-shadow:var(--shadow);opacity:0;pointer-events:none;transition:opacity .2s}
+  #toTop.show{opacity:1;pointer-events:auto}
+  footer.foot{max-width:var(--maxw);margin:0 auto;padding:24px 22px 60px;color:var(--muted);font-size:.86rem;border-top:1px solid var(--border)}
+
+  @media (max-width:880px){
+    .wrap{grid-template-columns:1fr;gap:0;padding-top:14px}
+    nav.toc{position:fixed;inset:54px 0 auto 0;top:54px;max-height:70vh;background:var(--surface);border-bottom:1px solid var(--border);
+            padding:14px 18px;box-shadow:var(--shadow);display:none;z-index:25}
+    nav.toc.open{display:block}
+    .menu-btn{display:inline-block}
+    .grid2{grid-template-columns:1fr}
+  }
+  @media print{
+    header.top,nav.toc,#toTop,.menu-btn{display:none!important}
+    .wrap{display:block;padding:0}
+    .card,.hero,figure.shot,.callout{box-shadow:none}
+    figure.shot .ph{min-height:120px}
+  }
+</style>
+</head>
+<body>
+
+<header class="top">
+  <div class="bar">
+    <button class="menu-btn" id="menuBtn" aria-label="Toggle contents">☰</button>
+    <span class="logo">D</span>
+    <span class="title">DataForms <span class="sub">User Guide</span></span>
+    <span class="spacer"></span>
+    <a class="gh" href="../guides/README.md">All written guides →</a>
+  </div>
+</header>
+
+<div class="wrap">
+
+  <nav class="toc" id="toc" aria-label="Contents">
+    <p class="toc-title">On this page</p>
+    <ol>
+      <li><a href="#intro">Welcome</a></li>
+      <li><a href="#concepts">Key concepts</a></li>
+      <li><a href="#example">Our example register</a></li>
+      <li><a href="#open">Opening a register</a></li>
+      <li><a href="#table">The records table
+        <ol>
+          <li><a href="#table-anatomy">Anatomy</a></li>
+          <li><a href="#search">Search</a></li>
+          <li><a href="#filter">Filter</a></li>
+          <li><a href="#sort">Sort</a></li>
+          <li><a href="#columns">Columns</a></li>
+          <li><a href="#inline">Inline edit</a></li>
+        </ol>
+      </a></li>
+      <li><a href="#records">Working with records
+        <ol>
+          <li><a href="#add">Add a record</a></li>
+          <li><a href="#detail">Detail &amp; history</a></li>
+          <li><a href="#editdelete">Edit &amp; delete</a></li>
+          <li><a href="#csv">Import / export</a></li>
+        </ol>
+      </a></li>
+      <li><a href="#views">Saved views</a></li>
+      <li><a href="#sharing">Sharing &amp; access</a></li>
+      <li><a href="#building">Building the register</a></li>
+      <li><a href="#automations">Automations</a></li>
+      <li><a href="#shortcuts">Shortcuts &amp; FAQ</a></li>
+    </ol>
+  </nav>
+
+  <main>
+
+    <section id="intro">
+      <div class="hero">
+        <span class="pill">Nextcloud app · internal use</span>
+        <h1>Using DataForms</h1>
+        <p class="lead">DataForms lets you build <b>registers</b> — structured, typed tables — and work with their
+        records right in Nextcloud, no spreadsheets and no code. This guide walks through the <b>records table</b>,
+        the workspace you'll use every day, and everything around it.</p>
+      </div>
+
+      <div class="callout note">
+        <div class="ttl">📷 About the screenshots</div>
+        <p>The picture boxes below are <b>placeholders</b>. To make them real, drop PNG files into
+        <code>docs/user-guide/img/</code> using the filename shown on each placeholder (e.g. <code>img/03-table-overview.png</code>).
+        They appear automatically the next time you open this page — no edits needed.</p>
+      </div>
+    </section>
+
+    <section id="concepts">
+      <h2>Key concepts</h2>
+      <p>A handful of words show up everywhere in DataForms. Learn these five and the rest follows.</p>
+      <table class="t">
+        <tr><th>Term</th><th>What it means</th></tr>
+        <tr><td><b>Register</b></td><td>A table with a defined shape — like a sheet, but every column has a type. <i>Equipment Inventory</i> is a register.</td></tr>
+        <tr><td><b>Field</b></td><td>A column in a register, with a type (text, date, select, user, relation…). <i>Status</i> and <i>Due back</i> are fields.</td></tr>
+        <tr><td><b>Record</b></td><td>One row — a single item. <i>“Canon EOS R6, asset EQ-0042”</i> is a record.</td></tr>
+        <tr><td><b>Form</b></td><td>A data-entry screen for adding/editing a record, optionally split into sections.</td></tr>
+        <tr><td><b>View</b></td><td>A saved combination of columns + filter + sort + search you can return to (and share).</td></tr>
+        <tr><td><b>Rule</b></td><td>Live form logic — show/hide a field, require it, set a default, validate, or compute it.</td></tr>
+        <tr><td><b>Automation</b></td><td>A server-side action that runs when a record changes (notify, set a field, create a folder…).</td></tr>
+      </table>
+      <div class="callout tip">
+        <div class="ttl">Roles, in one line</div>
+        <p><b>Managers</b> design the register (fields, forms, rules, automations, sharing). <b>Writers</b> add and edit
+        records. <b>Readers</b> browse. What you can do depends on how the register is shared with you.</p>
+      </div>
+    </section>
+
+    <section id="example">
+      <h2>Our example register</h2>
+      <p>Throughout this guide we use an <b>Equipment Inventory</b> — a register for tracking gear that staff borrow and
+      return (cameras, laptops, lab kit). It links to a small <b>Categories</b> register so each item has a tidy category.</p>
+
+      <h3>Fields in “Equipment Inventory”</h3>
+      <div class="chips">
+        <span class="chip"><span class="dot" style="background:#6e7785"></span>Inventory # · <span class="badge">Auto</span></span>
+        <span class="chip"><span class="dot" style="background:#3e5c76"></span>Asset tag · <span class="badge">Text · unique</span></span>
+        <span class="chip"><span class="dot" style="background:#3e5c76"></span>Name · <span class="badge">Text</span></span>
+        <span class="chip"><span class="dot" style="background:#3f7068"></span>Category · <span class="badge">Relation → Categories</span></span>
+        <span class="chip"><span class="dot" style="background:#956317"></span>Status · <span class="badge">Select</span></span>
+        <span class="chip"><span class="dot" style="background:#956317"></span>Condition · <span class="badge">Select</span></span>
+        <span class="chip"><span class="dot" style="background:#6e5a86"></span>Assigned to · <span class="badge">User</span></span>
+        <span class="chip"><span class="dot" style="background:#3e5c76"></span>Due back · <span class="badge">Date</span></span>
+        <span class="chip"><span class="dot" style="background:#4f7355"></span>Insured · <span class="badge">Yes/No</span></span>
+        <span class="chip"><span class="dot" style="background:#3e5c76"></span>Purchase date · <span class="badge">Date</span></span>
+        <span class="chip"><span class="dot" style="background:#4a5a70"></span>Notes · <span class="badge">Long text</span></span>
+      </div>
+      <p><i>Status</i> options: <code>Available</code>, <code>On loan</code>, <code>In maintenance</code>, <code>Retired</code>.
+      <i>Condition</i>: <code>New</code>, <code>Good</code>, <code>Fair</code>, <code>Poor</code>.</p>
+      <figure class="shot">
+        <img src="img/02-register-list.png" alt="The DataForms dashboard listing registers as cards">
+        <span class="ph" aria-hidden="true"><span class="ph-icon">📷</span><span class="ph-name">img/02-register-list.png</span><span class="ph-hint">Screenshot to be added</span></span>
+        <figcaption><b>The register dashboard.</b> Cards for each register you can see, with record counts and a star to favourite the ones you use most.</figcaption>
+      </figure>
+    </section>
+
+    <section id="open">
+      <h2>Opening a register</h2>
+      <ol class="steps">
+        <li>Open <b>DataForms</b> from the Nextcloud app menu at the top of the screen.</li>
+        <li>Pick <b>Equipment Inventory</b> from the left-hand navigation, or its card on the dashboard.</li>
+        <li>The register opens on its <b>Records</b> tab — the table. That's where the rest of this guide lives.</li>
+      </ol>
+      <figure class="shot">
+        <img src="img/01-app-nav.png" alt="DataForms in the Nextcloud top bar with the register navigation open">
+        <span class="ph" aria-hidden="true"><span class="ph-icon">📷</span><span class="ph-name">img/01-app-nav.png</span><span class="ph-hint">Screenshot to be added</span></span>
+        <figcaption><b>Finding the app.</b> DataForms in the Nextcloud header; registers list down the left, each with a colour dot and record count.</figcaption>
+      </figure>
+    </section>
+
+    <section id="table">
+      <h2>The records table</h2>
+      <p class="lead">The table is the heart of DataForms. Everything you do with data — find it, sort it, fix a typo,
+      open a row, add a new one — happens here.</p>
+
+      <h3 id="table-anatomy">Anatomy of the table</h3>
+      <p>Across the top sits the <b>toolbar</b>; below it, your records, one per row. The header row stays pinned as you
+      scroll, and the row-actions (open / edit / delete) stick to the right edge on wide tables.</p>
+      <figure class="shot">
+        <img src="img/03-table-overview.png" alt="The Equipment Inventory records table with toolbar, columns and rows">
+        <span class="ph" aria-hidden="true"><span class="ph-icon">📷</span><span class="ph-name">img/03-table-overview.png</span><span class="ph-hint">Screenshot to be added</span></span>
+        <figcaption><b>The records table.</b> Toolbar on top (search, filter, new record, ⋯ more); pinned header; per-row actions on the right.</figcaption>
+      </figure>
+      <table class="t">
+        <tr><th>Toolbar item</th><th>What it does</th></tr>
+        <tr><td><b>Search</b></td><td>Free-text search across the register's text fields.</td></tr>
+        <tr><td><b>Saved view</b></td><td>Switch between saved views (appears once you have any).</td></tr>
+        <tr><td><b>Filter</b></td><td>Build precise conditions (Status is <i>On loan</i>, Due back before today…).</td></tr>
+        <tr><td><b>New record</b></td><td>Add an item — blank or via a form.</td></tr>
+        <tr><td><b>⋯ More</b></td><td>Refresh, save/delete a view, import/export CSV, and the <b>Columns</b> picker.</td></tr>
+      </table>
+
+      <h3 id="search">Searching</h3>
+      <p>Type in the <b>Search</b> box to narrow the table to records whose text matches — for example
+      <code>Canon</code> finds every Canon item. Search combines with any active filter.</p>
+      <figure class="shot">
+        <img src="img/04-search.png" alt="Searching the table for a term">
+        <span class="ph" aria-hidden="true"><span class="ph-icon">📷</span><span class="ph-name">img/04-search.png</span><span class="ph-hint">Screenshot to be added</span></span>
+        <figcaption><b>Search.</b> Results filter as you type; the count updates to show how many records match.</figcaption>
+      </figure>
+
+      <h3 id="filter">Filtering</h3>
+      <p>Search is broad; <b>filters</b> are precise. Open <b>Filter</b> and add one or more conditions — each is a
+      <i>field · operator · value</i> row. Conditions combine with <b>AND</b> (all must match).</p>
+      <table class="t">
+        <tr><th>Operators</th><th>For</th></tr>
+        <tr><td><code>is</code> / <code>is not</code></td><td>Exact match — e.g. Status <code>is</code> <i>On loan</i>.</td></tr>
+        <tr><td><code>contains</code></td><td>Text fields — Name <code>contains</code> <i>laptop</i>.</td></tr>
+        <tr><td><code>&gt;</code> <code>&lt;</code> <code>≥</code> <code>≤</code></td><td>Numbers and dates — Due back <code>&lt;</code> today.</td></tr>
+        <tr><td><code>is empty</code> / <code>is not empty</code></td><td>Whether a field has any value.</td></tr>
+      </table>
+      <figure class="shot">
+        <img src="img/05-filter.png" alt="The filter bar with two conditions">
+        <span class="ph" aria-hidden="true"><span class="ph-icon">📷</span><span class="ph-name">img/05-filter.png</span><span class="ph-hint">Screenshot to be added</span></span>
+        <figcaption><b>Filter bar.</b> Select fields offer a dropdown of their options; date/number fields get the right input automatically.</figcaption>
+      </figure>
+      <div class="callout tip">
+        <div class="ttl">Example: what's overdue</div>
+        <p>Filter <i>Status</i> <code>is</code> <b>On loan</b> <b>and</b> <i>Due back</i> <code>&lt;</code> <b>today</b> to see every item that should already be back.</p>
+      </div>
+
+      <h3 id="sort">Sorting</h3>
+      <p>Click any <b>column header</b> to sort by it; click again to reverse. An arrow shows the active sort. The
+      automatic <i>Inventory #</i> column sorts numerically (1, 2, 3 …).</p>
+      <figure class="shot">
+        <img src="img/06-sort.png" alt="Sorting by clicking a column header">
+        <span class="ph" aria-hidden="true"><span class="ph-icon">📷</span><span class="ph-name">img/06-sort.png</span><span class="ph-hint">Screenshot to be added</span></span>
+        <figcaption><b>Sort.</b> Click <i>Due back</i> to bring the soonest returns to the top.</figcaption>
+      </figure>
+
+      <h3 id="columns">Choosing columns</h3>
+      <p>Open <b>⋯ More → Columns</b> to pick exactly which fields show in the table — keep it lean, or show
+      everything. Your choice is remembered and can be saved into a view.</p>
+      <figure class="shot">
+        <img src="img/07-columns.png" alt="The columns picker">
+        <span class="ph" aria-hidden="true"><span class="ph-icon">📷</span><span class="ph-name">img/07-columns.png</span><span class="ph-hint">Screenshot to be added</span></span>
+        <figcaption><b>Columns picker.</b> Tick the fields you want; untick the noise.</figcaption>
+      </figure>
+
+      <h3 id="inline">Inline editing</h3>
+      <p><b>Double-click a cell</b> to edit it right in the table — handy for a quick fix to a status, a date, or a
+      Yes/No. <kbd>Enter</kbd> or click away to save, <kbd>Esc</kbd> to cancel.</p>
+      <ul>
+        <li>Works for text, number, date/time, single-select and Yes/No cells (a dashed outline appears on hover).</li>
+        <li>Complex fields (relations, files, multi-select) and read-only auto/computed fields open the full editor instead.</li>
+        <li>A single click still opens the record's detail — a short pause tells a click from a double-click.</li>
+      </ul>
+      <figure class="shot">
+        <img src="img/08-inline-edit.png" alt="Editing a cell inline by double-clicking">
+        <span class="ph" aria-hidden="true"><span class="ph-icon">📷</span><span class="ph-name">img/08-inline-edit.png</span><span class="ph-hint">Screenshot to be added</span></span>
+        <figcaption><b>Inline edit.</b> Double-click <i>Status</i> and pick <b>On loan</b> without opening the full form.</figcaption>
+      </figure>
+    </section>
+
+    <section id="records">
+      <h2>Working with records</h2>
+
+      <h3 id="add">Adding a record</h3>
+      <ol class="steps">
+        <li>Click <b>New record</b>. If the register has data-entry forms, choose one — otherwise you get all fields (“Blank”).</li>
+        <li>Fill in the fields. Required fields are marked; the form's <b>rules</b> may show, hide or require fields as you type.</li>
+        <li>For <i>Category</i>, search and pick a record from the linked <b>Categories</b> register. For <i>Assigned to</i>, search a user.</li>
+        <li>Click <b>Save</b>. The new row appears in the table.</li>
+      </ol>
+      <figure class="shot">
+        <img src="img/09-new-record.png" alt="The data-entry form for a new equipment record">
+        <span class="ph" aria-hidden="true"><span class="ph-icon">📷</span><span class="ph-name">img/09-new-record.png</span><span class="ph-hint">Screenshot to be added</span></span>
+        <figcaption><b>Data-entry form.</b> Typed inputs per field; a relation picker for <i>Category</i>; live rules in action.</figcaption>
+      </figure>
+      <div class="callout note">
+        <div class="ttl">Live rules</div>
+        <p>In our example, a rule makes <i>Assigned to</i> and <i>Due back</i> <b>required</b> the moment you set
+        <i>Status</i> to <b>On loan</b> — so a loan is never recorded without a borrower and a return date.</p>
+      </div>
+
+      <h3 id="detail">Record detail &amp; history</h3>
+      <p>Click a row to open its <b>detail</b> — every field, including relations and attached files, read-only. At the
+      bottom, a collapsible <b>History</b> timeline shows who created or changed the record, when, and what changed.</p>
+      <figure class="shot">
+        <img src="img/10-record-detail.png" alt="The record detail view with the history timeline">
+        <span class="ph" aria-hidden="true"><span class="ph-icon">📷</span><span class="ph-name">img/10-record-detail.png</span><span class="ph-hint">Screenshot to be added</span></span>
+        <figcaption><b>Detail + history.</b> The full record up top; an audit trail of every change below.</figcaption>
+      </figure>
+
+      <h3 id="editdelete">Editing &amp; deleting</h3>
+      <p>Open a record and choose <b>Edit</b>, or use the row's edit action. To remove one, use <b>Delete</b> (you'll be
+      asked to confirm).</p>
+      <div class="callout warn">
+        <div class="ttl">Who can change what</div>
+        <p>With <b>Write</b> access you can add records and edit or delete <b>the ones you created</b>. A register
+        <b>Manager</b> can edit or delete any record. These rules are enforced on the server, not just hidden in the UI.</p>
+      </div>
+
+      <h3 id="csv">Importing &amp; exporting CSV</h3>
+      <p>Under <b>⋯ More</b>:</p>
+      <ul>
+        <li><b>Export CSV</b> downloads exactly what's in the current (filtered/sorted) table — open it in any spreadsheet.</li>
+        <li><b>Import CSV</b> uploads rows; columns are matched to fields by their header. A help dialog explains the format,
+        offers a header-only <b>template</b>, and reports any per-row errors.</li>
+      </ul>
+      <figure class="shot">
+        <img src="img/11-csv.png" alt="The CSV import dialog with a template download and error report">
+        <span class="ph" aria-hidden="true"><span class="ph-icon">📷</span><span class="ph-name">img/11-csv.png</span><span class="ph-hint">Screenshot to be added</span></span>
+        <figcaption><b>CSV import.</b> Match columns by header, download a template, and see row-by-row results.</figcaption>
+      </figure>
+      <div class="callout tip">
+        <div class="ttl">Bulk import is quiet</div>
+        <p>Importing many rows does <b>not</b> fire per-row automations — so a one-off load of 500 items won't send 500 notifications.</p>
+      </div>
+    </section>
+
+    <section id="views">
+      <h2>Saved views</h2>
+      <p>Once you've set up a useful slice of the table — say, “items currently on loan, soonest return first” — save it
+      so you (and your team) can come back to it in one click.</p>
+      <ol class="steps">
+        <li>Set the <b>columns</b>, <b>filter</b>, <b>sort</b> and <b>search</b> you want.</li>
+        <li>Open <b>⋯ More → Save current view</b>, give it a name (e.g. <i>On loan</i>).</li>
+        <li>Choose <b>private</b> (just you) or <b>shared</b> (everyone who can see the register).</li>
+        <li>Switch between saved views from the selector in the toolbar.</li>
+      </ol>
+      <figure class="shot">
+        <img src="img/12-saved-views.png" alt="Saving and switching between views">
+        <span class="ph" aria-hidden="true"><span class="ph-icon">📷</span><span class="ph-name">img/12-saved-views.png</span><span class="ph-hint">Screenshot to be added</span></span>
+        <figcaption><b>Saved views.</b> Name a slice of the table and reuse it; share the ones the whole team needs.</figcaption>
+      </figure>
+    </section>
+
+    <section id="sharing">
+      <h2>Sharing &amp; access</h2>
+      <p>A register's owner (and any manager) can share it with specific users or groups, each at one of three levels:</p>
+      <table class="t">
+        <tr><th>Level</th><th>Can…</th></tr>
+        <tr><td><span class="badge">Read</span></td><td>Browse records and views.</td></tr>
+        <tr><td><span class="badge">Write</span></td><td>Read, plus add records and edit/delete their own.</td></tr>
+        <tr><td><span class="badge">Manage</span></td><td>Everything, plus design the register: fields, forms, rules, automations and sharing.</td></tr>
+      </table>
+      <ol class="steps">
+        <li>Open the register's <b>Share</b> dialog.</li>
+        <li>Search a user or group (matches the id <i>and</i> the display name).</li>
+        <li>Pick a role and <b>Add</b>. Remove access from the same dialog.</li>
+      </ol>
+      <figure class="shot">
+        <img src="img/13-share.png" alt="The share dialog with a user/group search and role picker">
+        <span class="ph" aria-hidden="true"><span class="ph-icon">📷</span><span class="ph-name">img/13-share.png</span><span class="ph-hint">Screenshot to be added</span></span>
+        <figcaption><b>Sharing.</b> Add people or groups at Read / Write / Manage. Internal users only — nothing is ever public.</figcaption>
+      </figure>
+    </section>
+
+    <section id="building">
+      <h2>Building the register <span class="badge">managers</span></h2>
+      <p>If you can <b>Manage</b> a register, three extra tabs let you shape it. This is a quick tour — each has its own
+      detailed guide.</p>
+
+      <div class="grid2">
+        <div class="card">
+          <h3 style="margin-top:0">Fields</h3>
+          <p>Define the schema: add fields, pick a type (text, number, date, select, user, <b>relation</b>, file,
+          computed, automatic…), set options, and mark required/unique. Drag to reorder.</p>
+          <figure class="shot">
+            <img src="img/14-fields.png" alt="The field schema editor">
+            <span class="ph" aria-hidden="true"><span class="ph-icon">📷</span><span class="ph-name">img/14-fields.png</span><span class="ph-hint">Screenshot to be added</span></span>
+            <figcaption>The field/schema editor.</figcaption>
+          </figure>
+        </div>
+        <div class="card">
+          <h3 style="margin-top:0">Forms</h3>
+          <p>A <b>drag-and-drop builder</b>: drag fields into sections, reorder, and preview each control. Build focused
+          data-entry forms (e.g. a short “Log a loan” form).</p>
+          <figure class="shot">
+            <img src="img/15-form-builder.png" alt="The drag-and-drop form builder">
+            <span class="ph" aria-hidden="true"><span class="ph-icon">📷</span><span class="ph-name">img/15-form-builder.png</span><span class="ph-hint">Screenshot to be added</span></span>
+            <figcaption>The drag-and-drop form builder.</figcaption>
+          </figure>
+        </div>
+      </div>
+
+      <h3>Rules</h3>
+      <p>Conditional logic that runs live as a form is filled <b>and</b> is re-checked on the server: show/hide a field,
+      require-if, set a default, validate, or compute a value. One rule definition, two engines that agree.</p>
+      <figure class="shot">
+        <img src="img/16-rules.png" alt="The rule builder">
+        <span class="ph" aria-hidden="true"><span class="ph-icon">📷</span><span class="ph-name">img/16-rules.png</span><span class="ph-hint">Screenshot to be added</span></span>
+        <figcaption><b>Rules.</b> e.g. <i>“When Status is On loan, require Assigned to and Due back.”</i></figcaption>
+      </figure>
+    </section>
+
+    <section id="automations">
+      <h2>Automations</h2>
+      <p>Automations make a register <i>do</i> things. On a record <b>create / update / delete</b>, when an optional
+      <b>condition</b> holds, DataForms runs an <b>action</b> on the server. There are nine actions — from a simple
+      notification to creating folders, calendar events, Talk rooms and Deck boards.</p>
+      <table class="t">
+        <tr><th>Action</th><th>Does</th></tr>
+        <tr><td>Send a notification</td><td>A Nextcloud notification to chosen people.</td></tr>
+        <tr><td>Send an email</td><td>An email to chosen users.</td></tr>
+        <tr><td>Set a field</td><td>Sets a field on the record (e.g. stamp a status).</td></tr>
+        <tr><td>Create folders</td><td>A folder tree in the record owner's Files.</td></tr>
+        <tr><td>Copy a template</td><td>Copies template files into a folder.</td></tr>
+        <tr><td>Add a calendar event</td><td>An event from a date field.</td></tr>
+        <tr><td>Create a Talk room</td><td>A conversation with participants + a welcome message.</td></tr>
+        <tr><td>Create a Deck board</td><td>A board with columns.</td></tr>
+        <tr><td>Call a webhook</td><td>POSTs the record to an external URL (SSRF-guarded, optionally signed).</td></tr>
+      </table>
+      <div class="callout tip">
+        <div class="ttl">Example for our register</div>
+        <p><i>“When a record is updated and Status becomes On loan, notify the person in Assigned to.”</i> Set the
+        trigger to <b>update</b>, the condition to <i>Status is On loan</i>, and the action to <b>Send a notification</b>.</p>
+      </div>
+      <figure class="shot">
+        <img src="img/17-automations.png" alt="The automations builder showing a trigger, condition and action">
+        <span class="ph" aria-hidden="true"><span class="ph-icon">📷</span><span class="ph-name">img/17-automations.png</span><span class="ph-hint">Screenshot to be added</span></span>
+        <figcaption><b>Automations builder.</b> Pick a <i>When</i>, optional <i>Only if</i> conditions, and a <i>Then</i> action.</figcaption>
+      </figure>
+      <p>Some actions (Talk room, Deck board) need an administrator to set up a <b>service account</b> first. See the
+      written <a href="../guides/04-automations.md">Automations guide</a> and <a href="../guides/05-admin-and-integration.md">Admin &amp; integration guide</a> for the full detail.</p>
+    </section>
+
+    <section id="shortcuts">
+      <h2>Shortcuts &amp; FAQ</h2>
+      <h3>Handy interactions</h3>
+      <table class="t">
+        <tr><th>Do this</th><th>To…</th></tr>
+        <tr><td><b>Single-click</b> a row</td><td>Open the record's detail.</td></tr>
+        <tr><td><b>Double-click</b> a cell</td><td>Edit it in place.</td></tr>
+        <tr><td><kbd>Enter</kbd> / click away</td><td>Save an inline edit.</td></tr>
+        <tr><td><kbd>Esc</kbd></td><td>Cancel an inline edit, or close an open dialog.</td></tr>
+        <tr><td>Click a <b>column header</b></td><td>Sort (click again to reverse).</td></tr>
+      </table>
+
+      <h3>FAQ</h3>
+      <details class="adv"><summary>The table looks empty after I filtered — did I lose data?</summary>
+        <div class="body"><p>No. A filter only <i>hides</i> non-matching rows. Clear the filter (and the search box)
+        to see everything again. The record count next to the toolbar tells you how many match.</p></div></details>
+      <details class="adv"><summary>Why can't I edit some records?</summary>
+        <div class="body"><p>With <b>Write</b> access you can edit only records <i>you</i> created. Ask a register
+        <b>Manager</b> if you need to change someone else's record, or to be given Manage rights.</p></div></details>
+      <details class="adv"><summary>Why don't I see the Fields / Forms / Rules tabs?</summary>
+        <div class="body"><p>Those are <b>manager-only</b>. If you only add and edit records, you'll see just the
+        <b>Records</b> tab — by design, to keep things uncluttered.</p></div></details>
+      <details class="adv"><summary>Can I undo a delete?</summary>
+        <div class="body"><p>Deletes are confirmed first. Records are soft-deleted server-side, but there's no in-app
+        “restore” yet — so delete deliberately, and rely on your Nextcloud backups for recovery.</p></div></details>
+      <details class="adv"><summary>How do I link to a specific register?</summary>
+        <div class="body"><p>The URL updates as you navigate (it reflects the open register and tab). Use the
+        <b>Copy link</b> button in the header to share a deep link that opens straight to that register.</p></div></details>
+    </section>
+
+  </main>
+</div>
+
+<button id="toTop" aria-label="Back to top" title="Back to top">↑</button>
+
+<footer class="foot">
+  <p><b>DataForms User Guide.</b> Build registers, smart forms and views inside Nextcloud — no code required.
+  See the full written guides in <a href="../guides/README.md">docs/guides/</a>.</p>
+  <p>SPDX-License-Identifier: AGPL-3.0-or-later · Example data (“Equipment Inventory”) is fictional and for illustration only.</p>
+</footer>
+
+<script>
+(function(){
+  // Show real screenshots once their PNGs exist; placeholders until then.
+  document.querySelectorAll('figure.shot img').forEach(function(img){
+    var mark=function(){img.closest('.shot').classList.add('loaded');};
+    if(img.complete && img.naturalWidth>0){mark();}
+    img.addEventListener('load',mark);
+  });
+
+  // Mobile contents toggle
+  var menuBtn=document.getElementById('menuBtn'), toc=document.getElementById('toc');
+  menuBtn&&menuBtn.addEventListener('click',function(){toc.classList.toggle('open');});
+  toc&&toc.addEventListener('click',function(e){if(e.target.tagName==='A')toc.classList.remove('open');});
+
+  // Back-to-top
+  var toTop=document.getElementById('toTop');
+  window.addEventListener('scroll',function(){
+    toTop.classList.toggle('show', window.scrollY>500);
+  },{passive:true});
+  toTop.addEventListener('click',function(){window.scrollTo({top:0,behavior:'smooth'});});
+
+  // Scroll-spy: highlight the active section in the contents
+  var links=Array.prototype.slice.call(document.querySelectorAll('nav.toc a[href^="#"]'));
+  var map={};
+  links.forEach(function(a){var id=a.getAttribute('href').slice(1);(map[id]=map[id]||[]).push(a);});
+  var sections=Object.keys(map).map(function(id){return document.getElementById(id);}).filter(Boolean);
+  var current=null;
+  var obs=new IntersectionObserver(function(entries){
+    entries.forEach(function(en){
+      if(en.isIntersecting){
+        if(current)map[current]&&map[current].forEach(function(a){a.classList.remove('active');});
+        current=en.target.id;
+        map[current]&&map[current].forEach(function(a){a.classList.add('active');});
+      }
+    });
+  },{rootMargin:'-70px 0px -70% 0px',threshold:0});
+  sections.forEach(function(s){obs.observe(s);});
+})();
+</script>
+</body>
+</html>
