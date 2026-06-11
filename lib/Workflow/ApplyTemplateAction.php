@@ -44,7 +44,10 @@ class ApplyTemplateAction implements IAction {
 	}
 
 	public function isDeferred(): bool {
-		return true; // filesystem operations: run off the request thread
+		// Inline so a record's workspace (folders + their template files) is ready
+		// immediately on submit. Bounded by MAX_FILES; the slow/external actions
+		// (webhook, email, Talk, Deck) stay deferred.
+		return false;
 	}
 
 	public function run(ActionContext $context): void {

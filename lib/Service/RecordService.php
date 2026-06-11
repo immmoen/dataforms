@@ -213,7 +213,9 @@ class RecordService {
 
 		// Dispatch only after the data is durably committed, so automations
 		// (notifications, webhooks) never fire on a half-written or rolled-back row.
-		$this->eventDispatcher->dispatchTyped(new RecordCreatedEvent($registerId, $record->getId(), $userId, $values));
+		// Include the record's auto fields (sequence/dates/author) so a {sequence}
+		// token in an automation resolves instead of vanishing.
+		$this->eventDispatcher->dispatchTyped(new RecordCreatedEvent($registerId, $record->getId(), $userId, $this->withAutoValues($fields, $record, $values)));
 
 		$dto = $this->toDto($record, $fields, $this->valueMapper->findByRecordIds([$record->getId()])[$record->getId()] ?? []);
 		$dto = $this->resolveRelations($userId, $fields, [$dto])[0];
@@ -294,7 +296,7 @@ class RecordService {
 			return $this->logUpdate($record->getRegisterId(), $record->getId(), $userId, $fields, $before, $after);
 		});
 
-		$this->eventDispatcher->dispatchTyped(new RecordUpdatedEvent($record->getRegisterId(), $record->getId(), $userId, $values, $changed));
+		$this->eventDispatcher->dispatchTyped(new RecordUpdatedEvent($record->getRegisterId(), $record->getId(), $userId, $this->withAutoValues($fields, $record, $values), $changed));
 
 		$dto = $this->toDto($record, $fields, $this->valueMapper->findByRecordIds([$record->getId()])[$record->getId()] ?? []);
 		$dto = $this->resolveRelations($userId, $fields, [$dto])[0];
@@ -697,6 +699,25 @@ class RecordService {
 			'sequence' => (string)($record->getSeq() ?? $record->getId()),
 			default => null,
 		};
+	}
+
+	/**
+	 * Augment a value map with the record's **auto** fields (sequence number,
+	 * created/updated dates, author). Auto fields aren't stored as record values,
+	 * so an automation template like {number} (a sequence field) would otherwise
+	 * resolve to empty — this makes them available to the workflow engine.
+	 *
+	 * @param Field[] $fields
+	 * @param array<string,mixed> $values
+	 * @return array<string,mixed>
+	 */
+	private function withAutoValues(array $fields, Record $record, array $values): array {
+		foreach ($fields as $field) {
+			if ($field->getType() === 'auto') {
+				$values[$field->getMachineName()] = $this->autoValue($field, $record);
+			}
+		}
+		return $values;
 	}
 
 	/**

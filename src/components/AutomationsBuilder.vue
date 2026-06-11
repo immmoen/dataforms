@@ -188,7 +188,7 @@
 					<label class="block-label">{{ t('dataforms', 'Folders to create (one per line)') }}</label>
 					<NcTextArea v-model="draft.folderLines" :placeholder="folderPlaceholder" />
 					<p class="hint">
-						{{ t('dataforms', 'Created in the record author’s Files. Use {field} to insert a value, e.g. {client}/Contracts. Existing folders are reused.') }}
+						{{ t('dataforms', 'Created in the record author’s Files, immediately on save. A “/” makes nested folders — {client}/Contracts is a Contracts folder inside the client’s. Existing folders are reused; a line whose {field} is empty is skipped.') }}
 						<br>{{ t('dataforms', 'Fields:') }} <code>{{ machineNames }}</code>
 					</p>
 				</template>

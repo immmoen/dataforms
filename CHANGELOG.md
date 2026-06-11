@@ -7,6 +7,32 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.38.1] - Fix folder provisioning (immediate + auto fields + clearer paths)
+
+### Fixed
+- **Auto fields now resolve in automation templates.** A sequence/created/author
+  field (e.g. `{number}`) was invisible to automations — auto fields aren't stored
+  as record values — so `{number}/Docs` collapsed to just `Docs`. The record's
+  auto-field values are now included in the event, so `{number}` interpolates to
+  the case's running number.
+- **No more silently-collapsed folder trees.** A folder line whose `{placeholder}`
+  resolves to empty (a blank/misspelled field) is now **skipped with a warning**
+  instead of quietly dropping a level and creating a confusing structure.
+- **Workspace folders/template/calendar are created immediately on submit.** The
+  `provision_folders`, `apply_template` and `add_calendar_event` actions now run
+  inline (they touch only the owner's own local Files/calendar and are bounded),
+  so they no longer depend on the background-job (cron) queue and appear right
+  away. The slow/external actions (webhook, email, Talk, Deck) stay deferred.
+- Builder hint for *Create folders* clarifies that `/` makes nested folders and an
+  empty `{field}` skips the line.
+
+### Notes
+- Investigated a report of slow submits + suspected looping: **no loop exists**
+  (set-field writes directly without re-firing; one background job per event;
+  provisioning never writes records). The earlier "nothing happened" was the
+  deferred job not running because the instance's cron wasn't firing — now moot
+  for the local actions, which run inline.
+
 ## [0.38.0] - Multiple service accounts
 
 ### Added

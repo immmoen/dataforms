@@ -55,7 +55,10 @@ class ProvisionFoldersAction implements IAction {
 	}
 
 	public function isDeferred(): bool {
-		return true; // filesystem operations: run off the request thread
+		// Inline: a record's workspace folders should appear immediately on submit
+		// (local, fast, bounded), not minutes later via cron. The slow/external
+		// actions (webhook, email, Talk, Deck) stay deferred.
+		return false;
 	}
 
 	public function run(ActionContext $context): void {
@@ -95,13 +98,8 @@ class ProvisionFoldersAction implements IAction {
 				$this->logger->warning('Dataforms provision-folders hit the per-run folder budget for record ' . $context->recordId);
 				break;
 			}
-			$interpolated = $this->interpolator->interpolate(
-				$template,
-				$values,
-				static fn (string $s): string => PathSafety::pathSafeValue($s),
-			);
-			$segments = PathSafety::safeSegments($base . '/' . $interpolated);
-			if ($segments === []) {
+			$segments = $this->resolveSegments($base, $template, $values, $context);
+			if ($segments === null || $segments === []) {
 				continue;
 			}
 			try {
@@ -113,6 +111,41 @@ class ProvisionFoldersAction implements IAction {
 		if ($created > 0) {
 			$this->logger->info('Dataforms provision-folders created ' . $created . ' folder(s) for record ' . $context->recordId);
 		}
+	}
+
+	/**
+	 * Build the path segments for one folder template: basePath segments (literal)
+	 * then the template's segments with {tokens} interpolated. If a non-empty
+	 * template segment interpolates to EMPTY — a placeholder had no value (a blank
+	 * or misspelled field, or an auto/relation field with nothing to show) — the
+	 * whole template is skipped with a warning, rather than silently collapsing the
+	 * tree into a confusing shape (e.g. "{number}/Docs" becoming just "Docs").
+	 *
+	 * @param array<string,mixed> $values
+	 * @return string[]|null null = skip this template
+	 */
+	private function resolveSegments(string $base, string $template, array $values, ActionContext $context): ?array {
+		$transform = static fn (string $s): string => PathSafety::pathSafeValue($s);
+		$parts = [];
+		foreach (explode('/', str_replace('\\', '/', $base)) as $b) {
+			if (trim($b) !== '') {
+				$parts[] = trim($b);
+			}
+		}
+		foreach (explode('/', str_replace('\\', '/', $template)) as $seg) {
+			if (trim($seg) === '') {
+				continue;
+			}
+			$value = trim($this->interpolator->interpolate($seg, $values, $transform));
+			if ($value === '') {
+				$this->logger->warning('Dataforms provision-folders: skipped folder "' . $template
+					. '" for record ' . $context->recordId
+					. ' — a {placeholder} resolved to empty (a field may be blank or misspelled).');
+				return null;
+			}
+			$parts[] = $value;
+		}
+		return PathSafety::safeSegments(implode('/', $parts));
 	}
 
 	/**

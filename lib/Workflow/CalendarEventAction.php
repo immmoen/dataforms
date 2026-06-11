@@ -50,7 +50,9 @@ class CalendarEventAction implements IAction {
 	}
 
 	public function isDeferred(): bool {
-		return true; // calendar write: run off the request thread
+		// Inline so the event appears on the owner's calendar immediately on submit.
+		// One local calendar write; the slow/external actions stay deferred.
+		return false;
 	}
 
 	public function run(ActionContext $context): void {
