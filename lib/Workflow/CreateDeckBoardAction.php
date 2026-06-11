@@ -65,13 +65,11 @@ class CreateDeckBoardAction implements IAction {
 			'color' => substr($color, 0, 6),
 		]);
 		if ($created === null || !in_array($created['status'], [200, 201], true)) {
-			$this->logger->warning('Dataforms Deck action: could not create board "' . $title . '"');
-			return;
+			throw new \RuntimeException('Deck board "' . $title . '" could not be created');
 		}
 		$boardId = (int)($created['data']['id'] ?? 0);
 		if ($boardId <= 0) {
-			$this->logger->warning('Dataforms Deck action: board create returned no id for "' . $title . '"');
-			return;
+			throw new \RuntimeException('Deck board "' . $title . '" create returned no id');
 		}
 
 		$order = 0;

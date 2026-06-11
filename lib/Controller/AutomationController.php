@@ -10,6 +10,7 @@ use OCA\Dataforms\AppInfo\Application;
 use OCA\Dataforms\Exception\ForbiddenException;
 use OCA\Dataforms\Exception\NotFoundException;
 use OCA\Dataforms\Exception\ValidationException;
+use OCA\Dataforms\Service\AutomationLogService;
 use OCA\Dataforms\Service\AutomationService;
 use OCP\AppFramework\Http;
 use OCP\AppFramework\Http\Attribute\NoAdminRequired;
@@ -22,6 +23,7 @@ class AutomationController extends OCSController {
 	public function __construct(
 		IRequest $request,
 		private AutomationService $service,
+		private AutomationLogService $logService,
 		private IUserSession $userSession,
 	) {
 		parent::__construct(Application::APP_ID, $request);
@@ -46,6 +48,18 @@ class AutomationController extends OCSController {
 	public function index(int $registerId): DataResponse {
 		try {
 			return new DataResponse($this->service->listForRegister($this->userId(), $registerId));
+		} catch (NotFoundException $e) {
+			return new DataResponse(['message' => $e->getMessage()], Http::STATUS_NOT_FOUND);
+		} catch (ForbiddenException $e) {
+			return new DataResponse(['message' => $e->getMessage()], Http::STATUS_FORBIDDEN);
+		}
+	}
+
+	/** Recent automation runs for a register (manager-gated), newest first. */
+	#[NoAdminRequired]
+	public function log(int $registerId, int $limit = 100): DataResponse {
+		try {
+			return new DataResponse($this->logService->listForRegister($this->userId(), $registerId, $limit));
 		} catch (NotFoundException $e) {
 			return new DataResponse(['message' => $e->getMessage()], Http::STATUS_NOT_FOUND);
 		} catch (ForbiddenException $e) {

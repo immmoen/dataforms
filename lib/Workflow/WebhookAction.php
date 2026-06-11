@@ -58,24 +58,23 @@ class WebhookAction implements IAction {
 			$headers['X-DataForms-Signature'] = 'sha256=' . hash_hmac('sha256', $payload, $secret);
 		}
 
-		try {
-			$this->clientService->newClient()->post($url, [
-				'body' => $payload,
-				'headers' => $headers,
-				'timeout' => $this->settings->outboundTimeout(),
-				'connect_timeout' => 5,
-				// SSRF defence: refuse internal/loopback/link-local targets
-				// regardless of the instance's allow_local_remote_servers setting,
-				// and never follow redirects (a 30x to a local address would
-				// otherwise bypass the check via DNS-rebind / redirect chaining).
-				'nextcloud' => [
-					'allow_local_address' => false,
-				],
-				'allow_redirects' => false,
-			]);
-			$this->logger->info('Dataforms webhook delivered', ['url' => $url, 'record' => $context->recordId]);
-		} catch (\Throwable $e) {
-			$this->logger->warning('Dataforms webhook failed', ['url' => $url, 'exception' => $e]);
-		}
+		// A non-2xx response or a connection failure throws here; the automation
+		// engine catches it, records the run as **failed** in the activity log, and
+		// moves on to the next automation — so a bad endpoint is visible, not silent.
+		$this->clientService->newClient()->post($url, [
+			'body' => $payload,
+			'headers' => $headers,
+			'timeout' => $this->settings->outboundTimeout(),
+			'connect_timeout' => 5,
+			// SSRF defence: refuse internal/loopback/link-local targets
+			// regardless of the instance's allow_local_remote_servers setting,
+			// and never follow redirects (a 30x to a local address would
+			// otherwise bypass the check via DNS-rebind / redirect chaining).
+			'nextcloud' => [
+				'allow_local_address' => false,
+			],
+			'allow_redirects' => false,
+		]);
+		$this->logger->info('Dataforms webhook delivered', ['url' => $url, 'record' => $context->recordId]);
 	}
 }

@@ -81,6 +81,9 @@ can include **placeholders** filled from the record:
   service account to be set up.
 - Automations are **best‑effort** — if one fails it's logged and never blocks the
   record from being saved.
+- **See what happened** — the **Activity** button at the top of the Automations
+  tab lists recent runs and flags the ones that **failed** (with the error), so a
+  broken automation doesn't fail silently. Activity is kept for 30 days.
 - Conditions are **sandboxed** (no scripting), and everything runs server‑side.
 - Recipients only get what they're allowed to see — access rules still apply.
 

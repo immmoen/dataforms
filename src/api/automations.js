@@ -45,6 +45,15 @@ export async function listAutomations(registerId) {
 }
 
 /**
+ * Recent automation runs for a register (newest first) — what fired and what failed.
+ *
+ * @param registerId
+ */
+export async function getAutomationLog(registerId) {
+	return unwrap(await axios.get(url(`registers/${registerId}/automation-log`), config))
+}
+
+/**
  *
  * @param registerId
  * @param data

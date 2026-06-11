@@ -7,6 +7,7 @@ declare(strict_types=1);
 namespace OCA\Dataforms\BackgroundJob;
 
 use OCA\Dataforms\Rules\RuleEvaluator;
+use OCA\Dataforms\Service\AutomationLogService;
 use OCA\Dataforms\Service\AutomationService;
 use OCA\Dataforms\Workflow\ActionContext;
 use OCA\Dataforms\Workflow\ActionRegistry;
@@ -36,6 +37,7 @@ class RunAutomationsJob extends QueuedJob {
 		private AutomationService $automations,
 		private ActionRegistry $registry,
 		private RuleEvaluator $evaluator,
+		private AutomationLogService $log,
 		private LoggerInterface $logger,
 	) {
 		parent::__construct($time);
@@ -82,8 +84,10 @@ class RunAutomationsJob extends QueuedJob {
 					$values,
 					$config,
 				));
+				$this->log->record($automation, $registerId, $recordId, AutomationLogService::STATUS_OK);
 			} catch (\Throwable $e) {
 				// Best-effort: one bad automation never stops the others.
+				$this->log->record($automation, $registerId, $recordId, AutomationLogService::STATUS_ERROR, $e->getMessage());
 				$this->logger->warning('Dataforms deferred automation failed', ['exception' => $e]);
 			}
 		}

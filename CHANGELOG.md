@@ -7,6 +7,23 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.37.0] - Automation activity log
+
+### Added
+- **Automation activity log.** The engine now records the outcome of every action
+  it runs — **ok** or **error** (with the error message) — instead of leaving it
+  only in `nextcloud.log`. A manager opens **Automations → Activity** to see recent
+  runs for the register and spot a failing automation. New `df_automation_log`
+  table, `AutomationLogService`/`AutomationLogMapper`, a manager-gated
+  `automation-log` endpoint, and an Activity dialog in the builder.
+- Both the inline path (notify/set-field) and the deferred background-job path
+  (webhook/email/folders/calendar/Talk/Deck) log per-action; recording is
+  best-effort, so a logging failure can never break an automation.
+
+### Changed
+- The daily retention job now also **trims activity older than 30 days**, and a
+  register purge cascades to its activity log.
+
 ## [0.36.0] - Admin-configurable automations
 
 ### Added

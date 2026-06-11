@@ -6,6 +6,7 @@ declare(strict_types=1);
 
 namespace OCA\Dataforms\BackgroundJob;
 
+use OCA\Dataforms\Service\AutomationLogService;
 use OCA\Dataforms\Service\RegisterPurgeService;
 use OCP\AppFramework\Utility\ITimeFactory;
 use OCP\BackgroundJob\TimedJob;
@@ -22,6 +23,7 @@ class PurgeDeletedRegistersJob extends TimedJob {
 	public function __construct(
 		ITimeFactory $time,
 		private RegisterPurgeService $purge,
+		private AutomationLogService $logService,
 		private LoggerInterface $logger,
 	) {
 		parent::__construct($time);
@@ -38,8 +40,12 @@ class PurgeDeletedRegistersJob extends TimedJob {
 			if ($purged > 0) {
 				$this->logger->info('Dataforms: purged ' . $purged . ' soft-deleted register(s) past retention');
 			}
+			$logsPurged = $this->logService->purgeExpired();
+			if ($logsPurged > 0) {
+				$this->logger->info('Dataforms: trimmed ' . $logsPurged . ' automation-log entries past retention');
+			}
 		} catch (\Throwable $e) {
-			$this->logger->error('Dataforms register-purge job failed', ['exception' => $e]);
+			$this->logger->error('Dataforms retention job failed', ['exception' => $e]);
 		}
 	}
 }

@@ -11,6 +11,7 @@ use OCA\Dataforms\Event\RecordCreatedEvent;
 use OCA\Dataforms\Event\RecordDeletedEvent;
 use OCA\Dataforms\Event\RecordUpdatedEvent;
 use OCA\Dataforms\Rules\RuleEvaluator;
+use OCA\Dataforms\Service\AutomationLogService;
 use OCA\Dataforms\Service\AutomationService;
 use OCA\Dataforms\Workflow\ActionContext;
 use OCA\Dataforms\Workflow\ActionRegistry;
@@ -41,6 +42,7 @@ class AutomationListener implements IEventListener {
 		private ActionRegistry $registry,
 		private RuleEvaluator $evaluator,
 		private IJobList $jobList,
+		private AutomationLogService $log,
 		private LoggerInterface $logger,
 	) {
 	}
@@ -79,14 +81,21 @@ class AutomationListener implements IEventListener {
 				$config = ($configJson !== null && $configJson !== '')
 					? (json_decode($configJson, true) ?: [])
 					: [];
-				$action->run(new ActionContext(
-					$event->getRegisterId(),
-					$event->getRecordId(),
-					$event->getUserId(),
-					$automation->getName(),
-					$event->getValues(),
-					$config,
-				));
+				try {
+					$action->run(new ActionContext(
+						$event->getRegisterId(),
+						$event->getRecordId(),
+						$event->getUserId(),
+						$automation->getName(),
+						$event->getValues(),
+						$config,
+					));
+					$this->log->record($automation, $event->getRegisterId(), $event->getRecordId(), AutomationLogService::STATUS_OK);
+				} catch (\Throwable $e) {
+					// Best-effort: record the failure and keep running the others.
+					$this->log->record($automation, $event->getRegisterId(), $event->getRecordId(), AutomationLogService::STATUS_ERROR, $e->getMessage());
+					$this->logger->warning('Dataforms inline automation failed', ['exception' => $e]);
+				}
 			}
 		} catch (\Throwable $e) {
 			$this->logger->warning('Dataforms automation failed', ['exception' => $e]);

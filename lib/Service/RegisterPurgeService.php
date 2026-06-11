@@ -6,6 +6,7 @@ declare(strict_types=1);
 
 namespace OCA\Dataforms\Service;
 
+use OCA\Dataforms\Db\AutomationLogMapper;
 use OCA\Dataforms\Db\AutomationMapper;
 use OCA\Dataforms\Db\FieldMapper;
 use OCA\Dataforms\Db\FormMapper;
@@ -45,6 +46,7 @@ class RegisterPurgeService {
 		private RecordRefMapper $refMapper,
 		private RuleMapper $ruleMapper,
 		private AutomationMapper $automationMapper,
+		private AutomationLogMapper $automationLogMapper,
 		private HistoryMapper $historyMapper,
 		private ShareMapper $shareMapper,
 		private ViewMapper $viewMapper,
@@ -100,6 +102,7 @@ class RegisterPurgeService {
 			$this->fieldMapper->deleteByRegister($registerId);
 			$this->ruleMapper->deleteByRegister($registerId);
 			$this->automationMapper->deleteByRegister($registerId);
+			$this->automationLogMapper->deleteByRegister($registerId);
 			$this->shareMapper->deleteByRegister($registerId);
 			$this->viewMapper->deleteByRegister($registerId);
 			$this->formMapper->deleteByRegister($registerId);

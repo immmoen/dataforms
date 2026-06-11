@@ -80,6 +80,7 @@ return [
 
 		// Workflow automations
 		['name' => 'automation#actions', 'url' => '/api/v1/automation-actions', 'verb' => 'GET'],
+		['name' => 'automation#log', 'url' => '/api/v1/registers/{registerId}/automation-log', 'verb' => 'GET', 'requirements' => ['registerId' => '\d+']],
 		['name' => 'automation#index', 'url' => '/api/v1/registers/{registerId}/automations', 'verb' => 'GET', 'requirements' => ['registerId' => '\d+']],
 		['name' => 'automation#create', 'url' => '/api/v1/registers/{registerId}/automations', 'verb' => 'POST', 'requirements' => ['registerId' => '\d+']],
 		['name' => 'automation#update', 'url' => '/api/v1/automations/{id}', 'verb' => 'PUT', 'requirements' => ['id' => '\d+']],

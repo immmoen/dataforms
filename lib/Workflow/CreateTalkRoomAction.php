@@ -64,8 +64,8 @@ class CreateTalkRoomAction implements IAction {
 		// its own room exactly once.)
 		$token = $this->createRoom($roomName);
 		if ($token === null) {
-			$this->logger->warning('Dataforms Talk action: could not create room "' . $roomName . '"');
-			return;
+			// Surfaced to the engine → recorded as a failed run in the activity log.
+			throw new \RuntimeException('Talk room "' . $roomName . '" could not be created');
 		}
 
 		$this->addParticipants($context, $values, $token);

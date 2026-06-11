@@ -15,12 +15,20 @@
 					{{ t('dataforms', 'React to record changes: when something happens and your conditions match, run an action — notify someone, send an email, set a field, create folders, or call a webhook. Runs on the server.') }}
 				</p>
 			</div>
-			<NcButton v-if="canManage" type="primary" @click="openAdd">
-				<template #icon>
-					<PlusIcon :size="20" />
-				</template>
-				{{ t('dataforms', 'New automation') }}
-			</NcButton>
+			<div class="header-actions">
+				<NcButton v-if="canManage" @click="openLog">
+					<template #icon>
+						<HistoryIcon :size="20" />
+					</template>
+					{{ t('dataforms', 'Activity') }}
+				</NcButton>
+				<NcButton v-if="canManage" type="primary" @click="openAdd">
+					<template #icon>
+						<PlusIcon :size="20" />
+					</template>
+					{{ t('dataforms', 'New automation') }}
+				</NcButton>
+			</div>
 		</div>
 
 		<NcLoadingIcon v-if="loading" class="centered" :size="32" />
@@ -58,6 +66,31 @@
 				</NcActions>
 			</li>
 		</ul>
+
+		<NcDialog v-if="showLog"
+			:name="t('dataforms', 'Automation activity')"
+			size="normal"
+			@closing="showLog = false">
+			<NcLoadingIcon v-if="logLoading" class="centered" :size="28" />
+			<NcEmptyContent v-else-if="log.length === 0"
+				:name="t('dataforms', 'No activity yet')"
+				:description="t('dataforms', 'Automation runs appear here after records change.')">
+				<template #icon>
+					<HistoryIcon :size="20" />
+				</template>
+			</NcEmptyContent>
+			<ul v-else class="log-list">
+				<li v-for="e in log" :key="e.id" class="log-row">
+					<span class="log-badge" :class="e.status === 'error' ? 'is-error' : 'is-ok'">{{ e.status === 'error' ? t('dataforms', 'Failed') : t('dataforms', 'OK') }}</span>
+					<span class="log-main">
+						<span class="log-name">{{ e.automationName }}</span>
+						<span class="log-meta">{{ actionLabel(e.actionType) }} · {{ triggerLabel(e.trigger) }}</span>
+						<span v-if="e.message" class="log-msg">{{ e.message }}</span>
+					</span>
+					<span class="log-time">{{ fmtTime(e.created) }}</span>
+				</li>
+			</ul>
+		</NcDialog>
 
 		<NcDialog v-if="showDialog"
 			:name="editing ? t('dataforms', 'Edit automation') : t('dataforms', 'New automation')"
@@ -263,8 +296,9 @@ import PencilIcon from 'vue-material-design-icons/Pencil.vue'
 import DeleteIcon from 'vue-material-design-icons/Delete.vue'
 import CloseIcon from 'vue-material-design-icons/Close.vue'
 import RobotIcon from 'vue-material-design-icons/Cog.vue'
+import HistoryIcon from 'vue-material-design-icons/History.vue'
 
-import { listAutomations, createAutomation, updateAutomation, deleteAutomation, getAvailableActions, TRIGGERS, ACTION_TYPES } from '../api/automations.js'
+import { listAutomations, createAutomation, updateAutomation, deleteAutomation, getAvailableActions, getAutomationLog, TRIGGERS, ACTION_TYPES } from '../api/automations.js'
 import { listFields } from '../api/fields.js'
 import { searchSharees } from '../api/shares.js'
 import { FILTER_OPS } from '../api/rules.js'
@@ -289,6 +323,7 @@ export default {
 		DeleteIcon,
 		CloseIcon,
 		RobotIcon,
+		HistoryIcon,
 	},
 	props: {
 		registerId: { type: Number, required: true },
@@ -306,6 +341,9 @@ export default {
 			triggers: TRIGGERS.map((x) => ({ ...x, label: t('dataforms', x.label) })),
 			actionTypes: ACTION_TYPES.map((x) => ({ ...x, label: t('dataforms', x.label) })),
 			availableTypes: [],
+			showLog: false,
+			log: [],
+			logLoading: false,
 			ops: FILTER_OPS,
 			recipientOptions: [],
 			searching: false,
@@ -425,6 +463,28 @@ export default {
 			this.draft = blank()
 			this.recipientOptions = []
 			this.showDialog = true
+		},
+		async openLog() {
+			this.showLog = true
+			this.logLoading = true
+			try {
+				this.log = await getAutomationLog(this.registerId)
+			} catch (e) {
+				showError(t('dataforms', 'Could not load activity'))
+				this.log = []
+			} finally {
+				this.logLoading = false
+			}
+		},
+		fmtTime(epochSeconds) {
+			if (!epochSeconds) {
+				return ''
+			}
+			try {
+				return new Date(epochSeconds * 1000).toLocaleString()
+			} catch (e) {
+				return ''
+			}
 		},
 		openEdit(a) {
 			this.editing = a
@@ -600,4 +660,28 @@ export default {
 .cond-row-2 .c-op { flex: 0 1 150px; min-width: 110px; }
 
 .cond-row-2 .c-val { flex: 1 1 auto; min-width: 140px; }
+
+.header-actions { display: flex; gap: 8px; flex-shrink: 0; }
+
+.log-list { display: flex; flex-direction: column; min-width: min(520px, 84vw); }
+
+.log-row { display: flex; align-items: flex-start; gap: 10px; padding: 9px 2px; border-bottom: 1px solid var(--color-border); }
+
+.log-row:last-child { border-bottom: none; }
+
+.log-badge { flex: 0 0 auto; font-size: 0.72em; font-weight: 700; text-transform: uppercase; letter-spacing: 0.03em; padding: 2px 8px; border-radius: 6px; margin-top: 2px; }
+
+.log-badge.is-ok { color: var(--color-success, #2d7d33); background: rgba(45, 125, 51, 0.1); }
+
+.log-badge.is-error { color: var(--color-error, #c0392b); background: rgba(192, 57, 43, 0.1); }
+
+.log-main { display: flex; flex-direction: column; min-width: 0; flex: 1; }
+
+.log-name { font-weight: 600; }
+
+.log-meta { color: var(--color-text-maxcontrast); font-size: 0.82em; }
+
+.log-msg { color: var(--color-error, #c0392b); font-size: 0.82em; overflow-wrap: anywhere; margin-top: 2px; }
+
+.log-time { flex: 0 0 auto; color: var(--color-text-maxcontrast); font-size: 0.8em; white-space: nowrap; margin-top: 2px; }
 </style>
