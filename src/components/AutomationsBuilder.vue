@@ -183,23 +183,47 @@
 				</template>
 
 				<template v-else-if="draft.actionType === 'provision_folders'">
-					<label class="block-label">{{ t('dataforms', 'Base folder (optional)') }}</label>
-					<NcTextField v-model="draft.basePath" :placeholder="t('dataforms', 'e.g. Clients')" />
+					<label class="block-label">{{ t('dataforms', 'Base folder') }}</label>
+					<div class="path-row">
+						<NcTextField class="path-input" v-model="draft.basePath" :placeholder="t('dataforms', 'Files root — or browse / type a folder')" />
+						<NcButton @click="pickFolder('basePath')">
+							<template #icon>
+								<FolderIcon :size="20" />
+							</template>
+							{{ t('dataforms', 'Browse') }}
+						</NcButton>
+					</div>
 					<label class="block-label">{{ t('dataforms', 'Folders to create (one per line)') }}</label>
 					<NcTextArea v-model="draft.folderLines" :placeholder="folderPlaceholder" />
 					<p class="hint">
-						{{ t('dataforms', 'Created in the record author’s Files, immediately on save. A “/” makes nested folders — {client}/Contracts is a Contracts folder inside the client’s. Existing folders are reused; a line whose {field} is empty is skipped.') }}
+						{{ t('dataforms', 'Folders are created inside the record author’s Files, under the base folder, immediately on save. Pick a shared or group folder (one the authors can write to) to keep them in a shared space. A “/” makes nested folders; existing folders are reused; a line whose {field} is empty is skipped.') }}
 						<br>{{ t('dataforms', 'Fields:') }} <code>{{ machineNames }}</code>
 					</p>
 				</template>
 
 				<template v-else-if="draft.actionType === 'apply_template'">
 					<label class="block-label">{{ t('dataforms', 'Template folder') }}</label>
-					<NcTextField v-model="draft.templateSource" :placeholder="t('dataforms', 'e.g. Templates/Meeting')" />
+					<div class="path-row">
+						<NcTextField class="path-input" v-model="draft.templateSource" :placeholder="t('dataforms', 'Browse or type, e.g. Templates/Meeting')" />
+						<NcButton @click="pickFolder('templateSource')">
+							<template #icon>
+								<FolderIcon :size="20" />
+							</template>
+							{{ t('dataforms', 'Browse') }}
+						</NcButton>
+					</div>
 					<label class="block-label">{{ t('dataforms', 'Copy into') }}</label>
-					<NcTextField v-model="draft.templateDest" :placeholder="t('dataforms', 'e.g. Clients/{client}')" />
+					<div class="path-row">
+						<NcTextField class="path-input" v-model="draft.templateDest" :placeholder="t('dataforms', 'e.g. Clients/{client}')" />
+						<NcButton @click="pickFolder('templateDest')">
+							<template #icon>
+								<FolderIcon :size="20" />
+							</template>
+							{{ t('dataforms', 'Browse') }}
+						</NcButton>
+					</div>
 					<p class="hint">
-						{{ t('dataforms', 'Copies the contents of the template folder into the destination, in the record author’s Files. Use {field} placeholders; existing files are kept.') }}
+						{{ t('dataforms', 'Copies the contents of the template folder into the destination, in the record author’s Files. Browse to pick a folder, or use {field} placeholders; existing files are kept.') }}
 						<br>{{ t('dataforms', 'Fields:') }} <code>{{ machineNames }}</code>
 					</p>
 				</template>
@@ -294,7 +318,7 @@
 
 <script>
 import { translate as t, translatePlural as n } from '@nextcloud/l10n'
-import { showError } from '@nextcloud/dialogs'
+import { showError, getFilePickerBuilder, FilePickerType } from '@nextcloud/dialogs'
 
 import NcActions from '@nextcloud/vue/components/NcActions'
 import NcActionButton from '@nextcloud/vue/components/NcActionButton'
@@ -313,6 +337,7 @@ import DeleteIcon from 'vue-material-design-icons/Delete.vue'
 import CloseIcon from 'vue-material-design-icons/Close.vue'
 import RobotIcon from 'vue-material-design-icons/Cog.vue'
 import HistoryIcon from 'vue-material-design-icons/History.vue'
+import FolderIcon from 'vue-material-design-icons/FolderOutline.vue'
 
 import { listAutomations, createAutomation, updateAutomation, deleteAutomation, getAvailableActions, getAutomationLog, TRIGGERS, ACTION_TYPES } from '../api/automations.js'
 import { listFields } from '../api/fields.js'
@@ -340,6 +365,7 @@ export default {
 		CloseIcon,
 		RobotIcon,
 		HistoryIcon,
+		FolderIcon,
 	},
 	props: {
 		registerId: { type: Number, required: true },
@@ -509,6 +535,24 @@ export default {
 				return ''
 			}
 		},
+		// Browse Nextcloud Files and put the chosen folder's path into draft[field],
+		// instead of typing the location by hand.
+		async pickFolder(field) {
+			try {
+				const picker = getFilePickerBuilder(t('dataforms', 'Choose a folder'))
+					.setMultiSelect(false)
+					.setMimeTypeFilter(['httpd/unix-directory'])
+					.allowDirectories(true)
+					.setType(FilePickerType.Choose)
+					.build()
+				const path = await picker.pick()
+				if (typeof path === 'string') {
+					this.draft[field] = path
+				}
+			} catch (e) {
+				// Picker cancelled — leave the field unchanged.
+			}
+		},
 		openEdit(a) {
 			this.editing = a
 			const cfg = a.actionConfig || {}
@@ -675,6 +719,10 @@ export default {
 .auto-form { display: flex; flex-direction: column; gap: 10px; min-width: min(520px, 84vw); padding: 8px 2px; }
 
 .block-label { font-weight: 600; font-size: 0.85em; margin-top: 6px; }
+
+.path-row { display: flex; gap: 8px; align-items: center; }
+
+.path-row .path-input { flex: 1; }
 /* Field on its own line; operator + value + remove on a second line, so the
    value control always keeps a usable width in the narrow dialog. */
 .cond-row { display: flex; flex-direction: column; gap: 6px; margin-bottom: 12px; }

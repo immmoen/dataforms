@@ -7,6 +7,16 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.39.0] - Browse to pick the folder location
+
+### Added
+- **Folder browser for the provisioning actions.** Instead of typing the path by
+  hand, the *Create folders* base folder and the *Copy a template* source/destination
+  now have a **Browse** button that opens the Nextcloud folder picker. Pick any
+  folder — including a **shared or group folder** — so a record's folders aren't
+  tied to the author's personal home; they're created at the chosen location
+  (inside the record author's Files, so the author must be able to write there).
+
 ## [0.38.1] - Fix folder provisioning (immediate + auto fields + clearer paths)
 
 ### Fixed
