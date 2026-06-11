@@ -7,6 +7,29 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.36.0] - Admin-configurable automations
+
+### Added
+- **Admin → DataForms → Automations.** The action catalogue is now curated from
+  the console instead of being fixed in code: an admin can **enable/disable each
+  of the nine action types** instance-wide (a disabled action disappears from the
+  manager's builder, and the engine refuses to create or switch an automation to
+  it). The **Talk** and **Deck** actions appear only once the cross-app service
+  account is configured.
+- **Tunable limits & defaults.** The previously-hardcoded operational constants
+  are now admin settings (with the old values as defaults): max folders per
+  *Create folders* action and per run, max template files copied, max Talk
+  participants, max Deck columns, the default calendar-event length, the default
+  Deck columns, and the outbound webhook timeout.
+- New `WorkflowSettings` service (IAppConfig-backed), an admin-only
+  `AutomationConfigController` (`/admin/automation`), and a manager-readable
+  `automation-actions` endpoint that drives the builder's action list.
+
+### Notes
+- Protocol internals (API paths, the Talk room type, the path-safety rules and
+  date-format whitelist) are deliberately **not** configurable — they are
+  correctness-critical, not preferences.
+
 ## [0.35.2] - Release-readiness hardening
 
 ### Fixed

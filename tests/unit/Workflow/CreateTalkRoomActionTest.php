@@ -8,11 +8,13 @@ namespace OCA\Dataforms\Tests\Unit\Workflow;
 
 use OCA\Dataforms\Db\FieldMapper;
 use OCA\Dataforms\Db\RecordMapper;
+use OCA\Dataforms\Service\WorkflowSettings;
 use OCA\Dataforms\Workflow\ActionContext;
 use OCA\Dataforms\Workflow\CreateTalkRoomAction;
 use OCA\Dataforms\Workflow\NextcloudApiClient;
 use OCA\Dataforms\Workflow\RelationResolver;
 use OCA\Dataforms\Workflow\ValueInterpolator;
+use OCP\IAppConfig;
 use OCP\IGroupManager;
 use OCP\IUserManager;
 use PHPUnit\Framework\TestCase;
@@ -27,6 +29,14 @@ use Psr\Log\LoggerInterface;
 class CreateTalkRoomActionTest extends TestCase {
 	/** @var list<array{method:string,path:string,body:array<string,mixed>}> */
 	private array $calls = [];
+
+	/** A WorkflowSettings backed by a config mock that always yields the defaults. */
+	private function settings(): WorkflowSettings {
+		$cfg = $this->createMock(IAppConfig::class);
+		$cfg->method('getValueInt')->willReturnCallback(static fn (string $a, string $k, int $d = 0): int => $d);
+		$cfg->method('getValueString')->willReturnCallback(static fn (string $a, string $k, string $d = ''): string => $d);
+		return new WorkflowSettings($cfg);
+	}
 
 	private function buildAction(): CreateTalkRoomAction {
 		$client = $this->createMock(NextcloudApiClient::class);
@@ -62,6 +72,7 @@ class CreateTalkRoomActionTest extends TestCase {
 			$relations,
 			$users,
 			$groups,
+			$this->settings(),
 			$this->createMock(LoggerInterface::class),
 		);
 	}
@@ -113,6 +124,7 @@ class CreateTalkRoomActionTest extends TestCase {
 			$this->createMock(RelationResolver::class),
 			$this->createMock(IUserManager::class),
 			$this->createMock(IGroupManager::class),
+			$this->settings(),
 			$this->createMock(LoggerInterface::class),
 		);
 		$action->run($this->context());

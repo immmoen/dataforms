@@ -55,6 +55,25 @@ shown again, and is never returned to the browser. Until this is configured, the
 Talk and Deck actions simply log and skip. New rooms/boards are owned by this
 service account.
 
+## Automation settings (which actions, and limits)
+
+**Settings → Administration → DataForms → Automations** controls the automation
+engine instance-wide:
+
+- **Available actions** — turn each of the nine action types on or off. A disabled
+  action **disappears from every register's automation builder**, and the engine
+  refuses to create (or switch) an automation to it. The **Talk** and **Deck**
+  actions appear only once the service account above is configured.
+- **Limits & defaults** — tune the operational limits the engine enforces, each
+  pre-filled with its default (shown as the placeholder; leave blank to keep the
+  default): max folders per *Create folders* action and per run, max template files
+  copied per run, max Talk participants added, max Deck columns, the default
+  calendar-event length, the default Deck columns, and the outbound webhook
+  timeout.
+
+These are instance-wide and take effect immediately — no restart. (Protocol
+details such as API paths are intentionally not configurable.)
+
 ---
 
 ## The API

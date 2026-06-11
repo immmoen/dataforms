@@ -119,7 +119,7 @@
 
 				<label class="block-label">{{ t('dataforms', 'Then') }}</label>
 				<NcSelect v-model="draft.actionType"
-					:options="actionTypes"
+					:options="actionTypeOptions"
 					:reduce="(o) => o.id"
 					label="label"
 					:clearable="false" />
@@ -264,7 +264,7 @@ import DeleteIcon from 'vue-material-design-icons/Delete.vue'
 import CloseIcon from 'vue-material-design-icons/Close.vue'
 import RobotIcon from 'vue-material-design-icons/Cog.vue'
 
-import { listAutomations, createAutomation, updateAutomation, deleteAutomation, TRIGGERS, ACTION_TYPES } from '../api/automations.js'
+import { listAutomations, createAutomation, updateAutomation, deleteAutomation, getAvailableActions, TRIGGERS, ACTION_TYPES } from '../api/automations.js'
 import { listFields } from '../api/fields.js'
 import { searchSharees } from '../api/shares.js'
 import { FILTER_OPS } from '../api/rules.js'
@@ -305,6 +305,7 @@ export default {
 			draft: blank(),
 			triggers: TRIGGERS.map((x) => ({ ...x, label: t('dataforms', x.label) })),
 			actionTypes: ACTION_TYPES.map((x) => ({ ...x, label: t('dataforms', x.label) })),
+			availableTypes: [],
 			ops: FILTER_OPS,
 			recipientOptions: [],
 			searching: false,
@@ -318,6 +319,15 @@ export default {
 		}
 	},
 	computed: {
+		// Action types an admin has enabled (Talk/Deck appear only once the
+		// service account is set up). Falls back to all if the list hasn't loaded,
+		// and always keeps the automation's current action so editing never drops it.
+		actionTypeOptions() {
+			const avail = this.availableTypes
+			return this.actionTypes.filter((o) =>
+				avail.length === 0 || avail.includes(o.id) || o.id === this.draft.actionType,
+			)
+		},
 		fieldOptions() {
 			return this.fields
 				.filter((f) => !['file', 'relation', 'auto'].includes(f.type))
@@ -401,6 +411,7 @@ export default {
 			this.loading = true
 			try {
 				this.fields = await listFields(this.registerId).catch(() => [])
+				this.availableTypes = await getAvailableActions().catch(() => [])
 				this.automations = await listAutomations(this.registerId)
 			} catch (e) {
 				showError(t('dataforms', 'Could not load automations'))

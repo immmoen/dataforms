@@ -6,6 +6,7 @@ declare(strict_types=1);
 
 namespace OCA\Dataforms\Workflow;
 
+use OCA\Dataforms\Service\WorkflowSettings;
 use OCP\Http\Client\IClientService;
 use Psr\Log\LoggerInterface;
 
@@ -21,6 +22,7 @@ class WebhookAction implements IAction {
 
 	public function __construct(
 		private IClientService $clientService,
+		private WorkflowSettings $settings,
 		private LoggerInterface $logger,
 	) {
 	}
@@ -60,7 +62,7 @@ class WebhookAction implements IAction {
 			$this->clientService->newClient()->post($url, [
 				'body' => $payload,
 				'headers' => $headers,
-				'timeout' => 10,
+				'timeout' => $this->settings->outboundTimeout(),
 				'connect_timeout' => 5,
 				// SSRF defence: refuse internal/loopback/link-local targets
 				// regardless of the instance's allow_local_remote_servers setting,

@@ -1,8 +1,9 @@
 /**
  * SPDX-License-Identifier: AGPL-3.0-or-later
  *
- * Admin → DataForms settings: wires the cross-app service-account form to the
- * OCS endpoints. Vanilla JS (no Vue) — the form is rendered server-side.
+ * Admin → DataForms settings: wires the cross-app service-account form and the
+ * instance-wide automation settings (enabled actions + limits) to the OCS
+ * endpoints. Vanilla JS (no Vue) — the forms are rendered server-side.
  */
 import axios from '@nextcloud/axios'
 import { generateOcsUrl } from '@nextcloud/router'
@@ -11,7 +12,20 @@ import { translate as t } from '@nextcloud/l10n'
 const url = (path) => generateOcsUrl('apps/dataforms/api/v1/' + path)
 const cfg = { headers: { 'OCS-APIRequest': 'true', Accept: 'application/json' } }
 
-document.addEventListener('DOMContentLoaded', () => {
+// Display labels for the action types (kept in sync with src/api/automations.js).
+const ACTION_LABELS = () => ({
+	notify: t('dataforms', 'Send a notification'),
+	email: t('dataforms', 'Send an email'),
+	set_field: t('dataforms', 'Set a field'),
+	provision_folders: t('dataforms', 'Create folders'),
+	apply_template: t('dataforms', 'Copy template files'),
+	add_calendar_event: t('dataforms', 'Add a calendar event'),
+	create_talk_room: t('dataforms', 'Create a Talk conversation'),
+	create_deck_board: t('dataforms', 'Create a Deck board'),
+	webhook: t('dataforms', 'Call a webhook'),
+})
+
+function initServiceAccount() {
 	const root = document.getElementById('dataforms-service-account')
 	if (!root) {
 		return
@@ -84,10 +98,114 @@ document.addEventListener('DOMContentLoaded', () => {
 			passField.value = ''
 			passField.placeholder = ''
 			setStatus(t('dataforms', 'Removed'), '')
+			// Reflect Talk/Deck availability in the automation panel.
+			initAutomationConfig()
 		} catch (e) {
 			setStatus(t('dataforms', 'Could not remove'), 'err')
 		}
 	})
 
 	refresh()
+}
+
+function initAutomationConfig() {
+	const root = document.getElementById('dataforms-automation')
+	if (!root) {
+		return
+	}
+	const $ = (id) => root.querySelector('#' + id)
+	const actionsBox = $('df-auto-actions')
+	const status = $('df-auto-status')
+	const saveBtn = $('df-auto-save')
+	const labels = ACTION_LABELS()
+
+	const setStatus = (msg, kind) => {
+		status.textContent = msg
+		status.dataset.kind = kind || ''
+	}
+
+	const render = (data) => {
+		actionsBox.textContent = ''
+		for (const a of data.actions || []) {
+			const row = document.createElement('div')
+			row.className = 'df-auto-action'
+
+			const cb = document.createElement('input')
+			cb.type = 'checkbox'
+			cb.id = 'df-act-' + a.type
+			cb.checked = !!a.enabled
+			cb.dataset.action = a.type
+
+			const label = document.createElement('label')
+			label.setAttribute('for', cb.id)
+			label.textContent = labels[a.type] || a.type
+
+			row.appendChild(cb)
+			row.appendChild(label)
+
+			if (a.needsServiceAccount && !data.serviceAccountConfigured) {
+				const note = document.createElement('span')
+				note.className = 'df-auto-note'
+				note.textContent = t('dataforms', '— needs the service account above')
+				row.appendChild(note)
+			}
+			actionsBox.appendChild(row)
+		}
+
+		root.querySelectorAll('input[data-limit]').forEach((input) => {
+			const key = input.dataset.limit
+			input.value = data.limits?.[key] ?? ''
+			input.placeholder = data.defaults?.[key] ?? ''
+		})
+		const deck = $('df-auto-deckcols')
+		if (deck) {
+			deck.value = data.deckColumns || ''
+			deck.placeholder = data.defaultDeckColumns || ''
+		}
+	}
+
+	const refresh = async () => {
+		try {
+			render((await axios.get(url('admin/automation'), cfg)).data.ocs.data)
+		} catch (e) {
+			setStatus(t('dataforms', 'Could not load settings'), 'err')
+		}
+	}
+
+	saveBtn?.addEventListener('click', async () => {
+		saveBtn.disabled = true
+		setStatus(t('dataforms', 'Saving…'), '')
+		const disabled = []
+		actionsBox.querySelectorAll('input[data-action]').forEach((cb) => {
+			if (!cb.checked) {
+				disabled.push(cb.dataset.action)
+			}
+		})
+		const limits = {}
+		root.querySelectorAll('input[data-limit]').forEach((input) => {
+			const v = parseInt(input.value, 10)
+			if (!Number.isNaN(v) && v > 0) {
+				limits[input.dataset.limit] = v
+			}
+		})
+		try {
+			render((await axios.put(url('admin/automation'), {
+				disabled,
+				limits,
+				deckColumns: ($('df-auto-deckcols')?.value || '').trim(),
+			}, cfg)).data.ocs.data)
+			setStatus(t('dataforms', 'Saved'), 'ok')
+		} catch (e) {
+			setStatus(t('dataforms', 'Save failed'), 'err')
+		} finally {
+			saveBtn.disabled = false
+		}
+	})
+
+	refresh()
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+	initServiceAccount()
+	initAutomationConfig()
 })

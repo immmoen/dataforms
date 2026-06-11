@@ -21,15 +21,28 @@ use OCP\AppFramework\Utility\ITimeFactory;
 class AutomationService {
 	public const TRIGGERS = ['create', 'update', 'delete'];
 
-	/** Upper bound on folder templates in a provision_folders action. */
-	private const MAX_PROVISION_FOLDERS = 50;
-
 	public function __construct(
 		private AutomationMapper $mapper,
 		private RegisterService $registerService,
 		private ActionRegistry $actionRegistry,
+		private WorkflowSettings $workflowSettings,
+		private ServiceAccountService $serviceAccount,
 		private ITimeFactory $time,
 	) {
+	}
+
+	/**
+	 * Action types managers may actually pick right now: those an admin has left
+	 * enabled, with the cross-app (Talk/Deck) actions hidden until the service
+	 * account is configured. Drives the builder's action dropdown.
+	 *
+	 * @return string[]
+	 */
+	public function availableActionTypes(): array {
+		return $this->workflowSettings->availableActions(
+			$this->actionRegistry->types(),
+			$this->serviceAccount->isConfigured(),
+		);
 	}
 
 	/**
@@ -52,6 +65,7 @@ class AutomationService {
 		$this->registerService->findManageable($userId, $registerId);
 
 		$actionType = $this->validAction($data['actionType'] ?? '');
+		$this->assertActionEnabled($actionType);
 		$this->validateActionConfig($actionType, $data['actionConfig'] ?? []);
 		$trigger = $this->validTrigger($data['trigger'] ?? '');
 		$this->assertTriggerAllowed($trigger, $actionType);
@@ -84,7 +98,9 @@ class AutomationService {
 			$a->setTrigger($this->validTrigger($changes['trigger']));
 		}
 		if (array_key_exists('actionType', $changes)) {
-			$a->setActionType($this->validAction($changes['actionType']));
+			$type = $this->validAction($changes['actionType']);
+			$this->assertActionEnabled($type);
+			$a->setActionType($type);
 		}
 		if (array_key_exists('condition', $changes)) {
 			$a->setCondition($this->encodeJson($changes['condition']));
@@ -167,6 +183,19 @@ class AutomationService {
 	}
 
 	/**
+	 * Refuse an action type an administrator has disabled instance-wide, so a
+	 * manager can't create (or switch an automation to) an action the admin has
+	 * turned off in Settings → Administration → DataForms.
+	 *
+	 * @throws ValidationException
+	 */
+	private function assertActionEnabled(string $actionType): void {
+		if (!$this->workflowSettings->isActionEnabled($actionType)) {
+			throw new ValidationException('This action is disabled by the administrator');
+		}
+	}
+
+	/**
 	 * Lightweight save-time sanity check on an action's config. The authoritative
 	 * SSRF defence lives in WebhookAction (it refuses local addresses and
 	 * redirects at call time); this just rejects an obviously-wrong webhook URL
@@ -187,8 +216,9 @@ class AutomationService {
 			if ($folders === []) {
 				throw new ValidationException('Add at least one folder to create');
 			}
-			if (count($folders) > self::MAX_PROVISION_FOLDERS) {
-				throw new ValidationException('Too many folders to create (max ' . self::MAX_PROVISION_FOLDERS . ')');
+			$maxFolders = $this->workflowSettings->maxFolders();
+			if (count($folders) > $maxFolders) {
+				throw new ValidationException('Too many folders to create (max ' . $maxFolders . ')');
 			}
 			// Validate the optional base folder at save time so a bad path surfaces
 			// in the builder instead of failing silently in the background job.

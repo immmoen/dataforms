@@ -22,6 +22,10 @@ return [
 		['name' => 'serviceAccount#test', 'url' => '/api/v1/service-account/test', 'verb' => 'POST'],
 		['name' => 'serviceAccount#clear', 'url' => '/api/v1/service-account', 'verb' => 'DELETE'],
 
+		// Admin: instance-wide automation settings (enabled actions + limits/defaults).
+		['name' => 'automationConfig#status', 'url' => '/api/v1/admin/automation', 'verb' => 'GET'],
+		['name' => 'automationConfig#save', 'url' => '/api/v1/admin/automation', 'verb' => 'PUT'],
+
 		['name' => 'register#index', 'url' => '/api/v1/registers', 'verb' => 'GET'],
 		['name' => 'register#create', 'url' => '/api/v1/registers', 'verb' => 'POST'],
 		['name' => 'register#show', 'url' => '/api/v1/registers/{id}', 'verb' => 'GET', 'requirements' => ['id' => '\d+']],
@@ -75,6 +79,7 @@ return [
 		['name' => 'share#destroy', 'url' => '/api/v1/shares/{id}', 'verb' => 'DELETE', 'requirements' => ['id' => '\d+']],
 
 		// Workflow automations
+		['name' => 'automation#actions', 'url' => '/api/v1/automation-actions', 'verb' => 'GET'],
 		['name' => 'automation#index', 'url' => '/api/v1/registers/{registerId}/automations', 'verb' => 'GET', 'requirements' => ['registerId' => '\d+']],
 		['name' => 'automation#create', 'url' => '/api/v1/registers/{registerId}/automations', 'verb' => 'POST', 'requirements' => ['registerId' => '\d+']],
 		['name' => 'automation#update', 'url' => '/api/v1/automations/{id}', 'verb' => 'PUT', 'requirements' => ['id' => '\d+']],

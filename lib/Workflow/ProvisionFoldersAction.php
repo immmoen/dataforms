@@ -7,6 +7,7 @@ declare(strict_types=1);
 namespace OCA\Dataforms\Workflow;
 
 use OCA\Dataforms\Db\RecordMapper;
+use OCA\Dataforms\Service\WorkflowSettings;
 use OCP\Files\Folder;
 use OCP\Files\IRootFolder;
 use OCP\IUserManager;
@@ -38,15 +39,13 @@ use Psr\Log\LoggerInterface;
  */
 class ProvisionFoldersAction implements IAction {
 
-	private const MAX_FOLDERS = 50;   // templates per automation
-	private const MAX_CREATED = 200;  // folders newly created per fire
-
 	public function __construct(
 		private IRootFolder $rootFolder,
 		private RecordMapper $recordMapper,
 		private IUserManager $userManager,
 		private ValueInterpolator $interpolator,
 		private RelationResolver $relationResolver,
+		private WorkflowSettings $settings,
 		private LoggerInterface $logger,
 	) {
 	}
@@ -67,7 +66,7 @@ class ProvisionFoldersAction implements IAction {
 		if ($templates === []) {
 			return;
 		}
-		$templates = array_slice($templates, 0, self::MAX_FOLDERS);
+		$templates = array_slice($templates, 0, $this->settings->maxFolders());
 		$base = (string)($context->config['basePath'] ?? '');
 
 		// Act as the record OWNER (author), not the user who triggered the event.
@@ -90,8 +89,9 @@ class ProvisionFoldersAction implements IAction {
 		$values = $this->relationResolver->enrich($owner, $context->registerId, $context->values);
 
 		$created = 0;
+		$maxCreated = $this->settings->maxCreated();
 		foreach ($templates as $template) {
-			if ($created >= self::MAX_CREATED) {
+			if ($created >= $maxCreated) {
 				$this->logger->warning('Dataforms provision-folders hit the per-run folder budget for record ' . $context->recordId);
 				break;
 			}
@@ -105,7 +105,7 @@ class ProvisionFoldersAction implements IAction {
 				continue;
 			}
 			try {
-				$created += $this->ensurePath($userFolder, $segments, self::MAX_CREATED - $created);
+				$created += $this->ensurePath($userFolder, $segments, $maxCreated - $created);
 			} catch (\Throwable $e) {
 				$this->logger->warning('Dataforms provision-folders: could not create ' . implode('/', $segments), ['exception' => $e]);
 			}

@@ -29,6 +29,14 @@ export const ACTION_TYPES = [
 ]
 
 /**
+ * The action type ids managers may currently pick (admin-enabled, with Talk/Deck
+ * hidden until the service account is set up). Used to filter ACTION_TYPES.
+ */
+export async function getAvailableActions() {
+	return unwrap(await axios.get(url('automation-actions'), config)).actions ?? []
+}
+
+/**
  *
  * @param registerId
  */

@@ -32,6 +32,16 @@ class AutomationController extends OCSController {
 		return $user !== null ? $user->getUID() : '';
 	}
 
+	/**
+	 * The action types managers may currently pick — those an admin has left
+	 * enabled, with Talk/Deck hidden until the service account exists. Lets the
+	 * builder show only usable actions. Global (not register-scoped).
+	 */
+	#[NoAdminRequired]
+	public function actions(): DataResponse {
+		return new DataResponse(['actions' => $this->service->availableActionTypes()]);
+	}
+
 	#[NoAdminRequired]
 	public function index(int $registerId): DataResponse {
 		try {

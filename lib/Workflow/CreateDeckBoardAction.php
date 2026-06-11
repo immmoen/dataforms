@@ -7,6 +7,7 @@ declare(strict_types=1);
 namespace OCA\Dataforms\Workflow;
 
 use OCA\Dataforms\Db\RecordMapper;
+use OCA\Dataforms\Service\WorkflowSettings;
 use Psr\Log\LoggerInterface;
 
 /**
@@ -21,14 +22,13 @@ use Psr\Log\LoggerInterface;
 class CreateDeckBoardAction implements IAction {
 
 	private const API = '/index.php/apps/deck/api/v1.0';
-	private const MAX_COLUMNS = 20;
-	private const DEFAULT_COLUMNS = ['To do', 'Doing', 'Done'];
 
 	public function __construct(
 		private NextcloudApiClient $client,
 		private RecordMapper $recordMapper,
 		private ValueInterpolator $interpolator,
 		private RelationResolver $relationResolver,
+		private WorkflowSettings $settings,
 		private LoggerInterface $logger,
 	) {
 	}
@@ -102,10 +102,10 @@ class CreateDeckBoardAction implements IAction {
 	private function columns(ActionContext $context): array {
 		$raw = trim((string)($context->config['columns'] ?? ''));
 		if ($raw === '') {
-			return self::DEFAULT_COLUMNS;
+			return $this->settings->defaultDeckColumns();
 		}
 		$cols = array_values(array_filter(array_map('trim', preg_split('/[\n,]/', $raw) ?: []), static fn ($s) => $s !== ''));
-		return array_slice($cols, 0, self::MAX_COLUMNS);
+		return array_slice($cols, 0, $this->settings->maxDeckColumns());
 	}
 
 	/**

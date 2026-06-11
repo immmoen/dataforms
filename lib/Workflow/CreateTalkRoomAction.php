@@ -8,6 +8,7 @@ namespace OCA\Dataforms\Workflow;
 
 use OCA\Dataforms\Db\FieldMapper;
 use OCA\Dataforms\Db\RecordMapper;
+use OCA\Dataforms\Service\WorkflowSettings;
 use OCP\IGroupManager;
 use OCP\IUserManager;
 use Psr\Log\LoggerInterface;
@@ -23,7 +24,6 @@ use Psr\Log\LoggerInterface;
  */
 class CreateTalkRoomAction implements IAction {
 
-	private const MAX_PARTICIPANTS = 100;
 	private const ROOM_GROUP = 2; // spreed roomType: group conversation
 
 	public function __construct(
@@ -34,6 +34,7 @@ class CreateTalkRoomAction implements IAction {
 		private RelationResolver $relationResolver,
 		private IUserManager $userManager,
 		private IGroupManager $groupManager,
+		private WorkflowSettings $settings,
 		private LoggerInterface $logger,
 	) {
 	}
@@ -98,8 +99,9 @@ class CreateTalkRoomAction implements IAction {
 		}
 		$source = $this->participantSource($context->registerId, $pf);
 		$added = 0;
+		$maxParticipants = $this->settings->maxParticipants();
 		foreach ($this->idList($values[$pf] ?? null) as $id) {
-			if ($added >= self::MAX_PARTICIPANTS) {
+			if ($added >= $maxParticipants) {
 				break;
 			}
 			// Only add principals that actually exist — never relay an arbitrary

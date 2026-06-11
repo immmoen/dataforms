@@ -7,6 +7,7 @@ declare(strict_types=1);
 namespace OCA\Dataforms\Workflow;
 
 use OCA\Dataforms\Db\RecordMapper;
+use OCA\Dataforms\Service\WorkflowSettings;
 use OCP\Files\Folder;
 use OCP\Files\IRootFolder;
 use OCP\IUserManager;
@@ -27,14 +28,13 @@ use Psr\Log\LoggerInterface;
  */
 class ApplyTemplateAction implements IAction {
 
-	private const MAX_FILES = 200;
-
 	public function __construct(
 		private IRootFolder $rootFolder,
 		private RecordMapper $recordMapper,
 		private IUserManager $userManager,
 		private ValueInterpolator $interpolator,
 		private RelationResolver $relationResolver,
+		private WorkflowSettings $settings,
 		private LoggerInterface $logger,
 	) {
 	}
@@ -89,8 +89,9 @@ class ApplyTemplateAction implements IAction {
 		}
 
 		$copied = 0;
+		$maxFiles = $this->settings->maxTemplateFiles();
 		foreach ($source->getDirectoryListing() as $child) {
-			if ($copied >= self::MAX_FILES) {
+			if ($copied >= $maxFiles) {
 				$this->logger->warning('Dataforms apply-template hit the per-run file budget for record ' . $context->recordId);
 				break;
 			}

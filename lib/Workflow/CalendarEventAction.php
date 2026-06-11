@@ -7,6 +7,7 @@ declare(strict_types=1);
 namespace OCA\Dataforms\Workflow;
 
 use OCA\Dataforms\Db\RecordMapper;
+use OCA\Dataforms\Service\WorkflowSettings;
 use OCP\AppFramework\Utility\ITimeFactory;
 use OCP\Calendar\ICreateFromString;
 use OCP\Calendar\IManager;
@@ -31,7 +32,6 @@ use Sabre\VObject\Component\VCalendar;
 class CalendarEventAction implements IAction {
 
 	private const MAX_TITLE = 255;
-	private const DEFAULT_DURATION = 60;
 
 	public function __construct(
 		private IManager $calendarManager,
@@ -40,6 +40,7 @@ class CalendarEventAction implements IAction {
 		private ITimeFactory $time,
 		private ValueInterpolator $interpolator,
 		private RelationResolver $relationResolver,
+		private WorkflowSettings $settings,
 		private LoggerInterface $logger,
 	) {
 	}
@@ -98,7 +99,7 @@ class CalendarEventAction implements IAction {
 			$this->interpolator->interpolate((string)($context->config['description'] ?? ''), $values),
 			$startDt,
 			$allDay,
-			max(0, (int)($context->config['durationMinutes'] ?? self::DEFAULT_DURATION)),
+			max(0, (int)($context->config['durationMinutes'] ?? $this->settings->calendarDefaultDuration())),
 			(bool)($context->config['allDay'] ?? false) || $allDay,
 		);
 
@@ -142,7 +143,7 @@ class CalendarEventAction implements IAction {
 			$vevent->add('DTEND', $start->modify('+1 day'), ['VALUE' => 'DATE']);
 		} else {
 			$vevent->add('DTSTART', $start);
-			$vevent->add('DTEND', $start->modify('+' . ($durationMinutes > 0 ? $durationMinutes : self::DEFAULT_DURATION) . ' minutes'));
+			$vevent->add('DTEND', $start->modify('+' . ($durationMinutes > 0 ? $durationMinutes : $this->settings->calendarDefaultDuration()) . ' minutes'));
 		}
 		if ($description !== '') {
 			$vevent->add('DESCRIPTION', $description);

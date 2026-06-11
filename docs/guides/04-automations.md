@@ -75,6 +75,10 @@ can include **placeholders** filled from the record:
 
 ## Good to know
 
+- The list of actions you can pick is set by your **administrator** (Settings →
+  Administration → DataForms). If an action you expect is missing, ask them to
+  enable it; *Create a Talk room* and *Create a Deck board* also need the cross-app
+  service account to be set up.
 - Automations are **best‑effort** — if one fails it's logged and never blocks the
   record from being saved.
 - Conditions are **sandboxed** (no scripting), and everything runs server‑side.
