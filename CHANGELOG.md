@@ -7,6 +7,25 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.38.0] - Multiple service accounts
+
+### Added
+- **Multiple named service accounts.** Beyond the single default cross-app
+  identity, an admin can now add **named extra accounts** (Settings →
+  Administration → DataForms), each with its own internal URL, username and
+  encrypted app password — so different registers/teams can provision Talk rooms
+  and Deck boards under different identities.
+- The **Talk** and **Deck** actions gain an optional **service account** picker
+  (shown when more than one account exists); they run as the chosen account, or
+  the default when none is picked. Talk/Deck become available once **any** account
+  is configured.
+- Admin API moved to `/service-accounts` (list/save/test/remove per account).
+
+### Notes
+- The original default account is stored under the same keys as before, so
+  existing setups keep working untouched. An admin-supplied account id is never
+  used as a raw credentials-store key (extra ids are always generated).
+
 ## [0.37.0] - Automation activity log
 
 ### Added

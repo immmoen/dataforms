@@ -240,6 +240,14 @@
 						:clearable="true"
 						:placeholder="t('dataforms', 'None')" />
 					<NcTextArea v-model="draft.roomMessage" :label="t('dataforms', 'Welcome message (optional)')" />
+					<template v-if="serviceAccounts.length > 1">
+						<label class="block-label">{{ t('dataforms', 'Service account') }}</label>
+						<NcSelect v-model="draft.serviceAccount"
+							:options="serviceAccountOptions"
+							:reduce="(o) => o.id"
+							label="label"
+							:placeholder="t('dataforms', 'Default')" />
+					</template>
 					<p class="hint">
 						{{ t('dataforms', 'Needs a service account (Admin → DataForms). Use {field} placeholders.') }}
 					</p>
@@ -250,6 +258,14 @@
 					<NcTextField v-model="draft.boardTitle" :placeholder="t('dataforms', 'e.g. {client} onboarding')" />
 					<label class="block-label">{{ t('dataforms', 'Columns (one per line)') }}</label>
 					<NcTextArea v-model="draft.boardColumns" :placeholder="t('dataforms', 'To do\nDoing\nDone')" />
+					<template v-if="serviceAccounts.length > 1">
+						<label class="block-label">{{ t('dataforms', 'Service account') }}</label>
+						<NcSelect v-model="draft.serviceAccount"
+							:options="serviceAccountOptions"
+							:reduce="(o) => o.id"
+							label="label"
+							:placeholder="t('dataforms', 'Default')" />
+					</template>
 					<p class="hint">
 						{{ t('dataforms', 'Needs a service account (Admin → DataForms). Leave columns blank for To do / Doing / Done.') }}
 					</p>
@@ -303,7 +319,7 @@ import { listFields } from '../api/fields.js'
 import { searchSharees } from '../api/shares.js'
 import { FILTER_OPS } from '../api/rules.js'
 
-const blank = () => ({ name: '', trigger: 'create', conditions: [], actionType: 'notify', recipients: [], subject: '', message: '', setField: '', setValue: '', url: '', secret: '', basePath: '', folderLines: '', templateSource: '', templateDest: '', eventTitle: '', startField: '', duration: 60, calendar: '', eventDescription: '', roomName: '', participantsField: '', roomMessage: '', boardTitle: '', boardColumns: '' })
+const blank = () => ({ name: '', trigger: 'create', conditions: [], actionType: 'notify', recipients: [], subject: '', message: '', setField: '', setValue: '', url: '', secret: '', basePath: '', folderLines: '', templateSource: '', templateDest: '', eventTitle: '', startField: '', duration: 60, calendar: '', eventDescription: '', roomName: '', participantsField: '', roomMessage: '', boardTitle: '', boardColumns: '', serviceAccount: '' })
 
 export default {
 	name: 'AutomationsBuilder',
@@ -341,6 +357,7 @@ export default {
 			triggers: TRIGGERS.map((x) => ({ ...x, label: t('dataforms', x.label) })),
 			actionTypes: ACTION_TYPES.map((x) => ({ ...x, label: t('dataforms', x.label) })),
 			availableTypes: [],
+			serviceAccounts: [],
 			showLog: false,
 			log: [],
 			logLoading: false,
@@ -365,6 +382,10 @@ export default {
 			return this.actionTypes.filter((o) =>
 				avail.length === 0 || avail.includes(o.id) || o.id === this.draft.actionType,
 			)
+		},
+		// Configured service accounts the Talk/Deck actions can run as.
+		serviceAccountOptions() {
+			return this.serviceAccounts.map((a) => ({ id: a.id, label: a.name }))
 		},
 		fieldOptions() {
 			return this.fields
@@ -449,7 +470,9 @@ export default {
 			this.loading = true
 			try {
 				this.fields = await listFields(this.registerId).catch(() => [])
-				this.availableTypes = await getAvailableActions().catch(() => [])
+				const meta = await getAvailableActions().catch(() => ({ actions: [], serviceAccounts: [] }))
+				this.availableTypes = meta.actions
+				this.serviceAccounts = meta.serviceAccounts
 				this.automations = await listAutomations(this.registerId)
 			} catch (e) {
 				showError(t('dataforms', 'Could not load automations'))
@@ -516,6 +539,7 @@ export default {
 				roomMessage: cfg.message || '',
 				boardTitle: cfg.title || '',
 				boardColumns: cfg.columns || '',
+				serviceAccount: cfg.serviceAccount || '',
 			}
 			this.recipientOptions = recipients
 			this.showDialog = true
@@ -564,9 +588,9 @@ export default {
 					description: this.draft.eventDescription,
 				}
 			} else if (this.draft.actionType === 'create_talk_room') {
-				config = { roomName: this.draft.roomName.trim(), participantsField: this.draft.participantsField || '', message: this.draft.roomMessage }
+				config = { roomName: this.draft.roomName.trim(), participantsField: this.draft.participantsField || '', message: this.draft.roomMessage, serviceAccount: this.draft.serviceAccount || '' }
 			} else if (this.draft.actionType === 'create_deck_board') {
-				config = { title: this.draft.boardTitle.trim(), columns: this.draft.boardColumns }
+				config = { title: this.draft.boardTitle.trim(), columns: this.draft.boardColumns, serviceAccount: this.draft.serviceAccount || '' }
 			} else if (this.draft.actionType === 'webhook') {
 				config = { url: this.draft.url.trim(), secret: this.draft.secret }
 			}

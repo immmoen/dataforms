@@ -33,7 +33,8 @@ export const ACTION_TYPES = [
  * hidden until the service account is set up). Used to filter ACTION_TYPES.
  */
 export async function getAvailableActions() {
-	return unwrap(await axios.get(url('automation-actions'), config)).actions ?? []
+	const d = unwrap(await axios.get(url('automation-actions'), config))
+	return { actions: d.actions ?? [], serviceAccounts: d.serviceAccounts ?? [] }
 }
 
 /**

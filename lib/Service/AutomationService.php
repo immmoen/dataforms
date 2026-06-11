@@ -41,8 +41,17 @@ class AutomationService {
 	public function availableActionTypes(): array {
 		return $this->workflowSettings->availableActions(
 			$this->actionRegistry->types(),
-			$this->serviceAccount->isConfigured(),
+			$this->serviceAccount->anyConfigured(),
 		);
+	}
+
+	/**
+	 * Configured service accounts the builder offers for the Talk/Deck actions.
+	 *
+	 * @return array<int,array{id:string,name:string}>
+	 */
+	public function serviceAccounts(): array {
+		return $this->serviceAccount->accountList();
 	}
 
 	/**
@@ -242,6 +251,15 @@ class AutomationService {
 		}
 		if ($actionType === 'create_deck_board' && trim((string)($arr['title'] ?? '')) === '') {
 			throw new ValidationException('The board needs a title');
+		}
+		if ($actionType === 'create_talk_room' || $actionType === 'create_deck_board') {
+			// If a specific service account was chosen, it must still exist — surface
+			// a stale/removed selection at save time instead of silently no-op'ing.
+			$sa = trim((string)($arr['serviceAccount'] ?? ''));
+			if ($sa !== '' && $sa !== ServiceAccountService::DEFAULT_ID
+				&& !in_array($sa, array_column($this->serviceAccount->accountList(), 'id'), true)) {
+				throw new ValidationException('The selected service account no longer exists');
+			}
 		}
 		if ($actionType === 'add_calendar_event') {
 			if (trim((string)($arr['title'] ?? '')) === '') {

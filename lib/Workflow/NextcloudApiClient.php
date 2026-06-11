@@ -26,17 +26,18 @@ class NextcloudApiClient {
 	) {
 	}
 
-	public function isConfigured(): bool {
-		return $this->account->isConfigured();
+	public function isConfigured(string $accountId = ''): bool {
+		return $this->account->isConfigured($accountId);
 	}
 
 	/**
 	 * @param array<string,mixed> $jsonBody
+	 * @param string $accountId which service account to act as ('' = the default)
 	 * @return array{status:int,data:mixed}|null null = not configured / bad path
 	 */
-	public function request(string $method, string $path, array $jsonBody = []): ?array {
-		$base = $this->account->getInternalUrl();
-		$cred = $this->account->getCredentials();
+	public function request(string $method, string $path, array $jsonBody = [], string $accountId = ''): ?array {
+		$base = $this->account->getInternalUrl($accountId);
+		$cred = $this->account->getCredentials($accountId);
 		if ($base === '' || $cred === null) {
 			$this->logger->warning('Dataforms: cross-app service account not configured');
 			return null;
@@ -93,8 +94,8 @@ class NextcloudApiClient {
 	}
 
 	/** Connectivity/auth check for the admin "Test" button. @return array{ok:bool,status:int} */
-	public function test(): array {
-		$r = $this->request('GET', '/ocs/v2.php/cloud/capabilities?format=json');
+	public function test(string $accountId = ''): array {
+		$r = $this->request('GET', '/ocs/v2.php/cloud/capabilities?format=json', [], $accountId);
 		return ['ok' => $r !== null && $r['status'] === 200, 'status' => $r['status'] ?? 0];
 	}
 

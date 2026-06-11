@@ -42,7 +42,8 @@ class CreateDeckBoardAction implements IAction {
 	}
 
 	public function run(ActionContext $context): void {
-		if (!$this->client->isConfigured()) {
+		$accountId = (string)($context->config['serviceAccount'] ?? '');
+		if (!$this->client->isConfigured($accountId)) {
 			return;
 		}
 		$values = $this->enrich($context);
@@ -52,7 +53,7 @@ class CreateDeckBoardAction implements IAction {
 		}
 
 		// Idempotent: if a board with this exact title already exists, leave it.
-		if ($this->boardExists($title)) {
+		if ($this->boardExists($title, $accountId)) {
 			return;
 		}
 
@@ -63,7 +64,7 @@ class CreateDeckBoardAction implements IAction {
 		$created = $this->client->request('POST', self::API . '/boards', [
 			'title' => mb_substr($title, 0, 100),
 			'color' => substr($color, 0, 6),
-		]);
+		], $accountId);
 		if ($created === null || !in_array($created['status'], [200, 201], true)) {
 			throw new \RuntimeException('Deck board "' . $title . '" could not be created');
 		}
@@ -77,13 +78,13 @@ class CreateDeckBoardAction implements IAction {
 			$this->client->request('POST', self::API . '/boards/' . $boardId . '/stacks', [
 				'title' => mb_substr($column, 0, 100),
 				'order' => $order++,
-			]);
+			], $accountId);
 		}
 		$this->logger->info('Dataforms Deck board created for record ' . $context->recordId);
 	}
 
-	private function boardExists(string $title): bool {
-		$r = $this->client->request('GET', self::API . '/boards');
+	private function boardExists(string $title, string $accountId): bool {
+		$r = $this->client->request('GET', self::API . '/boards', [], $accountId);
 		$boards = $r['data'] ?? null;
 		if (!is_array($boards)) {
 			return false;

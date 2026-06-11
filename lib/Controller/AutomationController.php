@@ -41,7 +41,10 @@ class AutomationController extends OCSController {
 	 */
 	#[NoAdminRequired]
 	public function actions(): DataResponse {
-		return new DataResponse(['actions' => $this->service->availableActionTypes()]);
+		return new DataResponse([
+			'actions' => $this->service->availableActionTypes(),
+			'serviceAccounts' => $this->service->serviceAccounts(),
+		]);
 	}
 
 	#[NoAdminRequired]

@@ -48,7 +48,8 @@ class CreateTalkRoomAction implements IAction {
 	}
 
 	public function run(ActionContext $context): void {
-		if (!$this->client->isConfigured()) {
+		$accountId = (string)($context->config['serviceAccount'] ?? '');
+		if (!$this->client->isConfigured($accountId)) {
 			return;
 		}
 		$values = $this->enrich($context);
@@ -62,26 +63,26 @@ class CreateTalkRoomAction implements IAction {
 		// inject participants/messages into it — so we never reuse by name. These
 		// actions are restricted to the 'create' trigger, so each record provisions
 		// its own room exactly once.)
-		$token = $this->createRoom($roomName);
+		$token = $this->createRoom($roomName, $accountId);
 		if ($token === null) {
 			// Surfaced to the engine → recorded as a failed run in the activity log.
 			throw new \RuntimeException('Talk room "' . $roomName . '" could not be created');
 		}
 
-		$this->addParticipants($context, $values, $token);
+		$this->addParticipants($context, $values, $token, $accountId);
 
 		$message = trim($this->interpolator->interpolate((string)($context->config['message'] ?? ''), $values));
 		if ($message !== '') {
-			$this->client->request('POST', '/ocs/v2.php/apps/spreed/api/v1/chat/' . rawurlencode($token) . '?format=json', ['message' => $message]);
+			$this->client->request('POST', '/ocs/v2.php/apps/spreed/api/v1/chat/' . rawurlencode($token) . '?format=json', ['message' => $message], $accountId);
 		}
 		$this->logger->info('Dataforms Talk room ready for record ' . $context->recordId);
 	}
 
-	private function createRoom(string $name): ?string {
+	private function createRoom(string $name, string $accountId): ?string {
 		$r = $this->client->request('POST', '/ocs/v2.php/apps/spreed/api/v4/room?format=json', [
 			'roomType' => self::ROOM_GROUP,
 			'roomName' => mb_substr($name, 0, 254),
-		]);
+		], $accountId);
 		if ($r === null || !in_array($r['status'], [200, 201], true)) {
 			return null;
 		}
@@ -92,7 +93,7 @@ class CreateTalkRoomAction implements IAction {
 	/**
 	 * @param array<string,mixed> $values
 	 */
-	private function addParticipants(ActionContext $context, array $values, string $token): void {
+	private function addParticipants(ActionContext $context, array $values, string $token, string $accountId): void {
 		$pf = trim((string)($context->config['participantsField'] ?? ''));
 		if ($pf === '') {
 			return;
@@ -113,6 +114,7 @@ class CreateTalkRoomAction implements IAction {
 				'POST',
 				'/ocs/v2.php/apps/spreed/api/v4/room/' . rawurlencode($token) . '/participants?format=json',
 				['newParticipant' => $id, 'source' => $source],
+				$accountId,
 			);
 			$added++;
 		}

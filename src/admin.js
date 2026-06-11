@@ -30,82 +30,140 @@ function initServiceAccount() {
 	if (!root) {
 		return
 	}
-	const $ = (id) => root.querySelector('#' + id)
-	const urlField = $('df-sa-url')
-	const userField = $('df-sa-user')
-	const passField = $('df-sa-pass')
-	const status = $('df-sa-status')
-	const saveBtn = $('df-sa-save')
-	const testBtn = $('df-sa-test')
-	const clearBtn = $('df-sa-clear')
+	const list = root.querySelector('#df-sa-list')
+	const addBtn = root.querySelector('#df-sa-add')
 
-	const setStatus = (msg, kind) => {
-		status.textContent = msg
-		status.dataset.kind = kind || ''
+	const setRowStatus = (row, msg, kind) => {
+		const s = row.querySelector('.df-sa-status')
+		s.textContent = msg
+		s.dataset.kind = kind || ''
 	}
 
-	const refresh = async () => {
-		try {
-			const r = (await axios.get(url('service-account'), cfg)).data.ocs.data
-			urlField.value = r.internalUrl || ''
-			userField.value = r.username || ''
-			passField.placeholder = r.hasPassword ? '••••••••  ' + t('dataforms', '(leave blank to keep)') : ''
-			setStatus(r.configured ? t('dataforms', 'Configured') : t('dataforms', 'Not configured'), r.configured ? 'ok' : '')
-		} catch (e) {
-			setStatus(t('dataforms', 'Could not load settings'), 'err')
+	const buildRow = (acc) => {
+		const row = document.createElement('div')
+		row.className = 'df-sa-account'
+		row.dataset.id = acc.id || ''
+		const isDefault = !!acc.isDefault
+
+		const title = document.createElement('div')
+		title.className = 'df-sa-row-title'
+		title.textContent = isDefault ? t('dataforms', 'Default account') : (acc.name || t('dataforms', 'New account'))
+		row.appendChild(title)
+
+		const grid = document.createElement('div')
+		grid.className = 'df-sa-grid'
+		const field = (labelText, cls, type, value, ph) => {
+			const lbl = document.createElement('label')
+			lbl.textContent = labelText
+			const inp = document.createElement('input')
+			inp.type = type
+			inp.className = cls
+			inp.value = value || ''
+			if (ph) {
+				inp.placeholder = ph
+			}
+			grid.appendChild(lbl)
+			grid.appendChild(inp)
+			return inp
+		}
+		if (!isDefault) {
+			field(t('dataforms', 'Name'), 'df-sa-name', 'text', acc.name, t('dataforms', 'e.g. Team bot'))
+		}
+		field(t('dataforms', 'Internal API URL'), 'df-sa-url', 'text', acc.url, 'http://localhost')
+		field(t('dataforms', 'Username'), 'df-sa-user', 'text', acc.username, '')
+		const pass = field(t('dataforms', 'App password'), 'df-sa-pass', 'password', '', acc.configured ? '••••••••  ' + t('dataforms', '(leave blank to keep)') : '')
+		pass.autocomplete = 'new-password'
+		row.appendChild(grid)
+
+		const actions = document.createElement('div')
+		actions.className = 'df-sa-actions'
+		const button = (label, cls, primary) => {
+			const b = document.createElement('button')
+			b.textContent = label
+			b.className = cls + (primary ? ' primary' : '')
+			actions.appendChild(b)
+			return b
+		}
+		const saveBtn = button(t('dataforms', 'Save'), 'df-sa-save', true)
+		const testBtn = button(t('dataforms', 'Test'), 'df-sa-test', false)
+		const removeBtn = button(isDefault ? t('dataforms', 'Clear') : t('dataforms', 'Remove'), 'df-sa-remove', false)
+		const status = document.createElement('span')
+		status.className = 'df-sa-status'
+		status.textContent = acc.configured ? t('dataforms', 'Configured') : (acc.id || isDefault ? t('dataforms', 'Not configured') : '')
+		status.dataset.kind = acc.configured ? 'ok' : ''
+		actions.appendChild(status)
+		row.appendChild(actions)
+
+		const idOf = () => row.dataset.id
+		const payload = () => ({
+			id: idOf(),
+			name: isDefault ? 'Default' : (row.querySelector('.df-sa-name')?.value || '').trim(),
+			internalUrl: (row.querySelector('.df-sa-url').value || '').trim(),
+			username: (row.querySelector('.df-sa-user').value || '').trim(),
+			password: row.querySelector('.df-sa-pass').value,
+		})
+
+		saveBtn.addEventListener('click', async () => {
+			saveBtn.disabled = true
+			setRowStatus(row, t('dataforms', 'Saving…'), '')
+			try {
+				const r = (await axios.post(url('service-accounts'), payload(), cfg)).data.ocs.data
+				render(r.accounts || [])
+				initAutomationConfig() // Talk/Deck availability may have changed
+			} catch (e) {
+				setRowStatus(row, t('dataforms', 'Save failed'), 'err')
+				saveBtn.disabled = false
+			}
+		})
+
+		testBtn.addEventListener('click', async () => {
+			testBtn.disabled = true
+			setRowStatus(row, t('dataforms', 'Testing…'), '')
+			try {
+				const r = (await axios.post(url('service-accounts/test'), { id: idOf() }, cfg)).data.ocs.data
+				setRowStatus(row, r.ok ? t('dataforms', 'Connection OK') : t('dataforms', 'Test failed (HTTP {status})', { status: r.status }), r.ok ? 'ok' : 'err')
+			} catch (e) {
+				setRowStatus(row, t('dataforms', 'Test failed'), 'err')
+			} finally {
+				testBtn.disabled = false
+			}
+		})
+
+		removeBtn.addEventListener('click', async () => {
+			if (!idOf()) {
+				row.remove() // an unsaved new row
+				return
+			}
+			if (!window.confirm(isDefault ? t('dataforms', 'Clear the default service account?') : t('dataforms', 'Remove this service account?'))) {
+				return
+			}
+			try {
+				const r = (await axios.delete(url('service-accounts'), { ...cfg, data: { id: idOf() } })).data.ocs.data
+				render(r.accounts || [])
+				initAutomationConfig()
+			} catch (e) {
+				setRowStatus(row, t('dataforms', 'Could not remove'), 'err')
+			}
+		})
+
+		return row
+	}
+
+	const render = (accounts) => {
+		list.textContent = ''
+		for (const acc of accounts) {
+			list.appendChild(buildRow(acc))
 		}
 	}
 
-	saveBtn?.addEventListener('click', async () => {
-		saveBtn.disabled = true
-		try {
-			const r = (await axios.post(url('service-account'), {
-				internalUrl: urlField.value.trim(),
-				username: userField.value.trim(),
-				password: passField.value,
-			}, cfg)).data.ocs.data
-			passField.value = ''
-			await refresh()
-			setStatus(r.configured ? t('dataforms', 'Saved') : t('dataforms', 'Saved — add the app password to finish'), r.configured ? 'ok' : 'err')
-		} catch (e) {
-			setStatus(t('dataforms', 'Save failed'), 'err')
-		} finally {
-			saveBtn.disabled = false
-		}
+	addBtn?.addEventListener('click', () => {
+		// A new, unsaved extra account (empty id → backend generates one on save).
+		list.appendChild(buildRow({ id: '', name: '', url: '', username: '', configured: false, isDefault: false }))
 	})
 
-	testBtn?.addEventListener('click', async () => {
-		testBtn.disabled = true
-		setStatus(t('dataforms', 'Testing…'), '')
-		try {
-			const r = (await axios.post(url('service-account/test'), {}, cfg)).data.ocs.data
-			setStatus(r.ok ? t('dataforms', 'Connection OK') : t('dataforms', 'Test failed (HTTP {status})', { status: r.status }), r.ok ? 'ok' : 'err')
-		} catch (e) {
-			setStatus(t('dataforms', 'Test failed'), 'err')
-		} finally {
-			testBtn.disabled = false
-		}
-	})
-
-	clearBtn?.addEventListener('click', async () => {
-		if (!window.confirm(t('dataforms', 'Remove the service account?'))) {
-			return
-		}
-		try {
-			await axios.delete(url('service-account'), cfg)
-			urlField.value = ''
-			userField.value = ''
-			passField.value = ''
-			passField.placeholder = ''
-			setStatus(t('dataforms', 'Removed'), '')
-			// Reflect Talk/Deck availability in the automation panel.
-			initAutomationConfig()
-		} catch (e) {
-			setStatus(t('dataforms', 'Could not remove'), 'err')
-		}
-	})
-
-	refresh()
+	axios.get(url('service-accounts'), cfg)
+		.then((res) => render(res.data.ocs.data.accounts || []))
+		.catch(() => { list.textContent = t('dataforms', 'Could not load service accounts') })
 }
 
 function initAutomationConfig() {

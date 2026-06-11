@@ -17,10 +17,10 @@ return [
 	],
 	'ocs' => [
 		// Admin: cross-app service account (Talk/Deck provisioning).
-		['name' => 'serviceAccount#status', 'url' => '/api/v1/service-account', 'verb' => 'GET'],
-		['name' => 'serviceAccount#save', 'url' => '/api/v1/service-account', 'verb' => 'POST'],
-		['name' => 'serviceAccount#test', 'url' => '/api/v1/service-account/test', 'verb' => 'POST'],
-		['name' => 'serviceAccount#clear', 'url' => '/api/v1/service-account', 'verb' => 'DELETE'],
+		['name' => 'serviceAccount#index', 'url' => '/api/v1/service-accounts', 'verb' => 'GET'],
+		['name' => 'serviceAccount#save', 'url' => '/api/v1/service-accounts', 'verb' => 'POST'],
+		['name' => 'serviceAccount#test', 'url' => '/api/v1/service-accounts/test', 'verb' => 'POST'],
+		['name' => 'serviceAccount#remove', 'url' => '/api/v1/service-accounts', 'verb' => 'DELETE'],
 
 		// Admin: instance-wide automation settings (enabled actions + limits/defaults).
 		['name' => 'automationConfig#status', 'url' => '/api/v1/admin/automation', 'verb' => 'GET'],

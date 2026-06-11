@@ -41,22 +41,10 @@ $example = "curl -u \"USER:APP_PASSWORD\" \\\n"
 	<p class="settings-hint">
 		<?php p($l->t('Optional. Some automation actions — create a Talk room, set up a Deck board — call other Nextcloud apps from the background, where there is no logged-in user. They run as a dedicated service account you configure here. Its app password is stored encrypted and never shown again.')); ?>
 	</p>
-	<div class="df-sa-grid">
-		<label for="df-sa-url"><?php p($l->t('Internal API URL')); ?></label>
-		<input type="text" id="df-sa-url" placeholder="http://localhost">
-		<label for="df-sa-user"><?php p($l->t('Service account username')); ?></label>
-		<input type="text" id="df-sa-user" autocomplete="off">
-		<label for="df-sa-pass"><?php p($l->t('App password')); ?></label>
-		<input type="password" id="df-sa-pass" autocomplete="new-password">
-	</div>
-	<div class="df-sa-actions">
-		<button id="df-sa-save" class="primary"><?php p($l->t('Save')); ?></button>
-		<button id="df-sa-test"><?php p($l->t('Test connection')); ?></button>
-		<button id="df-sa-clear"><?php p($l->t('Remove')); ?></button>
-		<span id="df-sa-status" class="df-sa-status"></span>
-	</div>
+	<div id="df-sa-list" class="df-sa-list"></div>
+	<button id="df-sa-add"><?php p($l->t('Add another account')); ?></button>
 	<p class="settings-hint">
-		<?php p($l->t('Create the app password under that account’s Settings → Security. The Internal API URL is this server’s own address as seen from itself — often http://localhost. Use “Test connection” to confirm.')); ?>
+		<?php p($l->t('Create the app password under that account’s Settings → Security. The Internal API URL is this server’s own address as seen from itself — often http://localhost. Use “Test” to confirm. Add more accounts to provision under different identities — an automation can then pick which account to use.')); ?>
 	</p>
 </div>
 
@@ -108,6 +96,10 @@ $example = "curl -u \"USER:APP_PASSWORD\" \\\n"
 #dataforms-service-account .df-sa-status { margin-left: 8px; font-weight: 600; }
 #dataforms-service-account .df-sa-status[data-kind="ok"] { color: var(--color-success, #2d7d33); }
 #dataforms-service-account .df-sa-status[data-kind="err"] { color: var(--color-error, #c0392b); }
+#dataforms-service-account .df-sa-list { display: flex; flex-direction: column; gap: 14px; margin: 10px 0; }
+#dataforms-service-account .df-sa-account { border: 1px solid var(--color-border); border-radius: var(--border-radius-large, 8px); padding: 12px 14px; }
+#dataforms-service-account .df-sa-row-title { font-weight: 600; margin-bottom: 6px; }
+#dataforms-service-account #df-sa-add { margin-top: 4px; }
 
 #dataforms-automation .df-auto-actions { display: flex; flex-direction: column; gap: 6px; margin: 8px 0 4px; }
 #dataforms-automation .df-auto-action { display: flex; align-items: center; gap: 8px; }

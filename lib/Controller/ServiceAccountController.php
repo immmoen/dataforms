@@ -7,17 +7,19 @@ declare(strict_types=1);
 namespace OCA\Dataforms\Controller;
 
 use OCA\Dataforms\AppInfo\Application;
+use OCA\Dataforms\Exception\ValidationException;
 use OCA\Dataforms\Service\ServiceAccountService;
 use OCA\Dataforms\Workflow\NextcloudApiClient;
+use OCP\AppFramework\Http;
 use OCP\AppFramework\Http\DataResponse;
 use OCP\AppFramework\OCSController;
 use OCP\IRequest;
 
 /**
- * Admin-only management of the cross-app service account (used by the Talk/Deck
- * provisioning actions). Methods carry NO #[NoAdminRequired], so the framework
- * requires an admin; the OCS-APIRequest header provides CSRF protection. The
- * stored password is never returned.
+ * Admin-only management of the cross-app service accounts (the default one plus
+ * any named extras) used by the Talk/Deck provisioning actions. Methods carry NO
+ * #[NoAdminRequired], so the framework requires an admin; the OCS-APIRequest
+ * header provides CSRF protection. Stored passwords are never returned.
  */
 class ServiceAccountController extends OCSController {
 
@@ -29,27 +31,37 @@ class ServiceAccountController extends OCSController {
 		parent::__construct(Application::APP_ID, $request);
 	}
 
-	public function status(): DataResponse {
-		$cred = $this->account->getCredentials();
-		return new DataResponse([
-			'configured' => $this->account->isConfigured(),
-			'internalUrl' => $this->account->getInternalUrl(),
-			'username' => $cred['username'] ?? '',
-			'hasPassword' => $cred !== null,
-		]);
+	/** All accounts (default + extras), without passwords. */
+	public function index(): DataResponse {
+		return new DataResponse(['accounts' => $this->account->adminList()]);
 	}
 
-	public function save(string $internalUrl = '', string $username = '', string $password = ''): DataResponse {
-		$this->account->save($internalUrl, $username, $password);
-		return new DataResponse(['configured' => $this->account->isConfigured()]);
+	/**
+	 * Create/update an account. id 'default' updates the default account; any other
+	 * id updates that extra; an empty id creates a new extra. A blank password keeps
+	 * the stored secret.
+	 */
+	public function save(string $id = '', string $name = '', string $internalUrl = '', string $username = '', string $password = ''): DataResponse {
+		try {
+			if ($id === ServiceAccountService::DEFAULT_ID) {
+				$this->account->save($internalUrl, $username, $password);
+			} else {
+				$this->account->saveExtra($id, $name, $internalUrl, $username, $password);
+			}
+		} catch (ValidationException $e) {
+			return new DataResponse(['message' => $e->getMessage()], Http::STATUS_BAD_REQUEST);
+		}
+		return $this->index();
 	}
 
-	public function test(): DataResponse {
-		return new DataResponse($this->client->test());
+	/** Connectivity/auth check for a given account. */
+	public function test(string $id = ''): DataResponse {
+		return new DataResponse($this->client->test($id));
 	}
 
-	public function clear(): DataResponse {
-		$this->account->clear();
-		return new DataResponse(['configured' => false]);
+	/** Remove an account (the default is cleared; an extra is deleted). */
+	public function remove(string $id = ''): DataResponse {
+		$this->account->remove($id);
+		return $this->index();
 	}
 }
