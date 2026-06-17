@@ -24,7 +24,7 @@ rsync -a \
   --exclude=/Makefile --exclude=/package.json --exclude=/package-lock.json \
   --exclude=/playwright.config.js --exclude=/psalm.xml --exclude=/stylelint.config.cjs \
   --exclude=/tsconfig.json --exclude=/vite.config.js --exclude=/vitest.config.js \
-  --exclude=/DataForms-User-Manual.docx --exclude='*.map' --exclude='*.cache' --exclude='*.log' \
+  --exclude='*.docx' --exclude='*.map' --exclude='*.cache' --exclude='*.log' \
   ./ /tmp/df_pkg/dataforms/
 
 mkdir -p build

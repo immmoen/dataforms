@@ -19,6 +19,7 @@ exclude = [
     "/node_modules",
     "/src",
     "/tests",
+    "/scripts",
     "/vendor/bin",
     "/.editorconfig",
     "/.eslintrc.cjs",
@@ -38,6 +39,6 @@ exclude = [
     "/tsconfig.json",
     "/vite.config.js",
     "/vitest.config.js",
-    "/DataForms-User-Manual.docx",
+    "*.docx",
     "*.map",
 ]

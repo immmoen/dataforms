@@ -7,6 +7,20 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Repository hygiene (publish prep)
+- Removed the binary `DataForms-User-Manual.docx` from the repo (it was never
+  shipped in the app tarball; the Markdown guides under `docs/` remain the source
+  of truth) and cleared its now-stale references in `REUSE.toml`, `krankerl.toml`,
+  `scripts/package.sh` and the `Makefile`.
+- Added `export-ignore` rules to `.gitattributes` so a `git archive` / GitHub
+  "Download ZIP" can't leak `src/`, `tests/`, or tooling config — a safety net on
+  top of the krankerl / `scripts/package.sh` packaging path.
+- Fixed a packaging bug: the `Makefile`'s broad `--exclude=/*.json` glob silently
+  dropped `openapi.json` from the signed tarball; the excludes are now explicit and
+  consistent with `krankerl.toml` (so the API spec and `docs/` ship).
+- Broadened `.gitignore` to cover coverage/Playwright/Vitest reports, IDE folders
+  and `*.tsbuildinfo`. No tracked source, tests or docs were removed.
+
 ## [0.39.2] - Post-release audit follow-ups
 
 A six-lens audit (scalability, future-proofing, correctness, security, upgrade

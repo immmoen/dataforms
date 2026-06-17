@@ -14,12 +14,6 @@ SPDX-FileCopyrightText = "2026 The Dataforms contributors"
 SPDX-License-Identifier = "AGPL-3.0-or-later"
 
 [[annotations]]
-path = "DataForms-User-Manual.docx"
-precedence = "aggregate"
-SPDX-FileCopyrightText = "2026 The Dataforms contributors"
-SPDX-License-Identifier = "AGPL-3.0-or-later"
-
-[[annotations]]
 path = "docs/user-guide/img/**"
 precedence = "aggregate"
 SPDX-FileCopyrightText = "2026 The Dataforms contributors"

@@ -11,3 +11,12 @@ build_out.log
 .phpunit.result.cache
 tests/.phpunit.result.cache
 .DS_Store
+# Test / coverage reports
+/coverage/
+/.nyc_output/
+/playwright-report/
+/test-results/
+*.tsbuildinfo
+# Editor / IDE
+/.idea/
+/.vscode/
