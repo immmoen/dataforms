@@ -7,6 +7,18 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.39.1] - Fix the folder Browse button
+
+### Fixed
+- The **Browse** button crashed (and closed the automation dialog) because the
+  `@nextcloud/dialogs` FilePicker component fails to mount inside our Vue 3 dialog
+  (`Cannot read properties of undefined (reading '_c')`). Switched to Nextcloud's
+  built-in global file picker (`OC.dialogs.filepicker`), which is framework-agnostic
+  and works correctly. This also drops the heavy FilePicker bundle.
+- The picker opens as its own dialog at the same stacking level as the builder
+  dialog, so it appeared *behind* it; the newly-opened picker is now lifted above
+  the builder so it's actually usable.
+
 ## [0.39.0] - Browse to pick the folder location
 
 ### Added

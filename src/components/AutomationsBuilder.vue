@@ -318,7 +318,7 @@
 
 <script>
 import { translate as t, translatePlural as n } from '@nextcloud/l10n'
-import { showError, getFilePickerBuilder, FilePickerType } from '@nextcloud/dialogs'
+import { showError } from '@nextcloud/dialogs'
 
 import NcActions from '@nextcloud/vue/components/NcActions'
 import NcActionButton from '@nextcloud/vue/components/NcActionButton'
@@ -536,22 +536,45 @@ export default {
 			}
 		},
 		// Browse Nextcloud Files and put the chosen folder's path into draft[field],
-		// instead of typing the location by hand.
-		async pickFolder(field) {
-			try {
-				const picker = getFilePickerBuilder(t('dataforms', 'Choose a folder'))
-					.setMultiSelect(false)
-					.setMimeTypeFilter(['httpd/unix-directory'])
-					.allowDirectories(true)
-					.setType(FilePickerType.Choose)
-					.build()
-				const path = await picker.pick()
-				if (typeof path === 'string') {
-					this.draft[field] = path
-				}
-			} catch (e) {
-				// Picker cancelled — leave the field unchanged.
+		// instead of typing the location by hand. Uses Nextcloud's built-in global
+		// file picker (OC.dialogs) — the @nextcloud/dialogs FilePicker component
+		// crashes when mounted inside this dialog (a Vue-runtime conflict).
+		pickFolder(field) {
+			const oc = window.OC
+			if (!oc || !oc.dialogs || typeof oc.dialogs.filepicker !== 'function') {
+				showError(t('dataforms', 'The folder picker is unavailable — type the path instead.'))
+				return
 			}
+			// The picker is itself a dialog at the same z-index as this builder
+			// dialog, so it can render *behind* it. Note the dialogs already open,
+			// then lift the newly-mounted picker above this one.
+			const before = new Set(document.querySelectorAll('.dialog__modal'))
+			oc.dialogs.filepicker(
+				t('dataforms', 'Choose a folder'),
+				(path) => {
+					if (typeof path === 'string') {
+						this.draft[field] = path
+					}
+				},
+				false, // single select
+				'httpd/unix-directory', // folders only
+				true, // modal
+				oc.dialogs.FILEPICKER_TYPE_CHOOSE,
+			)
+			let tries = 0
+			const lift = () => {
+				let lifted = false
+				document.querySelectorAll('.dialog__modal').forEach((el) => {
+					if (!before.has(el)) {
+						el.style.zIndex = '11000'
+						lifted = true
+					}
+				})
+				if (!lifted && tries++ < 20) {
+					window.setTimeout(lift, 50)
+				}
+			}
+			window.setTimeout(lift, 0)
 		},
 		openEdit(a) {
 			this.editing = a
