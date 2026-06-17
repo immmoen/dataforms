@@ -39,7 +39,10 @@ action    : notify | email | set_field | provision_folders
 These are the "guided" actions that let DataForms drive intake → workspace setup
 *without* an external engine (Windmill/n8n) or even Nextcloud Flow — each built on
 a **public** Nextcloud API (no fragile per-app coupling), each running as the
-record **owner**, deferred, and idempotent.
+record **owner** and idempotent. The *local* ones (`provision_folders`,
+`apply_template`, `add_calendar_event`) run **inline** as of 0.38.1 (see
+"Execution model"); the *outbound* ones (`create_talk_room`, `create_deck_board`)
+remain **deferred**.
 
 **`provision_folders`** creates a folder tree in the owner's Files from
 `{machineName}` templates (e.g. `Clients/{client_name}/Contracts`). Every path
@@ -75,29 +78,38 @@ A "stage" is just a single-select `Field` (e.g. Case Status). A later addition
 is a **transition map** (which stage → which, and who may move it) stored in the
 field config, enforced server-side — still no new table, no new primitive.
 
-## Execution model (0.26 — hardened)
+## Execution model (0.38.1 — inline provisioning)
 
 Actions are split by cost so a slow or hostile endpoint can never block a record
-write or exhaust the PHP worker pool:
+write or exhaust the PHP worker pool. Each action declares its lane via
+`IAction::isDeferred()`:
 
-- **Inline actions** (`notify`, `set_field`) are cheap, internal and loop-safe.
-  They run **synchronously** in `AutomationListener` — but only *after* the
-  record's writes have committed (events are dispatched post-commit), so they
-  never observe a half-written or rolled-back row.
-- **Deferred actions** (`email`, `webhook`, `provision_folders`,
-  `add_calendar_event`) have slow or external side effects (SMTP, outbound HTTP,
-  filesystem I/O, calendar writes). The listener does
-  **not** run them; it enqueues a single
+- **Inline actions** (`notify`, `set_field`, `provision_folders`,
+  `apply_template`, `add_calendar_event`) are run **synchronously** in
+  `AutomationListener` — but only *after* the record's writes have committed
+  (events are dispatched post-commit), so they never observe a half-written or
+  rolled-back row. The local provisioning actions moved here in **0.38.1**: they
+  are bounded (≤ `maxFolders`/`maxCreated`/`maxTemplateFiles` per fire) local
+  filesystem/calendar I/O on the owner's account, fast enough to run on the
+  submit thread, and — crucially — they **fire reliably even on instances
+  without working cron**, which was the main pain point when they were deferred.
+- **Deferred actions** (`email`, `webhook`, `create_talk_room`,
+  `create_deck_board`) have slow or external side effects (SMTP, outbound HTTP,
+  cross-app API calls). The listener does **not** run them; it enqueues a single
   `OCA\Dataforms\BackgroundJob\RunAutomationsJob` (an `OCP\BackgroundJob`
   `QueuedJob`). The job re-reads the register's currently-enabled automations
   against the captured value snapshot and runs only the deferred ones — picking
   up any enable/disable change made between the write and the job firing.
-  Each action declares its lane via `IAction::isDeferred()`.
 
-**Operational requirement:** because email/webhook delivery happens in the
-background queue, the instance must run **system cron** (the recommended
+**Operational requirement:** because email/webhook/Talk/Deck delivery happens in
+the background queue, the instance must run **system cron** (the recommended
 Nextcloud setup) for timely delivery. With AJAX cron, delivery happens on the
-next page load; with no cron, deferred actions never run.
+next page load; with no cron, the *deferred* actions never run (the inline
+provisioning actions are unaffected).
+
+Both lanes record each run in the activity log (`df_automation_log`): `ok` on
+success, `error` (with the message) on failure — including a Talk/Deck run whose
+service account has since been removed.
 
 **Atomicity:** record create/update/delete wrap their multi-table writes
 (`df_records` + the value/file/ref tables + history) in a single DB transaction;

@@ -185,7 +185,7 @@
 				<template v-else-if="draft.actionType === 'provision_folders'">
 					<label class="block-label">{{ t('dataforms', 'Base folder') }}</label>
 					<div class="path-row">
-						<NcTextField class="path-input" v-model="draft.basePath" :placeholder="t('dataforms', 'Files root — or browse / type a folder')" />
+						<NcTextField v-model="draft.basePath" class="path-input" :placeholder="t('dataforms', 'Files root — or browse / type a folder')" />
 						<NcButton @click="pickFolder('basePath')">
 							<template #icon>
 								<FolderIcon :size="20" />
@@ -204,7 +204,7 @@
 				<template v-else-if="draft.actionType === 'apply_template'">
 					<label class="block-label">{{ t('dataforms', 'Template folder') }}</label>
 					<div class="path-row">
-						<NcTextField class="path-input" v-model="draft.templateSource" :placeholder="t('dataforms', 'Browse or type, e.g. Templates/Meeting')" />
+						<NcTextField v-model="draft.templateSource" class="path-input" :placeholder="t('dataforms', 'Browse or type, e.g. Templates/Meeting')" />
 						<NcButton @click="pickFolder('templateSource')">
 							<template #icon>
 								<FolderIcon :size="20" />
@@ -214,7 +214,7 @@
 					</div>
 					<label class="block-label">{{ t('dataforms', 'Copy into') }}</label>
 					<div class="path-row">
-						<NcTextField class="path-input" v-model="draft.templateDest" :placeholder="t('dataforms', 'e.g. Clients/{client}')" />
+						<NcTextField v-model="draft.templateDest" class="path-input" :placeholder="t('dataforms', 'e.g. Clients/{client}')" />
 						<NcButton @click="pickFolder('templateDest')">
 							<template #icon>
 								<FolderIcon :size="20" />
@@ -480,7 +480,7 @@ export default {
 		registerId() { this.load() },
 	},
 	mounted() { this.load() },
-	beforeUnmount() { clearTimeout(this.searchTimer) },
+	beforeUnmount() { clearTimeout(this.searchTimer); clearTimeout(this.liftTimer) },
 	methods: {
 		t,
 		n,
@@ -571,10 +571,10 @@ export default {
 					}
 				})
 				if (!lifted && tries++ < 20) {
-					window.setTimeout(lift, 50)
+					this.liftTimer = window.setTimeout(lift, 50)
 				}
 			}
-			window.setTimeout(lift, 0)
+			this.liftTimer = window.setTimeout(lift, 0)
 		},
 		openEdit(a) {
 			this.editing = a

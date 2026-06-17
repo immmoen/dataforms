@@ -111,7 +111,10 @@ class CreateTalkRoomActionTest extends TestCase {
 		$this->assertSame('users', $participantCalls[0]['body']['source']);
 	}
 
-	public function testDoesNothingWhenServiceAccountUnconfigured(): void {
+	public function testThrowsWhenServiceAccountUnconfigured(): void {
+		// An automation that expects to create a room but whose service account is
+		// gone must surface as a failed run (recorded as 'error' in the activity
+		// log), not a misleading silent "OK". It still makes no outbound call.
 		$client = $this->createMock(NextcloudApiClient::class);
 		$client->method('isConfigured')->willReturn(false);
 		$client->expects($this->never())->method('request');
@@ -127,6 +130,7 @@ class CreateTalkRoomActionTest extends TestCase {
 			$this->settings(),
 			$this->createMock(LoggerInterface::class),
 		);
+		$this->expectException(\RuntimeException::class);
 		$action->run($this->context());
 	}
 }

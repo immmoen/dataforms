@@ -7,6 +7,40 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.39.2] - Post-release audit follow-ups
+
+A six-lens audit (scalability, future-proofing, correctness, security, upgrade
+integrity, maintainability) found no blockers — the data layer is engineered for
+the 100k-record target and the security delta is clean. These are the agent-fixable
+follow-ups; the rest (an NC 33 release, a file-picker migration off the legacy
+global) are tracked as roadmap items.
+
+### Fixed
+- **Honest activity log for Talk/Deck.** When a *Create Talk room* / *Create Deck
+  board* automation runs but its service account has since been removed, the run is
+  now recorded as a **failure** (with a clear message) instead of a misleading
+  "OK". Previously the action returned silently and the activity log showed success
+  although nothing was created.
+- **Folder-picker timer leak.** The z-index lift used to bring the folder picker in
+  front of the builder polled with `setTimeout` and was never cancelled; the timer
+  is now cleared when the builder closes.
+
+### Changed
+- Cleared the auto-fixable ESLint attribute-order warnings in the automations
+  builder.
+
+### Documentation
+- Corrected the `ProvisionFoldersAction` docstring and `docs/WORKFLOW.md`: the
+  folder/template/calendar provisioning actions run **inline** (since 0.38.1), not
+  deferred. `WORKFLOW.md` now documents the inline-vs-deferred split and notes both
+  lanes write to the activity log.
+
+### Tests
+- Added `AutomationListenerTest` (inline vs deferred routing, per-action error
+  isolation, condition-skip, unregistered-action-skip, single-job enqueue) and
+  `RecordServiceAutoValuesTest` (auto-field enrichment + sequence/row-id fallback),
+  covering the 0.38.1+ automation hot path. 82 unit tests pass.
+
 ## [0.39.1] - Fix the folder Browse button
 
 ### Fixed

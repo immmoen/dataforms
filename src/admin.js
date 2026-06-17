@@ -25,6 +25,10 @@ const ACTION_LABELS = () => ({
 	webhook: t('dataforms', 'Call a webhook'),
 })
 
+/**
+ * Wire up the admin "service accounts" panel: list, add, test and remove the
+ * cross-app service accounts that the Talk/Deck provisioning actions use.
+ */
 function initServiceAccount() {
 	const root = document.getElementById('dataforms-service-account')
 	if (!root) {
@@ -166,6 +170,10 @@ function initServiceAccount() {
 		.catch(() => { list.textContent = t('dataforms', 'Could not load service accounts') })
 }
 
+/**
+ * Wire up the admin "automations" panel: enable/disable each action type and
+ * edit the workflow limits (max folders, timeouts, default Deck columns, …).
+ */
 function initAutomationConfig() {
 	const root = document.getElementById('dataforms-automation')
 	if (!root) {

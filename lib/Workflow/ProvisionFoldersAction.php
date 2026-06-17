@@ -33,7 +33,9 @@ use Psr\Log\LoggerInterface;
  *   ≤ MAX_CREATED folders per fire.
  * - **Idempotent:** mkdir -p; re-firing reuses the existing tree.
  *
- * It is a deferred action (filesystem I/O) and runs off the request thread.
+ * It is an inline action (bounded, fast local filesystem I/O on the record
+ * owner's account) and runs synchronously during the automation event — after the
+ * record's writes have committed, so it never observes a half-written row.
  *
  * action_config: { basePath?: string, folders: string[] }.
  */

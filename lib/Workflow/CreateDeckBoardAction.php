@@ -44,7 +44,10 @@ class CreateDeckBoardAction implements IAction {
 	public function run(ActionContext $context): void {
 		$accountId = (string)($context->config['serviceAccount'] ?? '');
 		if (!$this->client->isConfigured($accountId)) {
-			return;
+			// The automation expects to create a board but its service account is
+			// gone (removed, or the selected named account no longer exists).
+			// Surface it as a failed run rather than logging a misleading "OK".
+			throw new \RuntimeException('No service account is configured for the "create_deck_board" action');
 		}
 		$values = $this->enrich($context);
 		$title = trim($this->interpolator->interpolate(trim((string)($context->config['title'] ?? '')), $values));

@@ -50,7 +50,10 @@ class CreateTalkRoomAction implements IAction {
 	public function run(ActionContext $context): void {
 		$accountId = (string)($context->config['serviceAccount'] ?? '');
 		if (!$this->client->isConfigured($accountId)) {
-			return;
+			// The automation expects to create a room but its service account is
+			// gone (removed, or the selected named account no longer exists).
+			// Surface it as a failed run rather than logging a misleading "OK".
+			throw new \RuntimeException('No service account is configured for the "create_talk_room" action');
 		}
 		$values = $this->enrich($context);
 		$roomName = trim($this->interpolator->interpolate(trim((string)($context->config['roomName'] ?? '')), $values));
