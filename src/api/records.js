@@ -1,15 +1,12 @@
 /**
  * SPDX-License-Identifier: AGPL-3.0-or-later
  *
- * Client for the records OCS API, plus the CSV export URL helper.
+ * Client for the records OCS API, plus the local-upload and CSV export URL
+ * helpers (which use the normal app route, not OCS).
  */
 import axios from '@nextcloud/axios'
-import { generateOcsUrl, generateUrl } from '@nextcloud/router'
-
-// Build the path literally — a {placeholder} would percent-encode slashes.
-const url = (path) => generateOcsUrl('apps/dataforms/api/v1/' + path)
-const config = { timeout: 30000, headers: { 'OCS-APIRequest': 'true', Accept: 'application/json' } }
-const unwrap = (response) => response.data.ocs.data
+import { generateUrl } from '@nextcloud/router'
+import { ocsGet, ocsPost, ocsPut, ocsDelete } from './ocs.js'
 
 /**
  * @param {number} registerId register id
@@ -17,7 +14,7 @@ const unwrap = (response) => response.data.ocs.data
  * @return {Promise<{records: object[], total: number, fields: object[]}>}
  */
 export async function listRecords(registerId, params = {}) {
-	return unwrap(await axios.get(url(`registers/${registerId}/records`), { ...config, params }))
+	return ocsGet(`registers/${registerId}/records`, params)
 }
 
 /**
@@ -26,7 +23,7 @@ export async function listRecords(registerId, params = {}) {
  * @return {Promise<object>} the created record
  */
 export async function createRecord(registerId, values) {
-	return unwrap(await axios.post(url(`registers/${registerId}/records`), { values }, config))
+	return ocsPost(`registers/${registerId}/records`, { values })
 }
 
 /**
@@ -35,14 +32,14 @@ export async function createRecord(registerId, values) {
  * @return {Promise<object>} the updated record
  */
 export async function updateRecord(id, values) {
-	return unwrap(await axios.put(url(`records/${id}`), { values }, config))
+	return ocsPut(`records/${id}`, { values })
 }
 
 /**
  * @param {number} id record id
  */
 export async function deleteRecord(id) {
-	await axios.delete(url(`records/${id}`), config)
+	await ocsDelete(`records/${id}`)
 }
 
 /**
@@ -52,7 +49,7 @@ export async function deleteRecord(id) {
  * @return {Promise<{action:string,user:string,summary:string,detail:object,created:number}[]>}
  */
 export async function listHistory(id) {
-	return unwrap(await axios.get(url(`records/${id}/history`), config))
+	return ocsGet(`records/${id}/history`)
 }
 
 /**
@@ -63,7 +60,7 @@ export async function listHistory(id) {
  * @return {Promise<{id:number,label:string}[]>}
  */
 export async function listOptions(registerId, params = {}) {
-	return unwrap(await axios.get(url(`registers/${registerId}/options`), { ...config, params }))
+	return ocsGet(`registers/${registerId}/options`, params)
 }
 
 /**
@@ -73,7 +70,7 @@ export async function listOptions(registerId, params = {}) {
  * @return {Promise<{id:number,name:string}>}
  */
 export async function resolveFile(path) {
-	return unwrap(await axios.get(url('files/resolve'), { ...config, params: { path } }))
+	return ocsGet('files/resolve', { path })
 }
 
 /**
@@ -98,7 +95,7 @@ export async function uploadLocalFile(file) {
  * @return {Promise<{imported:number,failed:number,errors:string[]}>}
  */
 export async function importCsv(registerId, csv) {
-	return unwrap(await axios.post(url(`registers/${registerId}/import`), { csv }, config))
+	return ocsPost(`registers/${registerId}/import`, { csv })
 }
 
 /**

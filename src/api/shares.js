@@ -3,13 +3,7 @@
  *
  * Client for the register shares OCS API.
  */
-import axios from '@nextcloud/axios'
-import { generateOcsUrl } from '@nextcloud/router'
-
-// Build the path literally — a {placeholder} would percent-encode slashes.
-const url = (path) => generateOcsUrl('apps/dataforms/api/v1/' + path)
-const config = { timeout: 30000, headers: { 'OCS-APIRequest': 'true', Accept: 'application/json' } }
-const unwrap = (response) => response.data.ocs.data
+import { ocsGet, ocsPost, ocsPut, ocsDelete } from './ocs.js'
 
 /** Permission bits (mirror lib/Db/Share.php). */
 export const PERM_READ = 1
@@ -46,7 +40,7 @@ export function permissionsOf(roleId) {
  * @return {Promise<object[]>} shares (first entry is the owner)
  */
 export async function listShares(registerId) {
-	return unwrap(await axios.get(url(`registers/${registerId}/shares`), config))
+	return ocsGet(`registers/${registerId}/shares`)
 }
 
 /**
@@ -57,7 +51,7 @@ export async function listShares(registerId) {
  * @return {Promise<{id:string,label:string,sub:string,type:string}[]>}
  */
 export async function searchSharees(registerId, search) {
-	return unwrap(await axios.get(url(`registers/${registerId}/sharees`), { ...config, params: { search } }))
+	return ocsGet(`registers/${registerId}/sharees`, { search })
 }
 
 /**
@@ -66,7 +60,7 @@ export async function searchSharees(registerId, search) {
  * @return {Promise<object>} the created/updated share
  */
 export async function addShare(registerId, data) {
-	return unwrap(await axios.post(url(`registers/${registerId}/shares`), data, config))
+	return ocsPost(`registers/${registerId}/shares`, data)
 }
 
 /**
@@ -75,12 +69,12 @@ export async function addShare(registerId, data) {
  * @return {Promise<object>} the updated share
  */
 export async function updateShare(id, permissions) {
-	return unwrap(await axios.put(url(`shares/${id}`), { permissions }, config))
+	return ocsPut(`shares/${id}`, { permissions })
 }
 
 /**
  * @param {number} id share id
  */
 export async function removeShare(id) {
-	await axios.delete(url(`shares/${id}`), config)
+	await ocsDelete(`shares/${id}`)
 }

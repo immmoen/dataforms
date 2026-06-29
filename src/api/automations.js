@@ -3,12 +3,7 @@
  *
  * Client for the workflow automations OCS API.
  */
-import axios from '@nextcloud/axios'
-import { generateOcsUrl } from '@nextcloud/router'
-
-const url = (path) => generateOcsUrl('apps/dataforms/api/v1/' + path)
-const config = { timeout: 30000, headers: { 'OCS-APIRequest': 'true', Accept: 'application/json' } }
-const unwrap = (r) => r.data.ocs.data
+import { ocsGet, ocsPost, ocsPut, ocsDelete } from './ocs.js'
 
 export const TRIGGERS = [
 	{ id: 'create', label: 'When a record is created' },
@@ -33,7 +28,7 @@ export const ACTION_TYPES = [
  * hidden until the service account is set up). Used to filter ACTION_TYPES.
  */
 export async function getAvailableActions() {
-	const d = unwrap(await axios.get(url('automation-actions'), config))
+	const d = await ocsGet('automation-actions')
 	return { actions: d.actions ?? [], serviceAccounts: d.serviceAccounts ?? [] }
 }
 
@@ -42,7 +37,7 @@ export async function getAvailableActions() {
  * @param registerId
  */
 export async function listAutomations(registerId) {
-	return unwrap(await axios.get(url(`registers/${registerId}/automations`), config))
+	return ocsGet(`registers/${registerId}/automations`)
 }
 
 /**
@@ -51,7 +46,7 @@ export async function listAutomations(registerId) {
  * @param registerId
  */
 export async function getAutomationLog(registerId) {
-	return unwrap(await axios.get(url(`registers/${registerId}/automation-log`), config))
+	return ocsGet(`registers/${registerId}/automation-log`)
 }
 
 /**
@@ -60,7 +55,7 @@ export async function getAutomationLog(registerId) {
  * @param data
  */
 export async function createAutomation(registerId, data) {
-	return unwrap(await axios.post(url(`registers/${registerId}/automations`), data, config))
+	return ocsPost(`registers/${registerId}/automations`, data)
 }
 
 /**
@@ -69,7 +64,7 @@ export async function createAutomation(registerId, data) {
  * @param changes
  */
 export async function updateAutomation(id, changes) {
-	return unwrap(await axios.put(url(`automations/${id}`), { changes }, config))
+	return ocsPut(`automations/${id}`, { changes })
 }
 
 /**
@@ -77,5 +72,5 @@ export async function updateAutomation(id, changes) {
  * @param id
  */
 export async function deleteAutomation(id) {
-	await axios.delete(url(`automations/${id}`), config)
+	await ocsDelete(`automations/${id}`)
 }

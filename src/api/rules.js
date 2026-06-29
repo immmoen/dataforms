@@ -3,20 +3,14 @@
  *
  * Client for the rules OCS API.
  */
-import axios from '@nextcloud/axios'
-import { generateOcsUrl } from '@nextcloud/router'
-
-// Build the path literally — a {placeholder} would percent-encode slashes.
-const url = (path) => generateOcsUrl('apps/dataforms/api/v1/' + path)
-const config = { timeout: 30000, headers: { 'OCS-APIRequest': 'true', Accept: 'application/json' } }
-const unwrap = (response) => response.data.ocs.data
+import { ocsGet, ocsPost, ocsPut, ocsDelete } from './ocs.js'
 
 /**
  * @param {number} registerId register id
  * @return {Promise<object[]>} rules for the register
  */
 export async function listRules(registerId) {
-	return unwrap(await axios.get(url(`registers/${registerId}/rules`), config))
+	return ocsGet(`registers/${registerId}/rules`)
 }
 
 /**
@@ -25,7 +19,7 @@ export async function listRules(registerId) {
  * @return {Promise<object>} the created rule
  */
 export async function createRule(registerId, data) {
-	return unwrap(await axios.post(url(`registers/${registerId}/rules`), data, config))
+	return ocsPost(`registers/${registerId}/rules`, data)
 }
 
 /**
@@ -34,14 +28,14 @@ export async function createRule(registerId, data) {
  * @return {Promise<object>} the updated rule
  */
 export async function updateRule(id, data) {
-	return unwrap(await axios.put(url(`rules/${id}`), data, config))
+	return ocsPut(`rules/${id}`, data)
 }
 
 /**
  * @param {number} id rule id
  */
 export async function deleteRule(id) {
-	await axios.delete(url(`rules/${id}`), config)
+	await ocsDelete(`rules/${id}`)
 }
 
 /** Available rule effects, for the rule builder. */
