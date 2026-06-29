@@ -43,7 +43,9 @@ test('@smoke create a register, add a field, add a record, and see it', async ({
 	await page.getByRole('button', { name: /Add field/i }).click()
 	await page.getByLabel(/Label/i).first().fill('Title')
 	await page.getByRole('button', { name: /Add field/i }).last().click()
-	await expect(page.getByText('Title')).toBeVisible()
+	// Exact match: the field's machine name <code>title</code> also contains the
+	// substring, so a loose getByText('Title') hits two elements (strict-mode).
+	await expect(page.getByText('Title', { exact: true })).toBeVisible()
 
 	// Back to Records, add a record
 	await page.getByRole('button', { name: /^Records$/ }).click()
