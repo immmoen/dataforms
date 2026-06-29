@@ -7,9 +7,6 @@ declare(strict_types=1);
 namespace OCA\Dataforms\Controller;
 
 use OCA\Dataforms\AppInfo\Application;
-use OCA\Dataforms\Exception\ForbiddenException;
-use OCA\Dataforms\Exception\NotFoundException;
-use OCA\Dataforms\Exception\ValidationException;
 use OCA\Dataforms\Service\FormService;
 use OCP\AppFramework\Http;
 use OCP\AppFramework\Http\Attribute\NoAdminRequired;
@@ -19,6 +16,8 @@ use OCP\IRequest;
 use OCP\IUserSession;
 
 class FormController extends OCSController {
+	use HandlesApiExceptions;
+
 	public function __construct(
 		IRequest $request,
 		private FormService $service,
@@ -34,11 +33,7 @@ class FormController extends OCSController {
 
 	#[NoAdminRequired]
 	public function index(int $registerId): DataResponse {
-		try {
-			return new DataResponse($this->service->listForRegister($this->userId(), $registerId));
-		} catch (NotFoundException $e) {
-			return new DataResponse(['message' => $e->getMessage()], Http::STATUS_NOT_FOUND);
-		}
+		return $this->handle(fn () => $this->service->listForRegister($this->userId(), $registerId));
 	}
 
 	/**
@@ -46,15 +41,7 @@ class FormController extends OCSController {
 	 */
 	#[NoAdminRequired]
 	public function create(int $registerId, string $title = '', array $definition = []): DataResponse {
-		try {
-			return new DataResponse($this->service->create($this->userId(), $registerId, $title, $definition), Http::STATUS_CREATED);
-		} catch (ValidationException $e) {
-			return new DataResponse(['message' => $e->getMessage()], Http::STATUS_BAD_REQUEST);
-		} catch (NotFoundException $e) {
-			return new DataResponse(['message' => $e->getMessage()], Http::STATUS_NOT_FOUND);
-		} catch (ForbiddenException $e) {
-			return new DataResponse(['message' => $e->getMessage()], Http::STATUS_FORBIDDEN);
-		}
+		return $this->handle(fn () => $this->service->create($this->userId(), $registerId, $title, $definition), Http::STATUS_CREATED);
 	}
 
 	/**
@@ -69,24 +56,14 @@ class FormController extends OCSController {
 		if ($definition !== null) {
 			$changes['definition'] = $definition;
 		}
-		try {
-			return new DataResponse($this->service->update($this->userId(), $id, $changes));
-		} catch (NotFoundException $e) {
-			return new DataResponse(['message' => $e->getMessage()], Http::STATUS_NOT_FOUND);
-		} catch (ForbiddenException $e) {
-			return new DataResponse(['message' => $e->getMessage()], Http::STATUS_FORBIDDEN);
-		}
+		return $this->handle(fn () => $this->service->update($this->userId(), $id, $changes));
 	}
 
 	#[NoAdminRequired]
 	public function destroy(int $id): DataResponse {
-		try {
+		return $this->handle(function () use ($id): array {
 			$this->service->delete($this->userId(), $id);
-			return new DataResponse([]);
-		} catch (NotFoundException $e) {
-			return new DataResponse(['message' => $e->getMessage()], Http::STATUS_NOT_FOUND);
-		} catch (ForbiddenException $e) {
-			return new DataResponse(['message' => $e->getMessage()], Http::STATUS_FORBIDDEN);
-		}
+			return [];
+		});
 	}
 }

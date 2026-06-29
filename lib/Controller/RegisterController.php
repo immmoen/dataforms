@@ -7,8 +7,6 @@ declare(strict_types=1);
 namespace OCA\Dataforms\Controller;
 
 use OCA\Dataforms\AppInfo\Application;
-use OCA\Dataforms\Exception\ForbiddenException;
-use OCA\Dataforms\Exception\NotFoundException;
 use OCA\Dataforms\Service\RegisterService;
 use OCP\AppFramework\Http;
 use OCP\AppFramework\Http\Attribute\NoAdminRequired;
@@ -25,6 +23,8 @@ use OCP\IUserSession;
  * decisions to RegisterService — the client never supplies ownership.
  */
 class RegisterController extends OCSController {
+	use HandlesApiExceptions;
+
 	public function __construct(
 		IRequest $request,
 		private RegisterService $service,
@@ -45,11 +45,7 @@ class RegisterController extends OCSController {
 
 	#[NoAdminRequired]
 	public function show(int $id): DataResponse {
-		try {
-			return new DataResponse($this->service->findDecorated($this->userId(), $id));
-		} catch (NotFoundException $e) {
-			return new DataResponse(['message' => $e->getMessage()], Http::STATUS_NOT_FOUND);
-		}
+		return $this->handle(fn () => $this->service->findDecorated($this->userId(), $id));
 	}
 
 	#[NoAdminRequired]
@@ -73,33 +69,19 @@ class RegisterController extends OCSController {
 		if (isset($changes['title']) && trim($changes['title']) === '') {
 			return new DataResponse(['message' => 'Title cannot be empty'], Http::STATUS_BAD_REQUEST);
 		}
-		try {
-			return new DataResponse($this->service->update($this->userId(), $id, $changes));
-		} catch (NotFoundException $e) {
-			return new DataResponse(['message' => $e->getMessage()], Http::STATUS_NOT_FOUND);
-		} catch (ForbiddenException $e) {
-			return new DataResponse(['message' => $e->getMessage()], Http::STATUS_FORBIDDEN);
-		}
+		return $this->handle(fn () => $this->service->update($this->userId(), $id, $changes));
 	}
 
 	#[NoAdminRequired]
 	public function favorite(int $id, bool $favorite = true): DataResponse {
-		try {
-			return new DataResponse($this->service->setFavorite($this->userId(), $id, $favorite));
-		} catch (NotFoundException $e) {
-			return new DataResponse(['message' => $e->getMessage()], Http::STATUS_NOT_FOUND);
-		}
+		return $this->handle(fn () => $this->service->setFavorite($this->userId(), $id, $favorite));
 	}
 
 	#[NoAdminRequired]
 	public function destroy(int $id): DataResponse {
-		try {
+		return $this->handle(function () use ($id): array {
 			$this->service->delete($this->userId(), $id);
-			return new DataResponse([], Http::STATUS_OK);
-		} catch (NotFoundException $e) {
-			return new DataResponse(['message' => $e->getMessage()], Http::STATUS_NOT_FOUND);
-		} catch (ForbiddenException $e) {
-			return new DataResponse(['message' => $e->getMessage()], Http::STATUS_FORBIDDEN);
-		}
+			return [];
+		});
 	}
 }

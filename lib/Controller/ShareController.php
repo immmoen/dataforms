@@ -7,9 +7,6 @@ declare(strict_types=1);
 namespace OCA\Dataforms\Controller;
 
 use OCA\Dataforms\AppInfo\Application;
-use OCA\Dataforms\Exception\ForbiddenException;
-use OCA\Dataforms\Exception\NotFoundException;
-use OCA\Dataforms\Exception\ValidationException;
 use OCA\Dataforms\Service\ShareService;
 use OCP\AppFramework\Http;
 use OCP\AppFramework\Http\Attribute\NoAdminRequired;
@@ -19,6 +16,8 @@ use OCP\IRequest;
 use OCP\IUserSession;
 
 class ShareController extends OCSController {
+	use HandlesApiExceptions;
+
 	public function __construct(
 		IRequest $request,
 		private ShareService $service,
@@ -34,59 +33,29 @@ class ShareController extends OCSController {
 
 	#[NoAdminRequired]
 	public function index(int $registerId): DataResponse {
-		try {
-			return new DataResponse($this->service->listForRegister($this->userId(), $registerId));
-		} catch (NotFoundException $e) {
-			return new DataResponse(['message' => $e->getMessage()], Http::STATUS_NOT_FOUND);
-		} catch (ForbiddenException $e) {
-			return new DataResponse(['message' => $e->getMessage()], Http::STATUS_FORBIDDEN);
-		}
+		return $this->handle(fn () => $this->service->listForRegister($this->userId(), $registerId));
 	}
 
 	#[NoAdminRequired]
 	public function sharees(int $registerId, string $search = ''): DataResponse {
-		try {
-			return new DataResponse($this->service->searchSharees($this->userId(), $registerId, $search));
-		} catch (NotFoundException $e) {
-			return new DataResponse(['message' => $e->getMessage()], Http::STATUS_NOT_FOUND);
-		} catch (ForbiddenException $e) {
-			return new DataResponse(['message' => $e->getMessage()], Http::STATUS_FORBIDDEN);
-		}
+		return $this->handle(fn () => $this->service->searchSharees($this->userId(), $registerId, $search));
 	}
 
 	#[NoAdminRequired]
 	public function create(int $registerId, string $shareType = 'user', string $shareWith = '', int $permissions = 1): DataResponse {
-		try {
-			return new DataResponse($this->service->add($this->userId(), $registerId, $shareType, $shareWith, $permissions), Http::STATUS_CREATED);
-		} catch (ValidationException $e) {
-			return new DataResponse(['message' => $e->getMessage()], Http::STATUS_BAD_REQUEST);
-		} catch (NotFoundException $e) {
-			return new DataResponse(['message' => $e->getMessage()], Http::STATUS_NOT_FOUND);
-		} catch (ForbiddenException $e) {
-			return new DataResponse(['message' => $e->getMessage()], Http::STATUS_FORBIDDEN);
-		}
+		return $this->handle(fn () => $this->service->add($this->userId(), $registerId, $shareType, $shareWith, $permissions), Http::STATUS_CREATED);
 	}
 
 	#[NoAdminRequired]
 	public function update(int $id, int $permissions): DataResponse {
-		try {
-			return new DataResponse($this->service->setPermissions($this->userId(), $id, $permissions));
-		} catch (NotFoundException $e) {
-			return new DataResponse(['message' => $e->getMessage()], Http::STATUS_NOT_FOUND);
-		} catch (ForbiddenException $e) {
-			return new DataResponse(['message' => $e->getMessage()], Http::STATUS_FORBIDDEN);
-		}
+		return $this->handle(fn () => $this->service->setPermissions($this->userId(), $id, $permissions));
 	}
 
 	#[NoAdminRequired]
 	public function destroy(int $id): DataResponse {
-		try {
+		return $this->handle(function () use ($id): array {
 			$this->service->remove($this->userId(), $id);
-			return new DataResponse([]);
-		} catch (NotFoundException $e) {
-			return new DataResponse(['message' => $e->getMessage()], Http::STATUS_NOT_FOUND);
-		} catch (ForbiddenException $e) {
-			return new DataResponse(['message' => $e->getMessage()], Http::STATUS_FORBIDDEN);
-		}
+			return [];
+		});
 	}
 }

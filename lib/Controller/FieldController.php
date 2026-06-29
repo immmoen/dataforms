@@ -7,9 +7,6 @@ declare(strict_types=1);
 namespace OCA\Dataforms\Controller;
 
 use OCA\Dataforms\AppInfo\Application;
-use OCA\Dataforms\Exception\ForbiddenException;
-use OCA\Dataforms\Exception\NotFoundException;
-use OCA\Dataforms\Exception\ValidationException;
 use OCA\Dataforms\Service\FieldService;
 use OCP\AppFramework\Http;
 use OCP\AppFramework\Http\Attribute\NoAdminRequired;
@@ -25,6 +22,8 @@ use OCP\IUserSession;
  * /ocs/v2.php/apps/dataforms/api/v1/fields/{id}.
  */
 class FieldController extends OCSController {
+	use HandlesApiExceptions;
+
 	public function __construct(
 		IRequest $request,
 		private FieldService $service,
@@ -41,13 +40,11 @@ class FieldController extends OCSController {
 
 	#[NoAdminRequired]
 	public function index(int $registerId): DataResponse {
-		try {
+		return $this->handle(function () use ($registerId) {
 			$userId = $this->userId();
 			$this->session->close(); // release the session lock for this read
-			return new DataResponse($this->service->listForRegister($userId, $registerId));
-		} catch (NotFoundException $e) {
-			return new DataResponse(['message' => $e->getMessage()], Http::STATUS_NOT_FOUND);
-		}
+			return $this->service->listForRegister($userId, $registerId);
+		});
 	}
 
 	/**
@@ -55,24 +52,15 @@ class FieldController extends OCSController {
 	 */
 	#[NoAdminRequired]
 	public function create(int $registerId, string $label = '', string $type = '', string $machineName = '', $config = [], bool $mandatory = false, bool $unique = false, ?string $default = null): DataResponse {
-		try {
-			$field = $this->service->create($this->userId(), $registerId, [
-				'label' => $label,
-				'type' => $type,
-				'machineName' => $machineName,
-				'config' => $config,
-				'mandatory' => $mandatory,
-				'unique' => $unique,
-				'default' => $default,
-			]);
-			return new DataResponse($field, Http::STATUS_CREATED);
-		} catch (ValidationException $e) {
-			return new DataResponse(['message' => $e->getMessage()], Http::STATUS_BAD_REQUEST);
-		} catch (NotFoundException $e) {
-			return new DataResponse(['message' => $e->getMessage()], Http::STATUS_NOT_FOUND);
-		} catch (ForbiddenException $e) {
-			return new DataResponse(['message' => $e->getMessage()], Http::STATUS_FORBIDDEN);
-		}
+		return $this->handle(fn () => $this->service->create($this->userId(), $registerId, [
+			'label' => $label,
+			'type' => $type,
+			'machineName' => $machineName,
+			'config' => $config,
+			'mandatory' => $mandatory,
+			'unique' => $unique,
+			'default' => $default,
+		]), Http::STATUS_CREATED);
 	}
 
 	/**
@@ -97,27 +85,15 @@ class FieldController extends OCSController {
 		if ($default !== null) {
 			$changes['default'] = $default;
 		}
-		try {
-			return new DataResponse($this->service->update($this->userId(), $id, $changes));
-		} catch (ValidationException $e) {
-			return new DataResponse(['message' => $e->getMessage()], Http::STATUS_BAD_REQUEST);
-		} catch (NotFoundException $e) {
-			return new DataResponse(['message' => $e->getMessage()], Http::STATUS_NOT_FOUND);
-		} catch (ForbiddenException $e) {
-			return new DataResponse(['message' => $e->getMessage()], Http::STATUS_FORBIDDEN);
-		}
+		return $this->handle(fn () => $this->service->update($this->userId(), $id, $changes));
 	}
 
 	#[NoAdminRequired]
 	public function destroy(int $id): DataResponse {
-		try {
+		return $this->handle(function () use ($id): array {
 			$this->service->delete($this->userId(), $id);
-			return new DataResponse([]);
-		} catch (NotFoundException $e) {
-			return new DataResponse(['message' => $e->getMessage()], Http::STATUS_NOT_FOUND);
-		} catch (ForbiddenException $e) {
-			return new DataResponse(['message' => $e->getMessage()], Http::STATUS_FORBIDDEN);
-		}
+			return [];
+		});
 	}
 
 	/**
@@ -125,12 +101,6 @@ class FieldController extends OCSController {
 	 */
 	#[NoAdminRequired]
 	public function reorder(int $registerId, array $order = []): DataResponse {
-		try {
-			return new DataResponse($this->service->reorder($this->userId(), $registerId, $order));
-		} catch (NotFoundException $e) {
-			return new DataResponse(['message' => $e->getMessage()], Http::STATUS_NOT_FOUND);
-		} catch (ForbiddenException $e) {
-			return new DataResponse(['message' => $e->getMessage()], Http::STATUS_FORBIDDEN);
-		}
+		return $this->handle(fn () => $this->service->reorder($this->userId(), $registerId, $order));
 	}
 }
