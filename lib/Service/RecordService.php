@@ -414,6 +414,8 @@ class RecordService {
 			}
 		}
 		$n = count($changedLabels);
+		// $n === 1 guarantees index 0 exists; psalm cannot narrow count() to the key.
+		/** @psalm-suppress PossiblyUndefinedArrayOffset */
 		$summary = $n === 0
 			? 'Edited record'
 			: ($n === 1 ? 'Changed ' . $changedLabels[0] : 'Changed ' . $n . ' fields');
