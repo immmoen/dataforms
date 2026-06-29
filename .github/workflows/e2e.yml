@@ -60,6 +60,9 @@ jobs:
         run: |
           docker exec -u www-data nextcloud php occ app:enable dataforms
           docker exec -u www-data nextcloud php occ app:list | grep -A2 -i dataforms
+          # The first-run wizard renders a modal overlay that intercepts clicks
+          # on a fresh instance; disable it so the SPA is the only thing on top.
+          docker exec -u www-data nextcloud php occ app:disable firstrunwizard || true
 
       - name: Install the Playwright browser
         run: npm run test:e2e:install
