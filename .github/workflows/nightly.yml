@@ -1,0 +1,72 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+#
+# Slow CI tier (issue #2). The fast PR gate lives in lint.yml; this stage carries
+# the work too slow or too flaky to block every merge:
+#   - the full Playwright e2e suite (the PR gate runs only the @smoke subset),
+#   - the 3-database install + migration matrix (shared with the PR gate today,
+#     and the future home of the cross-engine mapper suite),
+#   - the global coverage ratchet that can only ever go up.
+# It runs on a nightly schedule, on demand, and on every push to main (the
+# ratchet calibrates on merge; the heavy jobs are skipped on plain main pushes).
+name: Nightly
+
+on:
+  schedule:
+    - cron: '17 3 * * *' # 03:17 UTC daily
+  workflow_dispatch:
+  push:
+    branches: [main]
+
+permissions:
+  contents: write # the ratchet pushes the raised baseline back to main
+
+concurrency:
+  group: nightly-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  # Full e2e suite — skipped on plain main pushes (the PR smoke already ran).
+  e2e-full:
+    if: github.event_name != 'push'
+    uses: ./.github/workflows/e2e.yml
+
+  # 3-database matrix — skipped on plain main pushes (the PR gate already ran it).
+  db-matrix:
+    if: github.event_name != 'push'
+    uses: ./.github/workflows/integration.yml
+
+  # Global coverage ratchet — runs on every trigger so merges to main calibrate
+  # and raise the floor promptly.
+  coverage-ratchet:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          coverage: pcov
+          ini-values: pcov.directory=${{ github.workspace }}
+      - run: composer install --no-progress
+      - name: Backend coverage
+        run: composer run test:coverage
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm ci
+      - name: Frontend coverage
+        run: npm run test:coverage
+
+      - name: Coverage ratchet
+        id: ratchet
+        run: bash .github/scripts/coverage-ratchet.sh
+
+      - name: Push the raised baseline (best-effort, main only)
+        if: steps.ratchet.outputs.ratchet_raised == 'true' && github.ref == 'refs/heads/main'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add .github/coverage-baseline.json
+          git commit -m "chore(ci): raise coverage ratchet [skip ci]"
+          git push || echo "::warning::coverage ratchet not pushed (protected branch or missing permissions); the floor still held"

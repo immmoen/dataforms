@@ -1,0 +1,92 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+#
+# Reusable end-to-end job: spin up a real, seeded Nextcloud, install the freshly
+# built SPA, and drive it with Playwright. Called twice:
+#   - by lint.yml as the fast PR-gate "smoke" (grep: '@smoke', one core flow),
+#   - by nightly.yml as the full e2e suite (no grep).
+# A real apache instance is used (not `php -S`) so Nextcloud's pretty URLs
+# (e.g. /login) and front-controller routing work without a custom router.
+name: E2E (reusable)
+
+on:
+  workflow_call:
+    inputs:
+      grep:
+        description: 'Playwright --grep filter (empty = run every e2e test)'
+        type: string
+        default: ''
+
+jobs:
+  e2e:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      # The built js/ + css/ are git-ignored, so the SPA must be built before the
+      # app can load. No composer step: the app has no runtime PHP deps (see
+      # composer.json) and Nextcloud's class loader resolves OCA\Dataforms\ itself.
+      - name: Install JS deps and build the SPA bundle
+        run: |
+          npm ci
+          npm run build
+
+      - name: Start a seeded Nextcloud (sqlite, apache)
+        run: |
+          docker run -d --name nextcloud -p 8080:80 \
+            -e SQLITE_DATABASE=nextcloud \
+            -e NEXTCLOUD_ADMIN_USER=admin \
+            -e NEXTCLOUD_ADMIN_PASSWORD=admin \
+            -e NEXTCLOUD_TRUSTED_DOMAINS="127.0.0.1 localhost" \
+            -v "$PWD":/var/www/html/custom_apps/dataforms \
+            nextcloud:32-apache
+
+      - name: Wait for Nextcloud to finish first-run install
+        run: |
+          for i in $(seq 1 60); do
+            if curl -fsS http://127.0.0.1:8080/status.php 2>/dev/null | grep -q '"installed":true'; then
+              echo "Nextcloud is installed and serving." && exit 0
+            fi
+            sleep 5
+          done
+          echo "::error::Nextcloud did not come up within 5 minutes" >&2
+          docker logs nextcloud --tail 200 || true
+          exit 1
+
+      - name: Enable the Dataforms app (runs all migrations)
+        run: |
+          docker exec -u www-data nextcloud php occ app:enable dataforms
+          docker exec -u www-data nextcloud php occ app:list | grep -A2 -i dataforms
+
+      - name: Install the Playwright browser
+        run: npm run test:e2e:install
+
+      - name: Run Playwright e2e
+        env:
+          DATAFORMS_BASE_URL: http://127.0.0.1:8080
+          DATAFORMS_USER: admin
+          DATAFORMS_PASSWORD: admin
+        run: |
+          if [ -n "${{ inputs.grep }}" ]; then
+            npm run test:e2e -- --grep "${{ inputs.grep }}"
+          else
+            npm run test:e2e
+          fi
+
+      - name: Dump Nextcloud log on failure
+        if: failure()
+        run: docker logs nextcloud --tail 200 || true
+
+      - name: Upload the Playwright report on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report-${{ inputs.grep && 'smoke' || 'full' }}
+          path: |
+            playwright-report/
+            test-results/
+          if-no-files-found: ignore
+          retention-days: 7

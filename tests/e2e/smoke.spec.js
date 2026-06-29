@@ -28,7 +28,7 @@ test.beforeEach(async ({ page }) => {
 	await expect(page).toHaveTitle(/Dataforms/)
 })
 
-test('create a register, add a field, add a record, and see it', async ({ page }) => {
+test('@smoke create a register, add a field, add a record, and see it', async ({ page }) => {
 	const stamp = Date.now().toString(36)
 	const registerTitle = `E2E ${stamp}`
 

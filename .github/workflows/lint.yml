@@ -98,71 +98,17 @@ jobs:
         run: npm run build
 
   # Install the app on each supported database and run the migrations — the
-  # reproducible version of the cross-DB matrix in docs/PORTABILITY.md.
+  # reproducible version of the cross-DB matrix in docs/PORTABILITY.md. Extracted
+  # into a reusable workflow so the nightly stage runs the identical matrix.
   integration:
-    runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        db: [sqlite, mysql, pgsql]
-    services:
-      mysql:
-        image: mariadb:10.11
-        env:
-          MARIADB_ROOT_PASSWORD: root
-          MARIADB_DATABASE: nextcloud
-          MARIADB_USER: nextcloud
-          MARIADB_PASSWORD: nextcloud
-        ports: ['4444:3306']
-        options: >-
-          --health-cmd="healthcheck.sh --connect --innodb_initialized"
-          --health-interval=5s --health-timeout=3s --health-retries=15
-      postgres:
-        image: postgres:16
-        env:
-          POSTGRES_DB: nextcloud
-          POSTGRES_USER: nextcloud
-          POSTGRES_PASSWORD: nextcloud
-        ports: ['4445:5432']
-        options: >-
-          --health-cmd=pg_isready --health-interval=5s --health-timeout=3s --health-retries=15
-    steps:
-      - name: Checkout Nextcloud server
-        uses: actions/checkout@v4
-        with:
-          repository: nextcloud/server
-          ref: v32.0.6
-          submodules: true
-          path: nextcloud
-      - name: Checkout the app
-        uses: actions/checkout@v4
-        with:
-          path: nextcloud/apps/dataforms
-      - uses: shivammathur/setup-php@v2
-        with:
-          php-version: '8.3'
-          extensions: mbstring, iconv, fileinfo, intl, pdo_sqlite, pdo_mysql, pdo_pgsql, gd, zip, bz2, curl
-          coverage: none
-      - name: Install runtime deps
-        working-directory: nextcloud/apps/dataforms
-        run: composer install --no-dev --no-progress || true
-      - name: Install Nextcloud (${{ matrix.db }})
-        working-directory: nextcloud
-        run: |
-          case "${{ matrix.db }}" in
-            mysql) ARGS="--database mysql --database-host 127.0.0.1:4444 --database-name nextcloud --database-user nextcloud --database-pass nextcloud" ;;
-            pgsql) ARGS="--database pgsql --database-host 127.0.0.1:4445 --database-name nextcloud --database-user nextcloud --database-pass nextcloud" ;;
-            *)     ARGS="--database sqlite" ;;
-          esac
-          php occ maintenance:install --admin-user admin --admin-pass admin $ARGS
-      - name: Enable app (applies all migrations)
-        working-directory: nextcloud
-        run: php occ app:enable dataforms
-      - name: Smoke — app enabled & migrations applied
-        working-directory: nextcloud
-        run: |
-          php occ app:list | grep -A1 -i dataforms
-          php occ app:enable dataforms 2>&1 | grep -qi "already enabled\|enabled"
+    uses: ./.github/workflows/integration.yml
+
+  # Fast PR-gate Playwright smoke: one core flow (@smoke) through the SPA against
+  # a real, seeded Nextcloud. The full e2e suite runs in the nightly stage.
+  e2e-smoke:
+    uses: ./.github/workflows/e2e.yml
+    with:
+      grep: '@smoke'
 
   # The real PR gate: every line changed in this PR must be covered (front +
   # back). Merges the PHP (clover) and JS (lcov) reports from the jobs above.
