@@ -190,10 +190,24 @@ jobs:
       - run: pip install "diff-cover>=9"
       - name: Diff coverage — changed lines must be 100% covered
         run: |
-          diff-cover cov-php/coverage.xml cov-js/lcov.info \
+          set +e
+          # diff-cover can't mix XML (clover) and LCov in one run — do each.
+          diff-cover cov-php/coverage.xml \
             --compare-branch origin/${{ github.base_ref }} \
-            --fail-under 100 \
-            --markdown-report diff-cover.md
+            --fail-under 100 --format markdown:diff-cover-php.md
+          rc_php=$?
+          diff-cover cov-js/lcov.info \
+            --compare-branch origin/${{ github.base_ref }} \
+            --fail-under 100 --format markdown:diff-cover-js.md
+          rc_js=$?
+          {
+            echo "## Diff coverage (changed lines must be 100%)"
+            echo "### Backend (PHP)"
+            cat diff-cover-php.md 2>/dev/null || echo "_no report_"
+            echo "### Frontend (JS)"
+            cat diff-cover-js.md 2>/dev/null || echo "_no report_"
+          } | tee diff-cover.md >> "$GITHUB_STEP_SUMMARY"
+          [ $rc_php -eq 0 ] && [ $rc_js -eq 0 ]
       - name: Comment diff coverage on PR
         if: always()
         uses: marocchino/sticky-pull-request-comment@v2
