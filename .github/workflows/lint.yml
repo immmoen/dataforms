@@ -8,6 +8,7 @@ on:
 
 permissions:
   contents: read
+  pull-requests: write
 
 jobs:
   php:
@@ -20,7 +21,8 @@ jobs:
       - uses: shivammathur/setup-php@v2
         with:
           php-version: ${{ matrix.php-version }}
-          coverage: none
+          coverage: pcov
+          ini-values: pcov.directory=${{ github.workspace }}
       - run: composer install --no-progress
       - name: PHP syntax lint
         run: composer run lint
@@ -28,8 +30,32 @@ jobs:
         run: composer run cs:check
       - name: Psalm
         run: composer run psalm
-      - name: Unit tests
-        run: composer run test:unit
+      - name: Unit tests (with coverage)
+        run: composer run test:coverage
+      - name: Upload PHP coverage
+        if: matrix.php-version == '8.3'
+        uses: actions/upload-artifact@v4
+        with:
+          name: php-coverage
+          path: coverage.xml
+          if-no-files-found: warn
+      - name: Coverage report (backend)
+        if: matrix.php-version == '8.3' && always()
+        run: |
+          if [ -f coverage.txt ]; then
+            {
+              echo "### Backend coverage (PHPUnit · PHP 8.3)"
+              echo '```'
+              awk '/Summary:/{f=1} f{print} /Lines:/{exit}' coverage.txt
+              echo '```'
+            } | tee coverage-backend.md >> "$GITHUB_STEP_SUMMARY"
+          fi
+      - name: Comment backend coverage on PR
+        if: matrix.php-version == '8.3' && github.event_name == 'pull_request'
+        uses: marocchino/sticky-pull-request-comment@v2
+        with:
+          header: coverage-backend
+          path: coverage-backend.md
 
   frontend:
     runs-on: ubuntu-latest
@@ -41,7 +67,33 @@ jobs:
       - run: npm ci
       - run: npm run lint
       - run: npm run stylelint
-      - run: npm run test
+      - name: Type-check (vue-tsc)
+        run: npm run type-check
+      - name: Unit tests (with coverage)
+        run: npm run test:coverage
+      - name: Upload JS coverage
+        uses: actions/upload-artifact@v4
+        with:
+          name: js-coverage
+          path: coverage/lcov.info
+          if-no-files-found: warn
+      - name: Coverage report (frontend)
+        if: always()
+        run: |
+          if [ -f coverage/coverage-summary.json ]; then
+            {
+              echo "### Frontend coverage (Vitest)"
+              echo "| Metric | % |"
+              echo "|---|---|"
+              jq -r '.total | "| Lines | \(.lines.pct)% |\n| Statements | \(.statements.pct)% |\n| Functions | \(.functions.pct)% |\n| Branches | \(.branches.pct)% |"' coverage/coverage-summary.json
+            } | tee coverage-frontend.md >> "$GITHUB_STEP_SUMMARY"
+          fi
+      - name: Comment frontend coverage on PR
+        if: github.event_name == 'pull_request'
+        uses: marocchino/sticky-pull-request-comment@v2
+        with:
+          header: coverage-frontend
+          path: coverage-frontend.md
       - name: Build production bundle
         run: npm run build
 
