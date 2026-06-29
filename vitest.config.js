@@ -21,7 +21,7 @@ export default defineConfig({
 			all: true,
 			include: ['src/**/*.{js,vue}'],
 			exclude: ['src/**/*.spec.js', 'src/main.js', 'src/reference.js', 'src/admin.js'],
-			reporter: ['text', 'json', 'lcov', 'html'],
+			reporter: ['text', 'text-summary', 'json', 'json-summary', 'lcov', 'html'],
 			// No global thresholds yet: the PR gate enforces 100% diff-coverage and
 			// the nightly stage carries the global ratchet (see issue #2).
 		},

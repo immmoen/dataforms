@@ -37,6 +37,17 @@ jobs:
           name: php-coverage
           path: coverage.xml
           if-no-files-found: warn
+      - name: Coverage summary (backend)
+        if: matrix.php-version == '8.3' && always()
+        run: |
+          if [ -f coverage.txt ]; then
+            {
+              echo "## Backend coverage (PHP 8.3)"
+              echo '```'
+              awk '/Summary:/{f=1} f' coverage.txt | head -n 6
+              echo '```'
+            } >> "$GITHUB_STEP_SUMMARY"
+          fi
 
   frontend:
     runs-on: ubuntu-latest
@@ -58,6 +69,17 @@ jobs:
           name: js-coverage
           path: coverage/lcov.info
           if-no-files-found: warn
+      - name: Coverage summary (frontend)
+        if: always()
+        run: |
+          if [ -f coverage/coverage-summary.json ]; then
+            {
+              echo "## Frontend coverage"
+              echo "| Metric | % |"
+              echo "|---|---|"
+              jq -r '.total | "| Lines | \(.lines.pct)% |\n| Statements | \(.statements.pct)% |\n| Functions | \(.functions.pct)% |\n| Branches | \(.branches.pct)% |"' coverage/coverage-summary.json
+            } >> "$GITHUB_STEP_SUMMARY"
+          fi
       - name: Build production bundle
         run: npm run build
 

@@ -37,6 +37,6 @@
 		"cs:fix": "php-cs-fixer fix",
 		"psalm": "psalm.phar --no-cache",
 		"test:unit": "phpunit --configuration tests/phpunit.xml",
-		"test:coverage": "phpunit --configuration tests/phpunit.xml --coverage-clover coverage.xml --coverage-text"
+		"test:coverage": "phpunit --configuration tests/phpunit.xml --coverage-clover coverage.xml --coverage-text=coverage.txt"
 	}
 }
