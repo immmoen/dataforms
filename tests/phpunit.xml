@@ -15,5 +15,11 @@
 		<include>
 			<directory suffix=".php">../lib</directory>
 		</include>
+		<exclude>
+			<!-- One-shot schema transforms; verified by the cross-DB integration job. -->
+			<directory suffix=".php">../lib/Migration</directory>
+			<!-- DI container bootstrap; exercised by integration, not unit-testable. -->
+			<file>../lib/AppInfo/Application.php</file>
+		</exclude>
 	</source>
 </phpunit>
