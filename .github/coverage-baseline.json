@@ -1,5 +1,5 @@
 {
   "_comment": "Global line-coverage floor (percent). The nightly ratchet (.github/workflows/nightly.yml) FAILS if coverage drops below these and raises them when it improves — the floor can only ever go up. Seeded at 0; the first nightly run on main calibrates it to the current level.",
-  "php": 0,
-  "js": 0
+  "php": 17.57,
+  "js": 6.75
 }
