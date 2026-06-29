@@ -22,6 +22,7 @@ jobs:
         with:
           php-version: ${{ matrix.php-version }}
           coverage: pcov
+          ini-values: pcov.directory=${{ github.workspace }}
       - run: composer install --no-progress
       - name: PHP syntax lint
         run: composer run lint
