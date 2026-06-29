@@ -46,7 +46,7 @@ jobs:
             {
               echo "### Backend coverage (PHPUnit · PHP 8.3)"
               echo '```'
-              awk '/Summary:/{f=1} f' coverage.txt | head -n 6
+              awk '/Summary:/{f=1} f{print} /Lines:/{exit}' coverage.txt
               echo '```'
             } | tee coverage-backend.md >> "$GITHUB_STEP_SUMMARY"
           fi
