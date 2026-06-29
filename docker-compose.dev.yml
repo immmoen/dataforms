@@ -1,0 +1,49 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+#
+# Local development environment. The `dev` service carries the whole toolchain
+# (PHP 8.3 + pcov, Composer, Node 22) matching CI; `mysql`/`postgres` back the
+# optional 3-database mapper matrix (SQLite needs no service).
+#
+#   docker compose -f docker-compose.dev.yml build
+#   docker compose -f docker-compose.dev.yml up -d dev
+#   docker compose -f docker-compose.dev.yml exec dev make test
+services:
+  dev:
+    build:
+      context: ./docker/dev
+    image: dataforms-dev:latest
+    # Run as the host user so generated files (vendor/, node_modules/, coverage)
+    # are not root-owned. Matches the repo owner's uid:gid.
+    user: "1000:1000"
+    working_dir: /app
+    environment:
+      HOME: /tmp
+      COMPOSER_HOME: /tmp/composer
+      npm_config_cache: /tmp/npm
+      # Connection strings for the optional DB matrix.
+      MYSQL_DSN: "mysql:host=mysql;dbname=dataforms_test"
+      PGSQL_DSN: "pgsql:host=postgres;dbname=dataforms_test"
+    volumes:
+      - .:/app
+    tty: true
+    stdin_open: true
+    command: ["sleep", "infinity"]
+
+  mysql:
+    image: mariadb:11
+    environment:
+      MARIADB_ROOT_PASSWORD: root
+      MARIADB_DATABASE: dataforms_test
+      MARIADB_USER: dataforms
+      MARIADB_PASSWORD: dataforms
+    tmpfs:
+      - /var/lib/mysql
+
+  postgres:
+    image: postgres:16
+    environment:
+      POSTGRES_DB: dataforms_test
+      POSTGRES_USER: dataforms
+      POSTGRES_PASSWORD: dataforms
+    tmpfs:
+      - /var/lib/postgresql/data

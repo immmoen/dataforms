@@ -46,6 +46,8 @@ appstore:
 		--exclude=/.github \
 		--exclude=/.tx \
 		--exclude=/build \
+		--exclude=/docker \
+		--exclude=/docker-compose.dev.yml \
 		--exclude=/node_modules \
 		--exclude=/src \
 		--exclude=/tests \
