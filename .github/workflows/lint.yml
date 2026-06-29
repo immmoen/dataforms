@@ -8,6 +8,7 @@ on:
 
 permissions:
   contents: read
+  pull-requests: write
 
 jobs:
   php:
@@ -37,17 +38,23 @@ jobs:
           name: php-coverage
           path: coverage.xml
           if-no-files-found: warn
-      - name: Coverage summary (backend)
+      - name: Coverage report (backend)
         if: matrix.php-version == '8.3' && always()
         run: |
           if [ -f coverage.txt ]; then
             {
-              echo "## Backend coverage (PHP 8.3)"
+              echo "### Backend coverage (PHPUnit · PHP 8.3)"
               echo '```'
               awk '/Summary:/{f=1} f' coverage.txt | head -n 6
               echo '```'
-            } >> "$GITHUB_STEP_SUMMARY"
+            } | tee coverage-backend.md >> "$GITHUB_STEP_SUMMARY"
           fi
+      - name: Comment backend coverage on PR
+        if: matrix.php-version == '8.3' && github.event_name == 'pull_request'
+        uses: marocchino/sticky-pull-request-comment@v2
+        with:
+          header: coverage-backend
+          path: coverage-backend.md
 
   frontend:
     runs-on: ubuntu-latest
@@ -69,17 +76,23 @@ jobs:
           name: js-coverage
           path: coverage/lcov.info
           if-no-files-found: warn
-      - name: Coverage summary (frontend)
+      - name: Coverage report (frontend)
         if: always()
         run: |
           if [ -f coverage/coverage-summary.json ]; then
             {
-              echo "## Frontend coverage"
+              echo "### Frontend coverage (Vitest)"
               echo "| Metric | % |"
               echo "|---|---|"
               jq -r '.total | "| Lines | \(.lines.pct)% |\n| Statements | \(.statements.pct)% |\n| Functions | \(.functions.pct)% |\n| Branches | \(.branches.pct)% |"' coverage/coverage-summary.json
-            } >> "$GITHUB_STEP_SUMMARY"
+            } | tee coverage-frontend.md >> "$GITHUB_STEP_SUMMARY"
           fi
+      - name: Comment frontend coverage on PR
+        if: github.event_name == 'pull_request'
+        uses: marocchino/sticky-pull-request-comment@v2
+        with:
+          header: coverage-frontend
+          path: coverage-frontend.md
       - name: Build production bundle
         run: npm run build
 
