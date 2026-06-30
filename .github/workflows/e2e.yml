@@ -64,6 +64,11 @@ jobs:
           # on a fresh instance; disable it so the SPA is the only thing on top.
           docker exec -u www-data nextcloud php occ app:disable firstrunwizard || true
 
+      - name: Seed a second user (sharee for the sharing e2e)
+        run: |
+          docker exec -u www-data -e OC_PASS=viewerpass123 nextcloud \
+            php occ user:add --password-from-env viewer
+
       - name: Install the Playwright browser
         run: npm run test:e2e:install
 
