@@ -96,6 +96,16 @@ side effect is asserted at the service seam rather than driven through the SPA.
 *Source: guide 03 §Fields, `VISION` (Field primitive — "20 types"). The roster of 20
 types is confirmed in code (`lib/`/`src/api/fields.js`).*
 
+> **Coverage (issue #6):** all 20 types + their type-specific config, the
+> machine-name rules, uniqueness, defaults, the mandatory flag and the
+> soft-delete name tombstone are exercised at the **service/validator seam**
+> (`FieldServiceTest`, `FieldValidatorTest`) and the **mapper seam** against the
+> real migrated schema per DB engine (`tests/integration/Db/FieldMapperTest`).
+> The schema editor is covered in jsdom (`SchemaEditor.spec.js`); a
+> representative single-select field is created through the SPA end-to-end
+> (`tests/e2e/fields.spec.js`). The per-row "E2E" seam below is therefore
+> satisfied at the lower seams for the type roster, per the PRD's seam policy.
+
 ### Common field behaviour
 
 | Id | Business scenario | Source | Seam | Test | Status |
@@ -121,7 +131,7 @@ types is confirmed in code (`lib/`/`src/api/fields.js`).*
 | FLD-14 | **Date** field | Guide 03 §Field types | E2E | `e2e/fields.spec.ts › date field` | 🔴 |
 | FLD-15 | **Date & time** field | Guide 03 §Field types | E2E | `e2e/fields.spec.ts › datetime field` | 🔴 |
 | FLD-16 | **Time** field | Guide 03 §Field types | E2E | `e2e/fields.spec.ts › time field` | 🔴 |
-| FLD-17 | **Single select** (options, one per line) | Guide 03 §Field types | E2E | `e2e/fields.spec.ts › single select field` | 🔴 |
+| FLD-17 | **Single select** (options, one per line) | Guide 03 §Field types | E2E | `e2e/fields.spec.js › add a single-select field with options` | 🟢 |
 | FLD-18 | **Multi select** (options) | Guide 03 §Field types | E2E | `e2e/fields.spec.ts › multi select field` | 🔴 |
 | FLD-19 | **Email** (format-checked) | Guide 03 §Field types | E2E | `e2e/fields.spec.ts › email field validates format` | 🔴 |
 | FLD-20 | **URL** (format-checked) | Guide 03 §Field types | E2E | `e2e/fields.spec.ts › url field validates format` | 🔴 |

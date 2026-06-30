@@ -99,7 +99,7 @@ class FieldService {
 	 * @throws ValidationException
 	 */
 	public function update(string $userId, int $fieldId, array $changes): Field {
-		$field = $this->findOwned($userId, $fieldId, manage: true);
+		$field = $this->findManageableField($userId, $fieldId);
 
 		if (array_key_exists('label', $changes)) {
 			$label = trim((string)$changes['label']);
@@ -129,7 +129,7 @@ class FieldService {
 	 * @throws \OCA\Dataforms\Exception\ForbiddenException
 	 */
 	public function delete(string $userId, int $fieldId): void {
-		$field = $this->findOwned($userId, $fieldId, manage: true);
+		$field = $this->findManageableField($userId, $fieldId);
 		$this->valueMapper->deleteByField($fieldId); // clean up stored values
 		$this->fileMapper->deleteForField($fieldId); // and any attached-file refs
 		$this->refMapper->deleteForField($fieldId); // and any relation refs
@@ -167,18 +167,14 @@ class FieldService {
 
 	// ---- helpers ---------------------------------------------------------
 
-	private function findOwned(string $userId, int $fieldId, bool $manage): Field {
+	/** Load a field, gated by manage rights on its owning register. */
+	private function findManageableField(string $userId, int $fieldId): Field {
 		try {
 			$field = $this->mapper->find($fieldId);
 		} catch (DoesNotExistException) {
 			throw new NotFoundException('Field not found');
 		}
-		// Gate via the owning register (read or manage as required).
-		if ($manage) {
-			$this->registerService->findManageable($userId, $field->getRegisterId());
-		} else {
-			$this->registerService->find($userId, $field->getRegisterId());
-		}
+		$this->registerService->findManageable($userId, $field->getRegisterId());
 		return $field;
 	}
 
