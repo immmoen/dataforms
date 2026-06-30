@@ -51,7 +51,7 @@
 			<NcButton :disabled="saving" @click="$emit('close')">
 				{{ t('dataforms', 'Cancel') }}
 			</NcButton>
-			<NcButton type="primary" :disabled="saving || fields.length === 0" @click="save">
+			<NcButton variant="primary" :disabled="saving || fields.length === 0" @click="save">
 				{{ t('dataforms', 'Save') }}
 			</NcButton>
 		</template>
@@ -75,8 +75,8 @@ export default {
 	components: { NcButton, NcDialog, NcEmptyContent, FieldInput },
 	props: {
 		registerId: { type: Number, required: true },
-		fields: { type: Array, required: true },
-		rules: { type: Array, default: () => [] },
+		fields: { type: /** @type {import('vue').PropType<import('@/types/models').Field[]>} */ (Array), required: true },
+		rules: { type: /** @type {import('vue').PropType<import('@/types/models').Rule[]>} */ (Array), default: () => [] },
 		record: { type: Object, default: null },
 		form: { type: Object, default: null },
 	},

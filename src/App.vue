@@ -74,7 +74,7 @@
 					<FolderTableIcon :size="20" />
 				</template>
 				<template #action>
-					<NcButton type="primary" @click="openCreate">
+					<NcButton variant="primary" @click="openCreate">
 						{{ t('dataforms', 'New register') }}
 					</NcButton>
 				</template>
@@ -116,13 +116,13 @@
 					<div class="head-row">
 						<h2>{{ selected.title }}</h2>
 						<div class="head-actions">
-							<NcButton type="tertiary" :aria-label="t('dataforms', 'Copy link to this register')" @click="copyLink">
+							<NcButton variant="tertiary" :aria-label="t('dataforms', 'Copy link to this register')" @click="copyLink">
 								<template #icon>
 									<LinkIcon :size="20" />
 								</template>
 								{{ t('dataforms', 'Copy link') }}
 							</NcButton>
-							<NcButton v-if="selected.canManage" type="secondary" @click="showShare = true">
+							<NcButton v-if="selected.canManage" variant="secondary" @click="showShare = true">
 								<template #icon>
 									<ShareVariantIcon :size="20" />
 								</template>
@@ -204,7 +204,7 @@
 				<NcButton :disabled="saving" @click="showCreate = false">
 					{{ t('dataforms', 'Cancel') }}
 				</NcButton>
-				<NcButton type="primary"
+				<NcButton variant="primary"
 					:disabled="saving || draft.title.trim() === ''"
 					@click="submitCreate">
 					{{ t('dataforms', 'Create') }}

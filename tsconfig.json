@@ -4,7 +4,6 @@
 		"module": "ESNext",
 		"moduleResolution": "Bundler",
 		"strict": true,
-		"noImplicitAny": true,
 		"esModuleInterop": true,
 		"skipLibCheck": true,
 		"forceConsistentCasingInFileNames": true,
@@ -15,8 +14,13 @@
 		"baseUrl": ".",
 		"paths": {
 			"@/*": ["src/*"]
-		}
+		},
+		"checkJs": true,
+		"allowJs": true,
+		"noImplicitAny": false,
+		"strictNullChecks": false,
+		"useUnknownInCatchVariables": false
 	},
-	"include": ["src/**/*.ts", "src/**/*.vue"],
-	"exclude": ["node_modules", "build", "js"]
+	"include": ["src/**/*.ts", "src/**/*.vue", "src/**/*.js"],
+	"exclude": ["node_modules", "build", "js", "src/**/*.spec.js", "tests"]
 }

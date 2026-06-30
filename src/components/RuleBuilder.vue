@@ -9,7 +9,7 @@
 				</p>
 			</div>
 			<NcButton v-if="canManage"
-				type="primary"
+				variant="primary"
 				:disabled="fields.length === 0"
 				@click="openAdd">
 				<template #icon>
@@ -126,13 +126,13 @@
 								:label="t('dataforms', 'Value')"
 								class="cond-val" />
 						</template>
-						<NcButton type="tertiary" :aria-label="t('dataforms', 'Remove condition')" @click="draft.conditions.splice(i, 1)">
+						<NcButton variant="tertiary" :aria-label="t('dataforms', 'Remove condition')" @click="draft.conditions.splice(i, 1)">
 							<template #icon>
 								<DeleteIcon :size="18" />
 							</template>
 						</NcButton>
 					</div>
-					<NcButton type="tertiary" @click="addCondition">
+					<NcButton variant="tertiary" @click="addCondition">
 						<template #icon>
 							<PlusIcon :size="18" />
 						</template>
@@ -177,7 +177,7 @@
 				<NcButton :disabled="saving" @click="showAdd = false">
 					{{ t('dataforms', 'Cancel') }}
 				</NcButton>
-				<NcButton type="primary" :disabled="saving || !draft.target" @click="submit">
+				<NcButton variant="primary" :disabled="saving || !draft.target" @click="submit">
 					{{ editingRule ? t('dataforms', 'Save') : t('dataforms', 'Add rule') }}
 				</NcButton>
 			</template>

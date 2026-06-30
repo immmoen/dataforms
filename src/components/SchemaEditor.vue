@@ -8,7 +8,7 @@
 					{{ t('dataforms', 'The typed fields this register stores. Machine names are generated once and never change.') }}
 				</p>
 			</div>
-			<NcButton v-if="canManage" type="primary" @click="openAdd">
+			<NcButton v-if="canManage" variant="primary" @click="openAdd">
 				<template #icon>
 					<PlusIcon :size="20" />
 				</template>
@@ -38,7 +38,7 @@
 				</span>
 				<span class="spacer" />
 				<template v-if="canManage">
-					<NcButton type="tertiary-no-background"
+					<NcButton variant="tertiary-no-background"
 						:disabled="index === 0"
 						:aria-label="t('dataforms', 'Move up')"
 						@click="move(index, -1)">
@@ -46,7 +46,7 @@
 							<ChevronUpIcon :size="20" />
 						</template>
 					</NcButton>
-					<NcButton type="tertiary-no-background"
+					<NcButton variant="tertiary-no-background"
 						:disabled="index === fields.length - 1"
 						:aria-label="t('dataforms', 'Move down')"
 						@click="move(index, 1)">
@@ -199,7 +199,7 @@
 				<NcButton :disabled="saving" @click="showAdd = false">
 					{{ t('dataforms', 'Cancel') }}
 				</NcButton>
-				<NcButton type="primary"
+				<NcButton variant="primary"
 					:disabled="saving || draft.label.trim() === '' || (draft.type === 'relation' && !draft.target)"
 					@click="submit">
 					{{ editingField ? t('dataforms', 'Save') : t('dataforms', 'Add field') }}

@@ -22,7 +22,7 @@
 					</template>
 					{{ t('dataforms', 'Activity') }}
 				</NcButton>
-				<NcButton v-if="canManage" type="primary" @click="openAdd">
+				<NcButton v-if="canManage" variant="primary" @click="openAdd">
 					<template #icon>
 						<PlusIcon :size="20" />
 					</template>
@@ -137,14 +137,14 @@
 							v-model="c.value"
 							:label="t('dataforms', 'Value')"
 							class="c-val" />
-						<NcButton type="tertiary" :aria-label="t('dataforms', 'Remove condition')" @click="draft.conditions.splice(i, 1)">
+						<NcButton variant="tertiary" :aria-label="t('dataforms', 'Remove condition')" @click="draft.conditions.splice(i, 1)">
 							<template #icon>
 								<CloseIcon :size="18" />
 							</template>
 						</NcButton>
 					</div>
 				</div>
-				<NcButton type="tertiary" @click="addCondition">
+				<NcButton variant="tertiary" @click="addCondition">
 					<template #icon>
 						<PlusIcon :size="16" />
 					</template>{{ t('dataforms', 'Add condition') }}
@@ -308,7 +308,7 @@
 				<NcButton :disabled="saving" @click="showDialog = false">
 					{{ t('dataforms', 'Cancel') }}
 				</NcButton>
-				<NcButton type="primary" :disabled="saving || !canSave" @click="submit">
+				<NcButton variant="primary" :disabled="saving || !canSave" @click="submit">
 					{{ editing ? t('dataforms', 'Save') : t('dataforms', 'Add') }}
 				</NcButton>
 			</template>
@@ -391,6 +391,7 @@ export default {
 			recipientOptions: [],
 			searching: false,
 			searchTimer: null,
+			liftTimer: null,
 			durationOptions: [
 				{ id: 30, label: t('dataforms', '30 minutes') },
 				{ id: 60, label: t('dataforms', '1 hour') },
@@ -566,7 +567,7 @@ export default {
 				let lifted = false
 				document.querySelectorAll('.dialog__modal').forEach((el) => {
 					if (!before.has(el)) {
-						el.style.zIndex = '11000'
+						(/** @type {HTMLElement} */ (el)).style.zIndex = '11000'
 						lifted = true
 					}
 				})

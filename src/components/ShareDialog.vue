@@ -37,7 +37,7 @@
 					:clearable="false"
 					class="role" />
 				<NcButton class="add-btn"
-					type="primary"
+					variant="primary"
 					:disabled="saving || !selectedSharee"
 					@click="add">
 					{{ t('dataforms', 'Add') }}
@@ -66,7 +66,7 @@
 							:clearable="false"
 							class="role-sel"
 							@update:model-value="changeRole(share, $event)" />
-						<NcButton type="tertiary" @click="remove(share)">
+						<NcButton variant="tertiary" @click="remove(share)">
 							<template #icon>
 								<DeleteIcon :size="18" />
 							</template>

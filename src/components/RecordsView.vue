@@ -16,7 +16,7 @@
 				:placeholder="t('dataforms', 'All records')"
 				class="view-select"
 				@update:model-value="onSelectView" />
-			<NcButton :type="activeFilters.length ? 'secondary' : 'tertiary'" @click="toggleFilterBar">
+			<NcButton :variant="activeFilters.length ? 'secondary' : 'tertiary'" @click="toggleFilterBar">
 				<template #icon>
 					<FilterIcon :size="20" />
 				</template>
@@ -95,7 +95,7 @@
 				</NcActionButton>
 			</NcActions>
 			<NcButton v-else-if="canWrite"
-				type="primary"
+				variant="primary"
 				:disabled="fields.length === 0"
 				@click="openNew(null)">
 				<template #icon>
@@ -132,14 +132,14 @@
 					:type="fieldInputType(f.field)"
 					:label="t('dataforms', 'Value')"
 					class="f-val" />
-				<NcButton type="tertiary" :aria-label="t('dataforms', 'Remove')" @click="draftFilters.splice(i, 1)">
+				<NcButton variant="tertiary" :aria-label="t('dataforms', 'Remove')" @click="draftFilters.splice(i, 1)">
 					<template #icon>
 						<CloseIcon :size="18" />
 					</template>
 				</NcButton>
 			</div>
 			<div class="filter-actions">
-				<NcButton type="tertiary" @click="addFilter">
+				<NcButton variant="tertiary" @click="addFilter">
 					<template #icon>
 						<PlusIcon :size="18" />
 					</template>
@@ -149,7 +149,7 @@
 				<NcButton @click="clearFilters">
 					{{ t('dataforms', 'Clear') }}
 				</NcButton>
-				<NcButton type="primary" @click="applyFilters">
+				<NcButton variant="primary" @click="applyFilters">
 					{{ t('dataforms', 'Apply') }}
 				</NcButton>
 			</div>
@@ -320,7 +320,7 @@
 				<NcButton @click="showSaveView = false">
 					{{ t('dataforms', 'Cancel') }}
 				</NcButton>
-				<NcButton type="primary" :disabled="newView.title.trim() === ''" @click="saveView">
+				<NcButton variant="primary" :disabled="newView.title.trim() === ''" @click="saveView">
 					{{ t('dataforms', 'Save') }}
 				</NcButton>
 			</template>
@@ -354,7 +354,7 @@
 				<NcButton @click="downloadTemplate">
 					{{ t('dataforms', 'Download template') }}
 				</NcButton>
-				<NcButton type="primary" :disabled="importing" @click="$refs.importInput.click()">
+				<NcButton variant="primary" :disabled="importing" @click="triggerImport">
 					{{ importing ? t('dataforms', 'Importing…') : t('dataforms', 'Choose CSV file') }}
 				</NcButton>
 			</template>
@@ -594,6 +594,13 @@ export default {
 			return (f && ['select', 'multiselect'].includes(f.type)) ? (f.config?.options ?? []) : []
 		},
 		// HTML input type for a free-text filter value (date/number where useful).
+		/**
+		 * HTML input type for a field's filter value. 'date' is valid at runtime
+		 * though NcTextField's prop type omits it, so the return is typed loosely.
+		 *
+		 * @param {string} machineName the field's machine name
+		 * @return {any}
+		 */
 		fieldInputType(machineName) {
 			const f = this.fields.find((x) => x.machineName === machineName)
 			if (!f) return 'text'
@@ -836,11 +843,15 @@ export default {
 			this.editingCell = null
 			this.editValue = ''
 		},
+		triggerImport() {
+			(/** @type {HTMLInputElement} */ (this.$refs.importInput)).click()
+		},
 		async saveInline(record, field) {
 			if (!this.editingCell) {
 				return
 			}
 			const mn = field.machineName
+			/** @type {any} */
 			let next = this.editValue
 			if (field.type === 'boolean') {
 				next = next === 'true' ? true : (next === 'false' ? false : null)

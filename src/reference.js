@@ -12,7 +12,9 @@ import { imagePath } from '@nextcloud/router'
 
 const css = (o) => Object.entries(o).map(([k, v]) => `${k}:${v}`).join(';')
 
-registerWidget('dataforms_form', (el, { richObject, accessible }) => {
+registerWidget('dataforms_form', (el, props) => {
+	// richObject is the smart-picker payload (untyped external data).
+	const { richObject, accessible } = /** @type {{ richObject: any, accessible: any }} */ (props)
 	el.style.width = '100%'
 
 	if (!accessible) {

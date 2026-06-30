@@ -13,15 +13,15 @@
 			:disabled="disabled"
 			v-bind="ariaAttrs"
 			class="native-input"
-			@input="emit($event.target.value)">
+			@input="emit(inputValue($event))">
 
 		<textarea v-else-if="field.type === 'longtext'"
-			:value="modelValue ?? ''"
+			:value="String(modelValue ?? '')"
 			:disabled="disabled"
 			v-bind="ariaAttrs"
 			rows="3"
 			class="native-input native-textarea"
-			@input="emit($event.target.value)" />
+			@input="emit(inputValue($event))" />
 
 		<input v-else-if="['number', 'currency', 'percentage'].includes(field.type)"
 			type="number"
@@ -29,7 +29,7 @@
 			:disabled="disabled"
 			v-bind="ariaAttrs"
 			class="native-input"
-			@input="emit($event.target.value === '' ? null : Number($event.target.value))">
+			@input="emit(inputValue($event) === '' ? null : Number(inputValue($event)))">
 
 		<div v-else-if="field.type === 'boolean'" class="bool-group">
 			<NcCheckboxRadioSwitch :model-value="boolChoice"
@@ -56,7 +56,7 @@
 			:disabled="disabled"
 			v-bind="ariaAttrs"
 			class="native-input"
-			@input="emit($event.target.value)">
+			@input="emit(inputValue($event))">
 
 		<NcSelect v-else-if="field.type === 'select'"
 			:model-value="modelValue"
@@ -106,7 +106,7 @@
 						rel="noopener noreferrer"
 						class="file-link"><span aria-hidden="true">📎 </span>{{ f.name }}</a>
 					<NcButton v-if="!disabled"
-						type="tertiary-no-background"
+						variant="tertiary-no-background"
 						:aria-label="t('dataforms', 'Remove file')"
 						@click.prevent="removeFile(f.id)">
 						<template #icon>
@@ -146,7 +146,7 @@
 			v-bind="ariaAttrs"
 			:placeholder="['user', 'group'].includes(field.type) ? t('dataforms', 'Enter an id') : ''"
 			class="native-input"
-			@input="emit($event.target.value)">
+			@input="emit(inputValue($event))">
 	</div>
 </template>
 
@@ -229,7 +229,7 @@ export default {
 				return this.modelValue
 			}
 			// tolerate a legacy single {id,name}
-			return this.modelValue && this.modelValue.id ? [this.modelValue] : []
+			return this.modelValue && /** @type {any} */ (this.modelValue).id ? [this.modelValue] : []
 		},
 		relationModel() {
 			if (this.field.config?.multiple) {
@@ -251,11 +251,21 @@ export default {
 		emit(value) {
 			this.$emit('update:modelValue', value)
 		},
+		/**
+		 * The string value of the event's input target. Centralises the cast so
+		 * the templates stay free of type assertions (not allowed in JS SFCs).
+		 *
+		 * @param {Event} e the input event
+		 * @return {string}
+		 */
+		inputValue(e) {
+			return (/** @type {HTMLInputElement} */ (e.target)).value
+		},
 		fileUrl(id) {
 			return generateUrl('/f/{id}', { id })
 		},
 		triggerUpload() {
-			this.$refs.fileInput?.click()
+			(/** @type {HTMLInputElement} */ (this.$refs.fileInput))?.click()
 		},
 		async onLocalFile(event) {
 			const files = [...(event.target.files || [])]
@@ -294,7 +304,7 @@ export default {
 				const opts = await listOptions(target, { display: this.field.config?.displayField ?? '', search })
 				const current = this.modelValue && typeof this.modelValue === 'object' ? [this.modelValue] : []
 				const seen = new Set(opts.map((o) => o.id))
-				this.relationOptions = [...opts, ...current.filter((c) => !seen.has(c.id))]
+				this.relationOptions = [...opts, ...current.filter((c) => !seen.has(/** @type {any} */ (c).id))]
 			} catch (e) {
 				console.error(e)
 			} finally {
