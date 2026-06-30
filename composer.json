@@ -30,7 +30,10 @@
 	"autoload-dev": {
 		"psr-4": {
 			"OCA\\Dataforms\\Tests\\": "tests/"
-		}
+		},
+		"classmap": [
+			"tests/unit/Service/RecordServiceTestCase.php"
+		]
 	},
 	"scripts": {
 		"lint": "find . -name \\*.php -not -path './vendor/*' -print0 | xargs -0 -n1 php -l",
