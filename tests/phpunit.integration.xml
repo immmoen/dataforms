@@ -16,4 +16,16 @@
 			<directory>integration</directory>
 		</testsuite>
 	</testsuites>
+	<!-- Same source scope as the unit config: the per-touched-file coverage gate
+	     (.github/scripts/touched_files_coverage.py) unions this clover with the
+	     unit one, so mapper coverage (measured only here) counts. -->
+	<source>
+		<include>
+			<directory suffix=".php">../lib</directory>
+		</include>
+		<exclude>
+			<directory suffix=".php">../lib/Migration</directory>
+			<file>../lib/AppInfo/Application.php</file>
+		</exclude>
+	</source>
 </phpunit>

@@ -53,7 +53,10 @@ jobs:
         with:
           php-version: '8.3'
           extensions: mbstring, iconv, fileinfo, intl, pdo_sqlite, pdo_mysql, pdo_pgsql, gd, zip, bz2, curl
-          coverage: none
+          # pcov only on the sqlite leg, which emits the integration clover the
+          # per-touched-file gate (lint.yml) unions with the unit coverage so
+          # mapper coverage counts. The mysql/pgsql legs stay coverage-free.
+          coverage: ${{ matrix.db == 'sqlite' && 'pcov' || 'none' }}
       - name: Install runtime deps
         working-directory: nextcloud/apps/dataforms
         run: composer install --no-dev --no-progress || true
@@ -80,4 +83,16 @@ jobs:
         working-directory: nextcloud/apps/dataforms
         run: |
           composer install --no-progress
-          php vendor/bin/phpunit -c tests/phpunit.integration.xml
+          if [ "${{ matrix.db }}" = "sqlite" ]; then
+            php vendor/bin/phpunit -c tests/phpunit.integration.xml \
+              --coverage-clover coverage-integration.xml
+          else
+            php vendor/bin/phpunit -c tests/phpunit.integration.xml
+          fi
+      - name: Upload integration coverage (sqlite leg)
+        if: matrix.db == 'sqlite'
+        uses: actions/upload-artifact@v4
+        with:
+          name: php-integration-coverage
+          path: nextcloud/apps/dataforms/coverage-integration.xml
+          if-no-files-found: warn

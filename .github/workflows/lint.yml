@@ -115,7 +115,7 @@ jobs:
   diff-coverage:
     if: github.event_name == 'pull_request'
     runs-on: ubuntu-latest
-    needs: [php, frontend]
+    needs: [php, frontend, integration]
     steps:
       - uses: actions/checkout@v4
         with:
@@ -130,33 +130,44 @@ jobs:
         with:
           name: js-coverage
           path: cov-js
+      # Mapper coverage is measured only by the integration suite (sqlite leg);
+      # the gate unions it with the unit clover so a touched mapper is judged on
+      # its real, integration-tested coverage.
+      - uses: actions/download-artifact@v4
+        with:
+          name: php-integration-coverage
+          path: cov-php-int
       - uses: actions/setup-python@v5
         with:
           python-version: '3.x'
       - run: pip install "diff-cover>=9"
-      - name: Diff coverage — changed lines must be 100% covered
+      # Informative per-line view (not the gate — gate B below is authoritative).
+      - name: Diff coverage report (changed lines, informative)
         run: |
           set +e
-          # diff-cover can't mix XML (clover) and LCov in one run — do each.
-          diff-cover cov-php/coverage.xml \
-            --compare-branch origin/${{ github.base_ref }} \
-            --fail-under 100 --format markdown:diff-cover-php.md
-          rc_php=$?
-          diff-cover cov-js/lcov.info \
-            --compare-branch origin/${{ github.base_ref }} \
-            --fail-under 100 --format markdown:diff-cover-js.md
-          rc_js=$?
+          diff-cover cov-php/coverage.xml --compare-branch origin/${{ github.base_ref }} \
+            --format markdown:diff-cover-php.md
+          diff-cover cov-js/lcov.info --compare-branch origin/${{ github.base_ref }} \
+            --format markdown:diff-cover-js.md
           {
-            echo "## Diff coverage (changed lines must be 100%)"
-            echo "### Backend (PHP)"
-            cat diff-cover-php.md 2>/dev/null || echo "_no report_"
-            echo "### Frontend (JS)"
-            cat diff-cover-js.md 2>/dev/null || echo "_no report_"
+            echo "## Diff coverage (changed lines — informative)"
+            echo "### Backend (PHP)"; cat diff-cover-php.md 2>/dev/null || echo "_no report_"
+            echo "### Frontend (JS)"; cat diff-cover-js.md 2>/dev/null || echo "_no report_"
           } | tee diff-cover.md >> "$GITHUB_STEP_SUMMARY"
-          [ $rc_php -eq 0 ] && [ $rc_js -eq 0 ]
-      - name: Comment diff coverage on PR
+          true
+      # The PR gate (docs/DECISIONS.md "gate B"): every PRODUCTION file *touched*
+      # in this PR must be 100% covered — the whole file, not just changed lines.
+      - name: Gate B — every touched file must be 100% covered
+        run: |
+          set -o pipefail  # otherwise tee masks the script's exit code
+          python3 .github/scripts/touched_files_coverage.py \
+            --base origin/${{ github.base_ref }} \
+            --clover cov-php/coverage.xml \
+            --clover cov-php-int/coverage-integration.xml \
+            --lcov cov-js/lcov.info | tee gate-b.md >> "$GITHUB_STEP_SUMMARY"
+      - name: Comment coverage on PR
         if: always()
         uses: marocchino/sticky-pull-request-comment@v2
         with:
           header: diff-coverage
-          path: diff-cover.md
+          path: gate-b.md
