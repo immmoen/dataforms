@@ -16,7 +16,25 @@
 		{ "name": "abs", "expr": "abs(a - b)", "values": { "a": 3, "b": 10 }, "expect": 7 },
 		{ "name": "upper", "expr": "upper(name)", "values": { "name": "edps" }, "expect": "EDPS" },
 		{ "name": "coalesce", "expr": "coalesce(a, b, 'fallback')", "values": { "a": "", "b": "second" }, "expect": "second" },
-		{ "name": "div-by-zero-safe", "expr": "a / b", "values": { "a": 10, "b": 0 }, "expect": 0 }
+		{ "name": "div-by-zero-safe", "expr": "a / b", "values": { "a": 10, "b": 0 }, "expect": 0 },
+
+		{ "name": "len", "expr": "len(name)", "values": { "name": "hello" }, "expect": 5 },
+		{ "name": "lower", "expr": "lower(name)", "values": { "name": "EDPS" }, "expect": "edps" },
+		{ "name": "number-cast", "expr": "number(x) + 1", "values": { "x": "41" }, "expect": 42 },
+		{ "name": "number-non-numeric-is-zero", "expr": "number(x)", "values": { "x": "abc" }, "expect": 0 },
+		{ "name": "modulo", "expr": "a % b", "values": { "a": 17, "b": 5 }, "expect": 2 },
+		{ "name": "modulo-by-zero-safe", "expr": "a % b", "values": { "a": 7, "b": 0 }, "expect": 0 },
+		{ "name": "eq-op", "expr": "a == b", "values": { "a": 2, "b": 2 }, "expect": true },
+		{ "name": "neq-op", "expr": "a != b", "values": { "a": 2, "b": 3 }, "expect": true },
+		{ "name": "lt-op", "expr": "a < b", "values": { "a": 1, "b": 2 }, "expect": true },
+		{ "name": "gt-op", "expr": "a > b", "values": { "a": 5, "b": 2 }, "expect": true },
+		{ "name": "lte-op", "expr": "a <= b", "values": { "a": 2, "b": 2 }, "expect": true },
+		{ "name": "unary-minus", "expr": "-a + 10", "values": { "a": 4 }, "expect": 6 },
+		{ "name": "bool-literal-false", "expr": "if(false, 1, 2)", "values": {}, "expect": 2 },
+		{ "name": "bool-literal-true", "expr": "if(true, 1, 2)", "values": {}, "expect": 1 },
+		{ "name": "coalesce-all-empty-is-null", "expr": "coalesce(a, b)", "values": { "a": "", "b": "" }, "expect": null },
+		{ "name": "string-equality", "expr": "name == 'edps'", "values": { "name": "edps" }, "expect": true },
+		{ "name": "nested-if", "expr": "if(n > 100, 'huge', if(n > 10, 'big', 'small'))", "values": { "n": 50 }, "expect": "big" }
 	],
 	"rules": [
 		{
@@ -29,6 +47,13 @@
 			"rules": [{ "effect": "compute", "target": "risk", "expression": "likelihood * impact" }],
 			"values": { "likelihood": 3, "impact": 4 },
 			"expect": { "values": { "risk": 12 }, "errors": {} }
+		},
+		{
+			"name": "compute-bad-expression-is-null",
+			"fields": [{ "machineName": "x", "type": "number" }, { "machineName": "out", "type": "number" }],
+			"rules": [{ "effect": "compute", "target": "out", "expression": "1 +" }],
+			"values": { "x": 2 },
+			"expect": { "values": { "out": 0 } }
 		},
 		{
 			"name": "conditional-require-triggered",
@@ -61,6 +86,16 @@
 			"expect": { "visible": { "categories": false } }
 		},
 		{
+			"name": "show-reveals-field",
+			"fields": [
+				{ "machineName": "special", "type": "boolean" },
+				{ "machineName": "categories", "type": "text" }
+			],
+			"rules": [{ "effect": "show", "target": "categories", "conditions": { "logic": "and", "rules": [{ "field": "special", "op": "eq", "value": true }] } }],
+			"values": { "special": true },
+			"expect": { "visible": { "categories": true } }
+		},
+		{
 			"name": "validate-range",
 			"fields": [{ "machineName": "score", "type": "number" }],
 			"rules": [{ "effect": "validate", "target": "score", "validation": { "kind": "range", "min": 0, "max": 10, "message": "0-10 only" } }],
@@ -68,11 +103,53 @@
 			"expect": { "errors": { "score": "0-10 only" } }
 		},
 		{
+			"name": "validate-range-ok",
+			"fields": [{ "machineName": "score", "type": "number" }],
+			"rules": [{ "effect": "validate", "target": "score", "validation": { "kind": "range", "min": 0, "max": 10, "message": "0-10 only" } }],
+			"values": { "score": 5 },
+			"expect": { "errors": {} }
+		},
+		{
 			"name": "validate-regex-ok",
 			"fields": [{ "machineName": "ref", "type": "text" }],
 			"rules": [{ "effect": "validate", "target": "ref", "validation": { "kind": "regex", "pattern": "^DPIA-[0-9]{4}-[0-9]+$", "message": "bad format" } }],
 			"values": { "ref": "DPIA-2026-7" },
 			"expect": { "errors": {} }
+		},
+		{
+			"name": "validate-regex-fail",
+			"fields": [{ "machineName": "ref", "type": "text" }],
+			"rules": [{ "effect": "validate", "target": "ref", "validation": { "kind": "regex", "pattern": "^DPIA-[0-9]{4}-[0-9]+$", "message": "bad format" } }],
+			"values": { "ref": "nope" },
+			"expect": { "errors": { "ref": "bad format" } }
+		},
+		{
+			"name": "validate-expression-fail",
+			"fields": [{ "machineName": "score", "type": "number" }],
+			"rules": [{ "effect": "validate", "target": "score", "validation": { "kind": "expression", "expression": "score < 100", "message": "too high" } }],
+			"values": { "score": 200 },
+			"expect": { "errors": { "score": "too high" } }
+		},
+		{
+			"name": "validate-skips-empty-value",
+			"fields": [{ "machineName": "ref", "type": "text" }],
+			"rules": [{ "effect": "validate", "target": "ref", "validation": { "kind": "regex", "pattern": "^X$", "message": "bad" } }],
+			"values": { "ref": "" },
+			"expect": { "errors": {} }
+		},
+		{
+			"name": "set-value-default-applied",
+			"fields": [{ "machineName": "tier", "type": "select" }, { "machineName": "fee", "type": "number" }],
+			"rules": [{ "effect": "set_value", "target": "fee", "value": 100, "conditions": { "logic": "and", "rules": [{ "field": "tier", "op": "eq", "value": "gold" }] } }],
+			"values": { "tier": "gold" },
+			"expect": { "values": { "fee": 100 } }
+		},
+		{
+			"name": "set-value-keeps-existing",
+			"fields": [{ "machineName": "tier", "type": "select" }, { "machineName": "fee", "type": "number" }],
+			"rules": [{ "effect": "set_value", "target": "fee", "value": 100, "conditions": { "logic": "and", "rules": [{ "field": "tier", "op": "eq", "value": "gold" }] } }],
+			"values": { "tier": "gold", "fee": 7 },
+			"expect": { "values": { "fee": 7 } }
 		},
 		{
 			"name": "or-conditions",
@@ -84,6 +161,90 @@
 			"rules": [{ "effect": "require", "target": "flag", "conditions": { "logic": "or", "rules": [{ "field": "a", "op": "eq", "value": "x" }, { "field": "b", "op": "eq", "value": "y" }] } }],
 			"values": { "a": "no", "b": "y" },
 			"expect": { "required": { "flag": true } }
+		},
+		{
+			"name": "require-neq",
+			"fields": [{ "machineName": "status", "type": "select" }, { "machineName": "reason", "type": "text" }],
+			"rules": [{ "effect": "require", "target": "reason", "conditions": { "logic": "and", "rules": [{ "field": "status", "op": "neq", "value": "open" }] } }],
+			"values": { "status": "closed" },
+			"expect": { "required": { "reason": true } }
+		},
+		{
+			"name": "require-gt",
+			"fields": [{ "machineName": "amount", "type": "number" }, { "machineName": "approval", "type": "text" }],
+			"rules": [{ "effect": "require", "target": "approval", "conditions": { "logic": "and", "rules": [{ "field": "amount", "op": "gt", "value": 1000 }] } }],
+			"values": { "amount": 5000 },
+			"expect": { "required": { "approval": true } }
+		},
+		{
+			"name": "require-gte-and-lte",
+			"fields": [{ "machineName": "amount", "type": "number" }, { "machineName": "mid", "type": "text" }],
+			"rules": [{ "effect": "require", "target": "mid", "conditions": { "logic": "and", "rules": [{ "field": "amount", "op": "gte", "value": 10 }, { "field": "amount", "op": "lte", "value": 100 }] } }],
+			"values": { "amount": 50 },
+			"expect": { "required": { "mid": true } }
+		},
+		{
+			"name": "require-lt",
+			"fields": [{ "machineName": "amount", "type": "number" }, { "machineName": "low", "type": "text" }],
+			"rules": [{ "effect": "require", "target": "low", "conditions": { "logic": "and", "rules": [{ "field": "amount", "op": "lt", "value": 10 }] } }],
+			"values": { "amount": 3 },
+			"expect": { "required": { "low": true } }
+		},
+		{
+			"name": "require-contains",
+			"fields": [{ "machineName": "tags", "type": "text" }, { "machineName": "extra", "type": "text" }],
+			"rules": [{ "effect": "require", "target": "extra", "conditions": { "logic": "and", "rules": [{ "field": "tags", "op": "contains", "value": "vip" }] } }],
+			"values": { "tags": "a,vip,b" },
+			"expect": { "required": { "extra": true } }
+		},
+		{
+			"name": "require-in",
+			"fields": [{ "machineName": "country", "type": "select" }, { "machineName": "vat", "type": "text" }],
+			"rules": [{ "effect": "require", "target": "vat", "conditions": { "logic": "and", "rules": [{ "field": "country", "op": "in", "value": ["FR", "DE"] }] } }],
+			"values": { "country": "DE" },
+			"expect": { "required": { "vat": true } }
+		},
+		{
+			"name": "require-matches",
+			"fields": [{ "machineName": "code", "type": "text" }, { "machineName": "sub", "type": "text" }],
+			"rules": [{ "effect": "require", "target": "sub", "conditions": { "logic": "and", "rules": [{ "field": "code", "op": "matches", "value": "^A[0-9]+$" }] } }],
+			"values": { "code": "A12" },
+			"expect": { "required": { "sub": true } }
+		},
+		{
+			"name": "require-is-not-empty",
+			"fields": [{ "machineName": "note", "type": "text" }, { "machineName": "ack", "type": "boolean" }],
+			"rules": [{ "effect": "require", "target": "ack", "conditions": { "logic": "and", "rules": [{ "field": "note", "op": "isNotEmpty" }] } }],
+			"values": { "note": "x" },
+			"expect": { "required": { "ack": true } }
+		},
+		{
+			"name": "require-is-empty",
+			"fields": [{ "machineName": "note", "type": "text" }, { "machineName": "ask", "type": "text" }],
+			"rules": [{ "effect": "require", "target": "ask", "conditions": { "logic": "and", "rules": [{ "field": "note", "op": "isEmpty" }] } }],
+			"values": { "note": "" },
+			"expect": { "required": { "ask": true } }
+		},
+		{
+			"name": "require-eq-numeric",
+			"fields": [{ "machineName": "amount", "type": "number" }, { "machineName": "tag", "type": "text" }],
+			"rules": [{ "effect": "require", "target": "tag", "conditions": { "logic": "and", "rules": [{ "field": "amount", "op": "eq", "value": 50 }] } }],
+			"values": { "amount": 50 },
+			"expect": { "required": { "tag": true } }
+		},
+		{
+			"name": "require-contains-array-value",
+			"fields": [{ "machineName": "tags", "type": "multiselect" }, { "machineName": "more", "type": "text" }],
+			"rules": [{ "effect": "require", "target": "more", "conditions": { "logic": "and", "rules": [{ "field": "tags", "op": "contains", "value": "vip" }] } }],
+			"values": { "tags": ["a", "vip"] },
+			"expect": { "required": { "more": true } }
+		},
+		{
+			"name": "validate-range-below-min",
+			"fields": [{ "machineName": "score", "type": "number" }],
+			"rules": [{ "effect": "validate", "target": "score", "validation": { "kind": "range", "min": 0, "max": 10, "message": "0-10 only" } }],
+			"values": { "score": -5 },
+			"expect": { "errors": { "score": "0-10 only" } }
 		}
 	]
 }

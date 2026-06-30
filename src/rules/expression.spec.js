@@ -40,4 +40,16 @@ describe('expression evaluator (safety)', () => {
 		expect(() => evaluateExpression('1 +', {})).toThrow(ExpressionError)
 		expect(() => evaluateExpression('(1 + 2', {})).toThrow(ExpressionError)
 	})
+	it('rejects an unexpected character', () => {
+		expect(() => evaluateExpression('a & b', {})).toThrow(ExpressionError)
+	})
+	it('rejects a stray token and trailing tokens', () => {
+		expect(() => evaluateExpression(')', {})).toThrow(ExpressionError)
+		expect(() => evaluateExpression('1 1', {})).toThrow(ExpressionError)
+	})
+	it('rejects function arity, separator and unterminated-string errors', () => {
+		expect(() => evaluateExpression('abs(1, 2)', {})).toThrow(ExpressionError)
+		expect(() => evaluateExpression('sum(1 2)', {})).toThrow(ExpressionError)
+		expect(() => evaluateExpression("'unterminated", {})).toThrow(ExpressionError)
+	})
 })

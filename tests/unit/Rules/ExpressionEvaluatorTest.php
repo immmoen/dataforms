@@ -67,4 +67,50 @@ class ExpressionEvaluatorTest extends TestCase {
 		$this->expectException(ExpressionException::class);
 		$this->eval->evaluate('(1 + 2', []);
 	}
+
+	public function testRejectsTrailingTokens(): void {
+		$this->expectException(ExpressionException::class);
+		$this->eval->evaluate('1 1', []); // a second expression with no operator
+	}
+
+	public function testRejectsUnterminatedStringLiteral(): void {
+		$this->expectException(ExpressionException::class);
+		$this->eval->evaluate("'abc", []);
+	}
+
+	public function testRejectsUnexpectedCharacter(): void {
+		$this->expectException(ExpressionException::class);
+		$this->eval->evaluate('a & b', []);
+	}
+
+	public function testRejectsStrayOperatorToken(): void {
+		$this->expectException(ExpressionException::class);
+		$this->eval->evaluate(')', []);
+	}
+
+	public function testRejectsMissingArgumentSeparator(): void {
+		$this->expectException(ExpressionException::class);
+		$this->eval->evaluate('sum(1 2)', []); // missing comma
+	}
+
+	public function testRejectsFixedArityMismatch(): void {
+		$this->expectException(ExpressionException::class);
+		$this->eval->evaluate('abs(1, 2)', []); // abs takes exactly one
+	}
+
+	public function testRejectsRoundWithNoArguments(): void {
+		$this->expectException(ExpressionException::class);
+		$this->eval->evaluate('round()', []); // needs at least one
+	}
+
+	public function testStringEscapeIsHonoured(): void {
+		// A backslash escapes the next char inside a string literal.
+		self::assertSame("it's", $this->eval->evaluate("'it\\'s'", []));
+	}
+
+	public function testConcatStringifiesBooleanAndWholeFloat(): void {
+		// toStr(): a bool renders as true/false, a whole float drops its decimals.
+		self::assertSame('xtrue', $this->eval->evaluate("concat('x', flag)", ['flag' => true]));
+		self::assertSame('3', $this->eval->evaluate("concat('', n)", ['n' => 3.0]));
+	}
 }

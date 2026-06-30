@@ -79,4 +79,60 @@ class RuleEvaluatorTest extends TestCase {
 		self::assertSame(12.0, (float)$result['values']['total']);
 		self::assertArrayHasKey('note', $result['errors']); // required because total > 10
 	}
+
+	public function testUnknownConditionOperatorNeverMatches(): void {
+		$fields = [['machineName' => 'a', 'type' => 'text'], ['machineName' => 'b', 'type' => 'text']];
+		$rules = [['effect' => 'require', 'target' => 'b', 'conditions' => ['logic' => 'and', 'rules' => [['field' => 'a', 'op' => 'bogus', 'value' => 'x']]]]];
+		$result = $this->evaluator->evaluate($fields, $rules, ['a' => 'x']);
+		self::assertFalse($result['required']['b'], 'an unknown operator is treated as no-match');
+	}
+
+	public function testValidationOnHiddenFieldIsSkipped(): void {
+		// `secret` is hidden by an unmet show-rule, so its validate rule must not run.
+		$fields = [['machineName' => 'gate', 'type' => 'text'], ['machineName' => 'secret', 'type' => 'text']];
+		$rules = [
+			['effect' => 'show', 'target' => 'secret', 'conditions' => ['logic' => 'and', 'rules' => [['field' => 'gate', 'op' => 'eq', 'value' => 'open']]]],
+			['effect' => 'validate', 'target' => 'secret', 'validation' => ['kind' => 'regex', 'pattern' => '^OK$', 'message' => 'nope']],
+		];
+		$result = $this->evaluator->evaluate($fields, $rules, ['gate' => 'closed', 'secret' => 'whatever']);
+		self::assertArrayNotHasKey('secret', $result['errors']);
+	}
+
+	public function testValidationSkippedWhenFieldAlreadyHasError(): void {
+		// A required-but-empty error pre-empts a second validate rule on the same field.
+		$fields = [['machineName' => 'ref', 'type' => 'text', 'mandatory' => true]];
+		$rules = [['effect' => 'validate', 'target' => 'ref', 'validation' => ['kind' => 'regex', 'pattern' => '^X$', 'message' => 'format']]];
+		$result = $this->evaluator->evaluate($fields, $rules, ['ref' => '']);
+		self::assertSame('This field is required', $result['errors']['ref']); // not 'format'
+	}
+
+	public function testValidationExpressionErrorYieldsTheMessage(): void {
+		$fields = [['machineName' => 'v', 'type' => 'number']];
+		$rules = [['effect' => 'validate', 'target' => 'v', 'validation' => ['kind' => 'expression', 'expression' => '1 +', 'message' => 'broken']]];
+		$result = $this->evaluator->evaluate($fields, $rules, ['v' => 5]);
+		self::assertSame('broken', $result['errors']['v']); // a thrown expression fails validation
+	}
+
+	public function testUnknownValidationKindPasses(): void {
+		$fields = [['machineName' => 'v', 'type' => 'text']];
+		$rules = [['effect' => 'validate', 'target' => 'v', 'validation' => ['kind' => 'mystery', 'message' => 'x']]];
+		$result = $this->evaluator->evaluate($fields, $rules, ['v' => 'anything']);
+		self::assertArrayNotHasKey('v', $result['errors']);
+	}
+
+	public function testConditionalValidationIsSkippedWhenConditionsUnmet(): void {
+		// A validate rule guarded by a condition that does not hold must not run.
+		$fields = [['machineName' => 'kind', 'type' => 'text'], ['machineName' => 'v', 'type' => 'text']];
+		$rules = [['effect' => 'validate', 'target' => 'v', 'validation' => ['kind' => 'regex', 'pattern' => '^OK$', 'message' => 'bad'],
+			'conditions' => ['logic' => 'and', 'rules' => [['field' => 'kind', 'op' => 'eq', 'value' => 'strict']]]]];
+		$result = $this->evaluator->evaluate($fields, $rules, ['kind' => 'lax', 'v' => 'anything']);
+		self::assertArrayNotHasKey('v', $result['errors']);
+	}
+
+	public function testRegexValidationWithEmptyPatternPasses(): void {
+		$fields = [['machineName' => 'v', 'type' => 'text']];
+		$rules = [['effect' => 'validate', 'target' => 'v', 'validation' => ['kind' => 'regex', 'pattern' => '', 'message' => 'bad']]];
+		$result = $this->evaluator->evaluate($fields, $rules, ['v' => 'anything']);
+		self::assertArrayNotHasKey('v', $result['errors']);
+	}
 }
