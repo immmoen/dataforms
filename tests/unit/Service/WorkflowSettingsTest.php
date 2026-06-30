@@ -77,4 +77,69 @@ class WorkflowSettingsTest extends TestCase {
 		$this->assertTrue($s->needsServiceAccount('create_deck_board'));
 		$this->assertFalse($s->needsServiceAccount('notify'));
 	}
+
+	public function testRemainingLimitGetters(): void {
+		$s = $this->settings([], ['automation_max_template_files' => 7, 'automation_max_deck_columns' => 3, 'automation_max_created' => 9]);
+		$this->assertSame(7, $s->maxTemplateFiles());
+		$this->assertSame(3, $s->maxDeckColumns());
+		$this->assertSame(9, $s->maxCreated());
+	}
+
+	public function testToArraySnapshot(): void {
+		$snap = $this->settings()->toArray();
+		$this->assertSame([], $snap['disabled']);
+		$this->assertSame(50, $snap['limits']['maxFolders']);
+		$this->assertSame('To do, Doing, Done', $snap['deckColumns']);
+		$this->assertSame(WorkflowSettings::DEFAULTS, $snap['defaults']);
+	}
+
+	/** A config mock that records writes/deletes. */
+	private function writableSettings(array &$writes, array &$deletes): WorkflowSettings {
+		$cfg = $this->createMock(IAppConfig::class);
+		$cfg->method('getValueString')->willReturnCallback(static fn (string $a, string $k, string $d = ''): string => $d);
+		$cfg->method('getValueInt')->willReturnCallback(static fn (string $a, string $k, int $d = 0): int => $d);
+		$cfg->method('setValueString')->willReturnCallback(function (string $a, string $k, string $v) use (&$writes) {
+			$writes[$k] = $v;
+			return true;
+		});
+		$cfg->method('setValueInt')->willReturnCallback(function (string $a, string $k, int $v) use (&$writes) {
+			$writes[$k] = $v;
+			return true;
+		});
+		$cfg->method('deleteKey')->willReturnCallback(function (string $a, string $k) use (&$deletes): void {
+			$deletes[] = $k;
+		});
+		return new WorkflowSettings($cfg);
+	}
+
+	public function testSetDisabledActionsCleansAndStores(): void {
+		$writes = [];
+		$deletes = [];
+		$this->writableSettings($writes, $deletes)->setDisabledActions(['webhook', '', 'webhook', 'email']);
+		$this->assertSame(['webhook', 'email'], json_decode($writes['automation_disabled'], true));
+	}
+
+	public function testSetLimitsStoresOverridesAndResetsDefaults(): void {
+		$writes = [];
+		$deletes = [];
+		$this->writableSettings($writes, $deletes)->setLimits([
+			'maxFolders' => 80,                 // override → stored
+			'maxParticipants' => 100,           // equals default → reset (delete)
+			'outboundTimeout' => 0,             // non-positive → reset (delete)
+			'unknownKey' => 5,                  // ignored
+		]);
+		$this->assertSame(80, $writes['automation_max_folders']);
+		$this->assertContains('automation_max_participants', $deletes);
+		$this->assertContains('automation_outbound_timeout', $deletes);
+	}
+
+	public function testSetDeckColumnsStoresOrResets(): void {
+		$writes = [];
+		$deletes = [];
+		$s = $this->writableSettings($writes, $deletes);
+		$s->setDeckColumns('A, B, C');
+		$this->assertSame('A, B, C', $writes['automation_deck_columns']);
+		$s->setDeckColumns('To do, Doing, Done'); // the default → reset
+		$this->assertContains('automation_deck_columns', $deletes);
+	}
 }

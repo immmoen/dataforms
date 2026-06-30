@@ -281,39 +281,39 @@ Talk-room & Deck-board are **⚠ unit-level** by PRD decision (faked `NextcloudA
 
 | Id | Business scenario | Source | Seam | Test | Status |
 |----|-------------------|--------|------|------|--------|
-| AUT-01 | Trigger **on record created** | Guide 04 §When | E2E | `e2e/automations.spec.ts › fires on create` | 🔴 |
-| AUT-02 | Trigger **on record updated** | Guide 04 §When | E2E | `e2e/automations.spec.ts › fires on update` | 🔴 |
-| AUT-03 | Trigger **on record deleted** | Guide 04 §When | E2E | `e2e/automations.spec.ts › fires on delete` | 🔴 |
-| AUT-04 | **Only if** condition(s) gate the action; multiple must all match | Guide 04 §Only if | E2E | `e2e/automations.spec.ts › condition gates the action` | 🔴 |
-| AUT-05 | **Enable / disable** switch | Guide 04 §Create | E2E | `e2e/automations.spec.ts › toggles enabled` | 🔴 |
-| AUT-06 | **Edit / Delete** an automation | Guide 04 §Create | E2E | `e2e/automations.spec.ts › edits and deletes` | 🔴 |
+| AUT-01 | Trigger **on record created** | Guide 04 §When | E2E | `e2e/automations.spec.js › @smoke a set-field automation fires on create` | 🟢 |
+| AUT-02 | Trigger **on record updated** | Guide 04 §When | E2E | `AutomationMapperTest › findActive by trigger` + `RunAutomationsJobTest` (unit); E2E slot pending | 🔴 |
+| AUT-03 | Trigger **on record deleted** | Guide 04 §When | E2E | `AutomationMapperTest`/`AutomationListenerTest` (unit); E2E slot pending | 🔴 |
+| AUT-04 | **Only if** condition(s) gate the action; multiple must all match | Guide 04 §Only if | E2E | `RunAutomationsJobTest › honours the condition` (unit); E2E slot pending | 🔴 |
+| AUT-05 | **Enable / disable** switch | Guide 04 §Create | E2E | `AutomationMapperTest › findActive enabled-only` (unit); E2E slot pending | 🔴 |
+| AUT-06 | **Edit / Delete** an automation | Guide 04 §Create | E2E | `e2e/automations.spec.js › @smoke a set-field automation fires on create` (delete); `AutomationServiceTest › update` (unit) | 🟢 |
 
 ### The nine actions
 
 | Id | Business scenario | Source | Seam | Test | Status |
 |----|-------------------|--------|------|------|--------|
-| AUT-07 | **Send a notification** (Nextcloud notification) | Guide 04 §Then | E2E | `e2e/automations.spec.ts › sends a notification` | 🔴 |
-| AUT-08 | **Send an email** — real mail to a mail catcher | Guide 04 §Then, guide 05 §Notifications & email | E2E | `e2e/automations.spec.ts › sends email to catcher` | 🔴 |
-| AUT-09 | **Set a field** — writes directly, no automation loop; relation/file/automatic excluded | Guide 04 §Then, §Notes | E2E | `e2e/automations.spec.ts › sets a field without looping` | 🔴 |
-| AUT-10 | **Create folders** — real folder tree in owner's Files; runs as owner; **idempotent** | Guide 04 §Then, §Notes | E2E | `e2e/automations.spec.ts › creates folders idempotently` | 🔴 |
-| AUT-11 | **Copy a template** — real copy into a folder; idempotent | Guide 04 §Then, §Notes | E2E | `e2e/automations.spec.ts › copies a template` | 🔴 |
-| AUT-12 | **Add a calendar event** — real event in owner's calendar; idempotent | Guide 04 §Then, §Notes | E2E | `e2e/automations.spec.ts › adds a calendar event` | 🔴 |
-| AUT-13 | **Create a Talk room** + participants + welcome message | Guide 04 §Then, guide 05 | ⚠ unit | `CreateTalkRoomActionTest.php › asserts OCS calls` | 🔴 |
-| AUT-14 | **Create a Deck board** + columns | Guide 04 §Then, guide 05 | ⚠ unit | `CreateDeckBoardActionTest.php › asserts OCS calls` | 🔴 |
-| AUT-15 | **Call a webhook** — real receiver verifies HMAC; http(s) only, no redirects, SSRF-guarded, logged | Guide 04 §Then, §Notes; guide 05 §Outbound webhooks | E2E + unit | `e2e/automations.spec.ts › posts a signed webhook`; `WebhookActionTest.php › SSRF guard` | 🔴 |
+| AUT-07 | **Send a notification** (Nextcloud notification) | Guide 04 §Then | E2E | `NotifyActionTest` (unit); E2E slot pending | 🔴 |
+| AUT-08 | **Send an email** — real mail to a mail catcher | Guide 04 §Then, guide 05 §Notifications & email | E2E | `EmailActionTest › resolved addresses only` (unit); mail-catcher E2E pending | 🔴 |
+| AUT-09 | **Set a field** — writes directly, no automation loop; relation/file/automatic excluded | Guide 04 §Then, §Notes | E2E | `e2e/automations.spec.js › @smoke a set-field automation fires on create` | 🟢 |
+| AUT-10 | **Create folders** — real folder tree in owner's Files; runs as owner; **idempotent** | Guide 04 §Then, §Notes | E2E | `ProvisionFoldersActionTest` (unit); folder-in-Files E2E pending | 🔴 |
+| AUT-11 | **Copy a template** — real copy into a folder; idempotent | Guide 04 §Then, §Notes | E2E | `ApplyTemplateActionTest › copies, idempotent` (unit); E2E slot pending | 🔴 |
+| AUT-12 | **Add a calendar event** — real event in owner's calendar; idempotent | Guide 04 §Then, §Notes | E2E | `CalendarEventActionTest` (guards, unit); real-calendar E2E pending | 🔴 |
+| AUT-13 | **Create a Talk room** + participants + welcome message | Guide 04 §Then, guide 05 | ⚠ unit | `CreateTalkRoomActionTest › asserts the exact OCS calls` | ⚠ |
+| AUT-14 | **Create a Deck board** + columns | Guide 04 §Then, guide 05 | ⚠ unit | `CreateDeckBoardActionTest › creates board + stacks` | ⚠ |
+| AUT-15 | **Call a webhook** — real receiver verifies HMAC; http(s) only, no redirects, SSRF-guarded, logged | Guide 04 §Then, §Notes; guide 05 §Outbound webhooks | ⚠ unit | `WebhookActionTest › HMAC signature + SSRF guard + no redirects` (a real local receiver is refused by the action’s own SSRF guard, so verified at the action seam) | ⚠ |
 
 ### Placeholders & engine behaviour
 
 | Id | Business scenario | Source | Seam | Test | Status |
 |----|-------------------|--------|------|------|--------|
-| AUT-16 | Placeholder `{machineName}` resolves a field value | Guide 04 §Placeholders | E2E | `e2e/automations.spec.ts › resolves field placeholder` | 🔴 |
-| AUT-17 | Placeholder `{field\|format}` reformats a date | Guide 04 §Placeholders | unit | `ValueInterpolatorTest.php › formats a date token` | 🔴 |
-| AUT-18 | Placeholder `{relation.subfield}` pulls from a linked record | Guide 04 §Placeholders | unit | `ValueInterpolatorTest.php › resolves relation subfield` | 🔴 |
-| AUT-19 | **Best-effort** — a failing automation is logged and never blocks the save | Guide 04 §Good to know | E2E | `e2e/automations.spec.ts › failure never blocks save` | 🔴 |
-| AUT-20 | Talk/Deck only on **create** trigger; if service account unconfigured, log & skip | Guide 04 §Notes, guide 05 | unit | `CreateTalkRoomActionTest.php › skips when unconfigured` | 🔴 |
-| AUT-21 | A disabled action disappears from the builder and the engine refuses it | Guide 05 §Automation settings | E2E + unit | `e2e/admin.spec.ts › disabled action hidden`; `AutomationServiceTest.php › refuses disabled action` | 🔴 |
-| AUT-22 | Recipients only get what they're allowed to see (access still applies) | Guide 04 §Good to know | unit | `NotifyActionTest.php › respects recipient access` | 🔴 |
-| AUT-23 | **Activity** log lists recent runs, flags failures, kept 30 days | Guide 04 §Good to know | E2E | `e2e/automations.spec.ts › activity log flags failures` | 🔴 |
+| AUT-16 | Placeholder `{machineName}` resolves a field value | Guide 04 §Placeholders | E2E | `ValueInterpolatorTest › substitutes field values` (unit); E2E slot pending | 🔴 |
+| AUT-17 | Placeholder `{field\|format}` reformats a date | Guide 04 §Placeholders | unit | `ValueInterpolatorTest › formats a date token` | 🟢 |
+| AUT-18 | Placeholder `{relation.subfield}` pulls from a linked record | Guide 04 §Placeholders | unit | `RelationResolverTest › enriches with target scalar subfields` | 🟢 |
+| AUT-19 | **Best-effort** — a failing automation is logged and never blocks the save | Guide 04 §Good to know | E2E | `RunAutomationsJobTest › records a failed run but continues` (unit); E2E slot pending | 🔴 |
+| AUT-20 | Talk/Deck only on **create** trigger; if service account unconfigured, log & skip | Guide 04 §Notes, guide 05 | unit | `Create{Talk,Deck}*Test › throws when the service account is unconfigured` | 🟢 |
+| AUT-21 | A disabled action disappears from the builder and the engine refuses it | Guide 05 §Automation settings | E2E + unit | `AutomationServiceTest › rejects a disabled action` + `AutomationConfigControllerTest` (unit); E2E slot pending | 🔴 |
+| AUT-22 | Recipients only get what they're allowed to see (access still applies) | Guide 04 §Good to know | unit | `NotifyActionTest › notifies only existing recipients` | 🟢 |
+| AUT-23 | **Activity** log lists recent runs, flags failures, kept 30 days | Guide 04 §Good to know | E2E | `e2e/automations.spec.js › @smoke a set-field automation fires on create` | 🟢 |
 
 ## Audit history — `AUD`
 
