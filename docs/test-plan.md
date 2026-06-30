@@ -139,7 +139,7 @@ types is confirmed in code (`lib/`/`src/api/fields.js`).*
 | FLD-22 | **User** (Nextcloud) | Guide 03 §Field types | E2E | `e2e/fields.spec.ts › user field` | 🔴 |
 | FLD-23 | **Group** (Nextcloud) | Guide 03 §Field types | E2E | `e2e/fields.spec.ts › group field` | 🔴 |
 | FLD-24 | **Relation** (link to another register) | Guide 03 §Field types, §Relation | E2E | `e2e/relations.spec.js › @smoke link a record via a relation field` (creates a relation field) | 🟢 |
-| FLD-25 | **File attachment** (one or more files via Files) | Guide 03 §Field types, §File | E2E | `e2e/fields.spec.ts › file attachment field` (see ATT-\*) | 🔴 |
+| FLD-25 | **File attachment** (one or more files via Files) | Guide 03 §Field types, §File | E2E | `e2e/attachments.spec.js › @smoke upload, list, remove and persist file attachments` | 🟢 |
 | FLD-26 | **Computed** (read-only expression: `sum,round,if,concat,min,max,abs,len,lower,upper`) | Guide 03 §Computed | E2E | `e2e/fields.spec.ts › computed field` | 🔴 |
 | FLD-27 | **Automatic** field type (system-filled) | Guide 03 §Automatic | E2E | `e2e/fields.spec.ts › automatic field type` | 🔴 |
 
@@ -223,10 +223,10 @@ Parity is gated by the shared `rule-cases.json` JS/PHP fixture (PRD seam #5).*
 
 | Id | Business scenario | Source | Seam | Test | Status |
 |----|-------------------|--------|------|------|--------|
-| ATT-01 | Upload a single file to a file field | Guide 02 §Attachments | E2E | `e2e/attachments.spec.ts › uploads one file` | 🔴 |
-| ATT-02 | Upload **multiple** files | Guide 02 §Attachments | E2E | `e2e/attachments.spec.ts › uploads multiple files` | 🔴 |
-| ATT-03 | Remove an attachment (✕) | Guide 02 §Attachments | E2E | `e2e/attachments.spec.ts › removes a file` | 🔴 |
-| ATT-04 | Files stored **by reference** in a "Dataforms" Files folder, never duplicated | Guide 02 §Attachments | E2E | `e2e/attachments.spec.ts › stores by reference` | 🔴 |
+| ATT-01 | Upload a single file to a file field | Guide 02 §Attachments | E2E | `e2e/attachments.spec.js › @smoke upload, list, remove and persist` | 🟢 |
+| ATT-02 | Upload **multiple** files | Guide 02 §Attachments | E2E | `e2e/attachments.spec.js › @smoke … (uploads two)` | 🟢 |
+| ATT-03 | Remove an attachment (✕) | Guide 02 §Attachments | E2E | `e2e/attachments.spec.js › @smoke … (removes one)` | 🟢 |
+| ATT-04 | Files stored **by reference** in a "Dataforms" Files folder, never duplicated | Guide 02 §Attachments | E2E + unit | `UploadControllerTest › stores in Dataforms folder, returns id+name`; `e2e/attachments.spec.js` (persists by id) | 🟢 |
 
 ## Views & browsing — `VW`
 

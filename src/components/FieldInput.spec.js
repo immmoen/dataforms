@@ -42,6 +42,48 @@ describe('FieldInput', () => {
 		wrapper.vm.triggerUpload()
 	})
 
+	it('normalises the file value into a list (array, single object, none)', () => {
+		expect(mount(FieldInput, { props: { field: field('file'), modelValue: [{ id: 1 }, { id: 2 }] } }).vm.fileList).toHaveLength(2)
+		expect(mount(FieldInput, { props: { field: field('file'), modelValue: { id: 9, name: 'x' } } }).vm.fileList).toEqual([{ id: 9, name: 'x' }])
+		expect(mount(FieldInput, { props: { field: field('file'), modelValue: null } }).vm.fileList).toEqual([])
+	})
+
+	it('uploads picked files and emits the merged list (referenced by id)', async () => {
+		const { uploadLocalFile } = await import('../api/records.js')
+		uploadLocalFile.mockResolvedValueOnce({ id: 11, name: 'a.txt' }).mockResolvedValueOnce({ id: 12, name: 'b.txt' })
+		const wrapper = mount(FieldInput, { props: { field: field('file'), modelValue: [{ id: 1, name: 'old.txt' }] } })
+		await wrapper.vm.onLocalFile({ target: { files: [new File(['a'], 'a.txt'), new File(['b'], 'b.txt')], value: 'x' } })
+		await flushPromises()
+		expect(uploadLocalFile).toHaveBeenCalledTimes(2)
+		expect(wrapper.emitted('update:modelValue')[0][0]).toEqual([
+			{ id: 1, name: 'old.txt' }, { id: 11, name: 'a.txt' }, { id: 12, name: 'b.txt' },
+		])
+	})
+
+	it('does nothing when no files are picked', async () => {
+		const { uploadLocalFile } = await import('../api/records.js')
+		const wrapper = mount(FieldInput, { props: { field: field('file'), modelValue: [] } })
+		await wrapper.vm.onLocalFile({ target: { files: [], value: '' } })
+		expect(uploadLocalFile).not.toHaveBeenCalled()
+	})
+
+	it('clears the uploading flag if an upload fails', async () => {
+		const { uploadLocalFile } = await import('../api/records.js')
+		uploadLocalFile.mockRejectedValueOnce(new Error('boom'))
+		const wrapper = mount(FieldInput, { props: { field: field('file'), modelValue: [] } })
+		await wrapper.vm.onLocalFile({ target: { files: [new File(['a'], 'a.txt')], value: 'x' } })
+		await flushPromises()
+		expect(wrapper.vm.uploading).toBe(false)
+	})
+
+	it('removes an attachment by id and builds a file URL', () => {
+		const wrapper = mount(FieldInput, { props: { field: field('file'), modelValue: [{ id: 1, name: 'a' }, { id: 2, name: 'b' }] } })
+		wrapper.vm.removeFile(1)
+		expect(wrapper.emitted('update:modelValue')[0][0]).toEqual([{ id: 2, name: 'b' }])
+		// The router stub doesn't interpolate params; assert the route shape.
+		expect(wrapper.vm.fileUrl(42)).toContain('/f/')
+	})
+
 	it('seeds the picker from the current value and loads options on mount', async () => {
 		const { listOptions } = await import('../api/records.js')
 		const wrapper = mount(FieldInput, {
