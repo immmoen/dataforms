@@ -41,4 +41,18 @@ describe('SchemaEditor', () => {
 		wrapper.vm.draft.label = 'Quantity'
 		await wrapper.vm.submitEdit()
 	})
+
+	it('creates a new field with a chosen type, appending it to the list', async () => {
+		const { createField } = await import('../api/fields.js')
+		createField.mockResolvedValueOnce({ id: 9, machineName: 'amount', label: 'Amount', type: 'currency' })
+		const wrapper = mount(SchemaEditor, { props: { registerId: 5, canManage: true } })
+		await flushPromises()
+		wrapper.vm.openAdd()
+		wrapper.vm.draft.label = 'Amount'
+		wrapper.vm.draft.type = 'currency'
+		await wrapper.vm.submitAdd()
+		expect(createField).toHaveBeenCalledWith(5, expect.objectContaining({ label: 'Amount', type: 'currency' }))
+		expect(wrapper.vm.fields.some((f) => f.id === 9)).toBe(true)
+		expect(wrapper.vm.showAdd).toBe(false)
+	})
 })
