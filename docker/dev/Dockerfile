@@ -39,6 +39,8 @@ RUN apt-get update \
 	&& rm -rf /var/lib/apt/lists/*
 
 # pcov on by default so `composer run test:unit` collects coverage like CI does.
-RUN echo "pcov.enabled=1" > /usr/local/etc/php/conf.d/pcov.ini
+# pcov.directory must be the repo root (mounted at /app) to cover both lib/ and
+# src/ — without it pcov auto-detects only /app/src and misses the PHP backend.
+RUN printf 'pcov.enabled=1\npcov.directory=/app\n' > /usr/local/etc/php/conf.d/pcov.ini
 
 WORKDIR /app
