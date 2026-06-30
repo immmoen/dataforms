@@ -37,13 +37,6 @@ class RecordFileMapper {
 		$qb->executeStatement();
 	}
 
-	public function deleteForRecord(int $recordId): void {
-		$qb = $this->db->getQueryBuilder();
-		$qb->delete('df_rec_files')
-			->where($qb->expr()->eq('record_id', $qb->createNamedParameter($recordId, IQueryBuilder::PARAM_INT)));
-		$qb->executeStatement();
-	}
-
 	public function deleteForField(int $fieldId): void {
 		$qb = $this->db->getQueryBuilder();
 		$qb->delete('df_rec_files')

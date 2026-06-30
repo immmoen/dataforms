@@ -7,9 +7,6 @@ declare(strict_types=1);
 namespace OCA\Dataforms\Controller;
 
 use OCA\Dataforms\AppInfo\Application;
-use OCA\Dataforms\Exception\ForbiddenException;
-use OCA\Dataforms\Exception\NotFoundException;
-use OCA\Dataforms\Exception\ValidationException;
 use OCA\Dataforms\Service\ImportService;
 use OCA\Dataforms\Service\RecordService;
 use OCP\AppFramework\Http;
@@ -26,6 +23,8 @@ use OCP\IUserSession;
  * /ocs/v2.php/apps/dataforms/api/v1/records/{id}.
  */
 class RecordController extends OCSController {
+	use HandlesApiExceptions;
+
 	public function __construct(
 		IRequest $request,
 		private RecordService $service,
@@ -61,11 +60,7 @@ class RecordController extends OCSController {
 				$filters = $decoded;
 			}
 		}
-		try {
-			return new DataResponse($this->service->list($this->readUserId(), $registerId, $limit, $offset, $sort, $direction, $search, $filters));
-		} catch (NotFoundException $e) {
-			return new DataResponse(['message' => $e->getMessage()], Http::STATUS_NOT_FOUND);
-		}
+		return $this->handle(fn () => $this->service->list($this->readUserId(), $registerId, $limit, $offset, $sort, $direction, $search, $filters));
 	}
 
 	/**
@@ -73,20 +68,12 @@ class RecordController extends OCSController {
 	 */
 	#[NoAdminRequired]
 	public function options(int $registerId, string $display = '', string $search = ''): DataResponse {
-		try {
-			return new DataResponse($this->service->options($this->readUserId(), $registerId, $display, $search));
-		} catch (NotFoundException $e) {
-			return new DataResponse(['message' => $e->getMessage()], Http::STATUS_NOT_FOUND);
-		}
+		return $this->handle(fn () => $this->service->options($this->readUserId(), $registerId, $display, $search));
 	}
 
 	#[NoAdminRequired]
 	public function show(int $id): DataResponse {
-		try {
-			return new DataResponse($this->service->get($this->readUserId(), $id));
-		} catch (NotFoundException $e) {
-			return new DataResponse(['message' => $e->getMessage()], Http::STATUS_NOT_FOUND);
-		}
+		return $this->handle(fn () => $this->service->get($this->readUserId(), $id));
 	}
 
 	/**
@@ -94,15 +81,7 @@ class RecordController extends OCSController {
 	 */
 	#[NoAdminRequired]
 	public function create(int $registerId, array $values = []): DataResponse {
-		try {
-			return new DataResponse($this->service->create($this->userId(), $registerId, $values), Http::STATUS_CREATED);
-		} catch (ValidationException $e) {
-			return new DataResponse(['message' => $e->getMessage(), 'errors' => $e->getErrors()], Http::STATUS_BAD_REQUEST);
-		} catch (NotFoundException $e) {
-			return new DataResponse(['message' => $e->getMessage()], Http::STATUS_NOT_FOUND);
-		} catch (ForbiddenException $e) {
-			return new DataResponse(['message' => $e->getMessage()], Http::STATUS_FORBIDDEN);
-		}
+		return $this->handle(fn () => $this->service->create($this->userId(), $registerId, $values), Http::STATUS_CREATED);
 	}
 
 	/**
@@ -110,52 +89,26 @@ class RecordController extends OCSController {
 	 */
 	#[NoAdminRequired]
 	public function update(int $id, array $values = []): DataResponse {
-		try {
-			return new DataResponse($this->service->update($this->userId(), $id, $values));
-		} catch (ValidationException $e) {
-			return new DataResponse(['message' => $e->getMessage(), 'errors' => $e->getErrors()], Http::STATUS_BAD_REQUEST);
-		} catch (NotFoundException $e) {
-			return new DataResponse(['message' => $e->getMessage()], Http::STATUS_NOT_FOUND);
-		} catch (ForbiddenException $e) {
-			return new DataResponse(['message' => $e->getMessage()], Http::STATUS_FORBIDDEN);
-		}
+		return $this->handle(fn () => $this->service->update($this->userId(), $id, $values));
 	}
 
 	#[NoAdminRequired]
 	public function import(int $registerId, string $csv = ''): DataResponse {
-		try {
-			return new DataResponse($this->importService->importCsv($this->userId(), $registerId, $csv));
-		} catch (ValidationException $e) {
-			return new DataResponse(['message' => $e->getMessage()], Http::STATUS_BAD_REQUEST);
-		} catch (NotFoundException $e) {
-			return new DataResponse(['message' => $e->getMessage()], Http::STATUS_NOT_FOUND);
-		} catch (ForbiddenException $e) {
-			return new DataResponse(['message' => $e->getMessage()], Http::STATUS_FORBIDDEN);
-		}
+		return $this->handle(fn () => $this->importService->importCsv($this->userId(), $registerId, $csv));
 	}
 
 	#[NoAdminRequired]
 	public function destroy(int $id): DataResponse {
-		try {
+		// A 'block' delete policy surfaces as a 422 (the record exists but an
+		// integrity rule forbids removing it), distinct from a 400 input error.
+		return $this->handle(function () use ($id): array {
 			$this->service->delete($this->userId(), $id);
-			return new DataResponse([]);
-		} catch (ValidationException $e) {
-			return new DataResponse(['message' => $e->getMessage()], Http::STATUS_UNPROCESSABLE_ENTITY);
-		} catch (NotFoundException $e) {
-			return new DataResponse(['message' => $e->getMessage()], Http::STATUS_NOT_FOUND);
-		} catch (ForbiddenException $e) {
-			return new DataResponse(['message' => $e->getMessage()], Http::STATUS_FORBIDDEN);
-		}
+			return [];
+		}, Http::STATUS_OK, Http::STATUS_UNPROCESSABLE_ENTITY);
 	}
 
 	#[NoAdminRequired]
 	public function history(int $id): DataResponse {
-		try {
-			return new DataResponse($this->service->history($this->readUserId(), $id));
-		} catch (NotFoundException $e) {
-			return new DataResponse(['message' => $e->getMessage()], Http::STATUS_NOT_FOUND);
-		} catch (ForbiddenException $e) {
-			return new DataResponse(['message' => $e->getMessage()], Http::STATUS_FORBIDDEN);
-		}
+		return $this->handle(fn () => $this->service->history($this->readUserId(), $id));
 	}
 }

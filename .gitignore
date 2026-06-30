@@ -13,6 +13,8 @@ tests/.phpunit.result.cache
 .DS_Store
 # Test / coverage reports
 /coverage/
+/coverage.xml
+/coverage.txt
 /.nyc_output/
 /playwright-report/
 /test-results/

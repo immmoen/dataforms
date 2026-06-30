@@ -4,7 +4,7 @@
 	errorLevel="2"
 	resolveFromConfigFile="true"
 	findUnusedBaselineEntry="true"
-	findUnusedCode="false"
+	findUnusedCode="true"
 	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
 	xmlns="https://getpsalm.org/schema/config"
 	xsi:schemaLocation="https://getpsalm.org/schema/config vendor/vimeo/psalm/config.xsd"
@@ -44,6 +44,29 @@
 		</UndefinedDocblockClass>
 		<MissingDependency errorLevel="suppress" />
 		<PropertyNotSetInConstructor errorLevel="suppress" />
+		<!--
+			findUnusedCode is enabled (above) to surface genuinely dead code —
+			unused local variables, unreferenced private methods/properties, etc.
+			The categories below, however, are false positives by construction in
+			a Nextcloud app and are suppressed so the useful signal is not drowned:
+			- UnusedClass / PossiblyUnusedMethod: controllers, background jobs,
+			  listeners, settings, mappers and their constructors are instantiated
+			  by the DI container, the router and the event dispatcher — never by
+			  `new` in app code — so psalm's call graph cannot see the entry points.
+			- PossiblyUnusedProperty: Entity properties are written by QBMapper
+			  hydration (via __call) and read through jsonSerialize(), neither of
+			  which psalm models.
+			- PossiblyUnusedReturnValue: a method returning a useful value that some
+			  callers legitimately ignore is not a defect.
+			- UnnecessaryVarAnnotation: the `@var ISchemaWrapper $schema` line is the
+			  conventional Nextcloud migration idiom; psalm reads it as redundant
+			  against the OCP stub, but it documents the closure result for readers.
+		-->
+		<UnusedClass errorLevel="suppress" />
+		<PossiblyUnusedMethod errorLevel="suppress" />
+		<PossiblyUnusedProperty errorLevel="suppress" />
+		<PossiblyUnusedReturnValue errorLevel="suppress" />
+		<UnnecessaryVarAnnotation errorLevel="suppress" />
 		<!--
 			Defensive (string)/(int)/(bool) casts on values that arrive as `mixed`
 			from JSON / request input are intentional, even where an optimistic

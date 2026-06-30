@@ -22,7 +22,7 @@
 					</template>
 					{{ t('dataforms', 'Activity') }}
 				</NcButton>
-				<NcButton v-if="canManage" type="primary" @click="openAdd">
+				<NcButton v-if="canManage" variant="primary" @click="openAdd">
 					<template #icon>
 						<PlusIcon :size="20" />
 					</template>
@@ -137,14 +137,14 @@
 							v-model="c.value"
 							:label="t('dataforms', 'Value')"
 							class="c-val" />
-						<NcButton type="tertiary" :aria-label="t('dataforms', 'Remove condition')" @click="draft.conditions.splice(i, 1)">
+						<NcButton variant="tertiary" :aria-label="t('dataforms', 'Remove condition')" @click="draft.conditions.splice(i, 1)">
 							<template #icon>
 								<CloseIcon :size="18" />
 							</template>
 						</NcButton>
 					</div>
 				</div>
-				<NcButton type="tertiary" @click="addCondition">
+				<NcButton variant="tertiary" @click="addCondition">
 					<template #icon>
 						<PlusIcon :size="16" />
 					</template>{{ t('dataforms', 'Add condition') }}
@@ -308,7 +308,7 @@
 				<NcButton :disabled="saving" @click="showDialog = false">
 					{{ t('dataforms', 'Cancel') }}
 				</NcButton>
-				<NcButton type="primary" :disabled="saving || !canSave" @click="submit">
+				<NcButton variant="primary" :disabled="saving || !canSave" @click="submit">
 					{{ editing ? t('dataforms', 'Save') : t('dataforms', 'Add') }}
 				</NcButton>
 			</template>
@@ -344,7 +344,7 @@ import { listFields } from '../api/fields.js'
 import { searchSharees } from '../api/shares.js'
 import { FILTER_OPS } from '../api/rules.js'
 
-const blank = () => ({ name: '', trigger: 'create', conditions: [], actionType: 'notify', recipients: [], subject: '', message: '', setField: '', setValue: '', url: '', secret: '', basePath: '', folderLines: '', templateSource: '', templateDest: '', eventTitle: '', startField: '', duration: 60, calendar: '', eventDescription: '', roomName: '', participantsField: '', roomMessage: '', boardTitle: '', boardColumns: '', serviceAccount: '' })
+const blank = () => ({ name: '', trigger: 'create', conditions: /** @type {Array<{field:string,op:string,value:any}>} */ ([]), actionType: 'notify', recipients: /** @type {Array<{id:string,label?:string}>} */ ([]), subject: '', message: '', setField: '', setValue: '', url: '', secret: '', basePath: '', folderLines: '', templateSource: '', templateDest: '', eventTitle: '', startField: '', duration: 60, calendar: '', eventDescription: '', roomName: '', participantsField: '', roomMessage: '', boardTitle: '', boardColumns: '', serviceAccount: '' })
 
 export default {
 	name: 'AutomationsBuilder',
@@ -373,24 +373,34 @@ export default {
 	},
 	data() {
 		return {
+			/** @type {import('@/types/models').Automation[]} */
 			automations: [],
+			/** @type {import('@/types/models').Field[]} */
 			fields: [],
 			loading: true,
 			showDialog: false,
+			/** @type {import('@/types/models').Automation|null} */
 			editing: null,
 			saving: false,
 			draft: blank(),
 			triggers: TRIGGERS.map((x) => ({ ...x, label: t('dataforms', x.label) })),
 			actionTypes: ACTION_TYPES.map((x) => ({ ...x, label: t('dataforms', x.label) })),
+			/** @type {string[]} */
 			availableTypes: [],
+			/** @type {Array<{id:string,name:string}>} */
 			serviceAccounts: [],
 			showLog: false,
+			/** @type {Array<Record<string,any>>} */
 			log: [],
 			logLoading: false,
 			ops: FILTER_OPS,
+			/** @type {Array<{id:string,label:string,sub?:string}>} */
 			recipientOptions: [],
 			searching: false,
+			/** @type {any} */
 			searchTimer: null,
+			/** @type {any} */
+			liftTimer: null,
 			durationOptions: [
 				{ id: 30, label: t('dataforms', '30 minutes') },
 				{ id: 60, label: t('dataforms', '1 hour') },
@@ -566,7 +576,7 @@ export default {
 				let lifted = false
 				document.querySelectorAll('.dialog__modal').forEach((el) => {
 					if (!before.has(el)) {
-						el.style.zIndex = '11000'
+						(/** @type {HTMLElement} */ (el)).style.zIndex = '11000'
 						lifted = true
 					}
 				})

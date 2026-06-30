@@ -6,7 +6,6 @@ declare(strict_types=1);
 
 namespace OCA\Dataforms\Service;
 
-use OCA\Dataforms\Db\Share;
 use OCA\Dataforms\Db\View;
 use OCA\Dataforms\Db\ViewMapper;
 use OCA\Dataforms\Exception\ForbiddenException;
@@ -103,7 +102,7 @@ class ViewService {
 		}
 		// A register manager may also tidy up shared views.
 		$register = $this->registerService->find($userId, $view->getRegisterId());
-		if (($this->registerService->permissionsFor($register, $userId) & Share::PERMISSION_MANAGE) !== 0) {
+		if ($this->registerService->isManager($register, $userId)) {
 			return $view;
 		}
 		throw new ForbiddenException('Only the view owner or a register manager can change this view');

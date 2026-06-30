@@ -83,8 +83,8 @@ import { groupForOption } from '../api/fields.js'
 export default {
 	name: 'GroupedMultiSelect',
 	props: {
-		options: { type: Array, default: () => [] },
-		modelValue: { type: Array, default: () => [] },
+		options: { type: /** @type {import('vue').PropType<string[]>} */ (Array), default: () => [] },
+		modelValue: { type: /** @type {import('vue').PropType<string[]>} */ (Array), default: () => [] },
 		groupPattern: { type: String, default: '' },
 		label: { type: String, default: '' },
 		disabled: { type: Boolean, default: false },

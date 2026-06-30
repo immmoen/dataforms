@@ -7,9 +7,6 @@ declare(strict_types=1);
 namespace OCA\Dataforms\Controller;
 
 use OCA\Dataforms\AppInfo\Application;
-use OCA\Dataforms\Exception\ForbiddenException;
-use OCA\Dataforms\Exception\NotFoundException;
-use OCA\Dataforms\Exception\ValidationException;
 use OCA\Dataforms\Service\AutomationLogService;
 use OCA\Dataforms\Service\AutomationService;
 use OCP\AppFramework\Http;
@@ -20,6 +17,8 @@ use OCP\IRequest;
 use OCP\IUserSession;
 
 class AutomationController extends OCSController {
+	use HandlesApiExceptions;
+
 	public function __construct(
 		IRequest $request,
 		private AutomationService $service,
@@ -49,65 +48,33 @@ class AutomationController extends OCSController {
 
 	#[NoAdminRequired]
 	public function index(int $registerId): DataResponse {
-		try {
-			return new DataResponse($this->service->listForRegister($this->userId(), $registerId));
-		} catch (NotFoundException $e) {
-			return new DataResponse(['message' => $e->getMessage()], Http::STATUS_NOT_FOUND);
-		} catch (ForbiddenException $e) {
-			return new DataResponse(['message' => $e->getMessage()], Http::STATUS_FORBIDDEN);
-		}
+		return $this->handle(fn () => $this->service->listForRegister($this->userId(), $registerId));
 	}
 
 	/** Recent automation runs for a register (manager-gated), newest first. */
 	#[NoAdminRequired]
 	public function log(int $registerId, int $limit = 100): DataResponse {
-		try {
-			return new DataResponse($this->logService->listForRegister($this->userId(), $registerId, $limit));
-		} catch (NotFoundException $e) {
-			return new DataResponse(['message' => $e->getMessage()], Http::STATUS_NOT_FOUND);
-		} catch (ForbiddenException $e) {
-			return new DataResponse(['message' => $e->getMessage()], Http::STATUS_FORBIDDEN);
-		}
+		return $this->handle(fn () => $this->logService->listForRegister($this->userId(), $registerId, $limit));
 	}
 
 	#[NoAdminRequired]
 	public function create(int $registerId, string $name = '', string $trigger = '', string $actionType = '', mixed $condition = null, mixed $actionConfig = [], bool $enabled = true): DataResponse {
-		try {
-			return new DataResponse($this->service->create($this->userId(), $registerId, [
-				'name' => $name, 'trigger' => $trigger, 'actionType' => $actionType,
-				'condition' => $condition, 'actionConfig' => $actionConfig, 'enabled' => $enabled,
-			]), Http::STATUS_CREATED);
-		} catch (ValidationException $e) {
-			return new DataResponse(['message' => $e->getMessage()], Http::STATUS_BAD_REQUEST);
-		} catch (NotFoundException $e) {
-			return new DataResponse(['message' => $e->getMessage()], Http::STATUS_NOT_FOUND);
-		} catch (ForbiddenException $e) {
-			return new DataResponse(['message' => $e->getMessage()], Http::STATUS_FORBIDDEN);
-		}
+		return $this->handle(fn () => $this->service->create($this->userId(), $registerId, [
+			'name' => $name, 'trigger' => $trigger, 'actionType' => $actionType,
+			'condition' => $condition, 'actionConfig' => $actionConfig, 'enabled' => $enabled,
+		]), Http::STATUS_CREATED);
 	}
 
 	#[NoAdminRequired]
 	public function update(int $id, array $changes = []): DataResponse {
-		try {
-			return new DataResponse($this->service->update($this->userId(), $id, $changes));
-		} catch (ValidationException $e) {
-			return new DataResponse(['message' => $e->getMessage()], Http::STATUS_BAD_REQUEST);
-		} catch (NotFoundException $e) {
-			return new DataResponse(['message' => $e->getMessage()], Http::STATUS_NOT_FOUND);
-		} catch (ForbiddenException $e) {
-			return new DataResponse(['message' => $e->getMessage()], Http::STATUS_FORBIDDEN);
-		}
+		return $this->handle(fn () => $this->service->update($this->userId(), $id, $changes));
 	}
 
 	#[NoAdminRequired]
 	public function destroy(int $id): DataResponse {
-		try {
+		return $this->handle(function () use ($id): array {
 			$this->service->delete($this->userId(), $id);
-			return new DataResponse([]);
-		} catch (NotFoundException $e) {
-			return new DataResponse(['message' => $e->getMessage()], Http::STATUS_NOT_FOUND);
-		} catch (ForbiddenException $e) {
-			return new DataResponse(['message' => $e->getMessage()], Http::STATUS_FORBIDDEN);
-		}
+			return [];
+		});
 	}
 }

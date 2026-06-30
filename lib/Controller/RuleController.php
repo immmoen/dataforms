@@ -7,9 +7,6 @@ declare(strict_types=1);
 namespace OCA\Dataforms\Controller;
 
 use OCA\Dataforms\AppInfo\Application;
-use OCA\Dataforms\Exception\ForbiddenException;
-use OCA\Dataforms\Exception\NotFoundException;
-use OCA\Dataforms\Exception\ValidationException;
 use OCA\Dataforms\Service\RuleService;
 use OCP\AppFramework\Http;
 use OCP\AppFramework\Http\Attribute\NoAdminRequired;
@@ -20,6 +17,8 @@ use OCP\ISession;
 use OCP\IUserSession;
 
 class RuleController extends OCSController {
+	use HandlesApiExceptions;
+
 	public function __construct(
 		IRequest $request,
 		private RuleService $service,
@@ -36,13 +35,11 @@ class RuleController extends OCSController {
 
 	#[NoAdminRequired]
 	public function index(int $registerId): DataResponse {
-		try {
+		return $this->handle(function () use ($registerId) {
 			$userId = $this->userId();
 			$this->session->close(); // release the session lock for this read
-			return new DataResponse($this->service->listForRegister($userId, $registerId));
-		} catch (NotFoundException $e) {
-			return new DataResponse(['message' => $e->getMessage()], Http::STATUS_NOT_FOUND);
-		}
+			return $this->service->listForRegister($userId, $registerId);
+		});
 	}
 
 	/**
@@ -52,16 +49,10 @@ class RuleController extends OCSController {
 	 */
 	#[NoAdminRequired]
 	public function create(int $registerId, string $effect = '', string $target = '', $conditions = null, $value = null, ?string $expression = null, $validation = null, bool $enabled = true): DataResponse {
-		try {
-			$rule = $this->service->create($this->userId(), $registerId, compact('effect', 'target', 'conditions', 'value', 'expression', 'validation', 'enabled'));
-			return new DataResponse($rule, Http::STATUS_CREATED);
-		} catch (ValidationException $e) {
-			return new DataResponse(['message' => $e->getMessage()], Http::STATUS_BAD_REQUEST);
-		} catch (NotFoundException $e) {
-			return new DataResponse(['message' => $e->getMessage()], Http::STATUS_NOT_FOUND);
-		} catch (ForbiddenException $e) {
-			return new DataResponse(['message' => $e->getMessage()], Http::STATUS_FORBIDDEN);
-		}
+		// compact() resolves in this scope; an arrow fn would not capture the
+		// names (it only auto-captures variables it lexically references).
+		$data = compact('effect', 'target', 'conditions', 'value', 'expression', 'validation', 'enabled');
+		return $this->handle(fn () => $this->service->create($this->userId(), $registerId, $data), Http::STATUS_CREATED);
 	}
 
 	/**
@@ -80,24 +71,14 @@ class RuleController extends OCSController {
 			'validation' => $validation,
 			'enabled' => $enabled,
 		], static fn ($v) => $v !== null);
-		try {
-			return new DataResponse($this->service->update($this->userId(), $id, $data));
-		} catch (NotFoundException $e) {
-			return new DataResponse(['message' => $e->getMessage()], Http::STATUS_NOT_FOUND);
-		} catch (ForbiddenException $e) {
-			return new DataResponse(['message' => $e->getMessage()], Http::STATUS_FORBIDDEN);
-		}
+		return $this->handle(fn () => $this->service->update($this->userId(), $id, $data));
 	}
 
 	#[NoAdminRequired]
 	public function destroy(int $id): DataResponse {
-		try {
+		return $this->handle(function () use ($id): array {
 			$this->service->delete($this->userId(), $id);
-			return new DataResponse([]);
-		} catch (NotFoundException $e) {
-			return new DataResponse(['message' => $e->getMessage()], Http::STATUS_NOT_FOUND);
-		} catch (ForbiddenException $e) {
-			return new DataResponse(['message' => $e->getMessage()], Http::STATUS_FORBIDDEN);
-		}
+			return [];
+		});
 	}
 }

@@ -3,28 +3,14 @@
  *
  * Client for the fields (schema) OCS API.
  */
-import axios from '@nextcloud/axios'
-import { generateOcsUrl } from '@nextcloud/router'
-
-// Build the path literally — a {placeholder} would percent-encode slashes.
-const url = (path) => generateOcsUrl('apps/dataforms/api/v1/' + path)
-
-const config = {
-	timeout: 30000,
-	headers: {
-		'OCS-APIRequest': 'true',
-		Accept: 'application/json',
-	},
-}
-
-const unwrap = (response) => response.data.ocs.data
+import { ocsGet, ocsPost, ocsPut, ocsDelete } from './ocs.js'
 
 /**
  * @param {number} registerId register id
  * @return {Promise<object[]>} fields ordered by position
  */
 export async function listFields(registerId) {
-	return unwrap(await axios.get(url(`registers/${registerId}/fields`), config))
+	return ocsGet(`registers/${registerId}/fields`)
 }
 
 /**
@@ -33,7 +19,7 @@ export async function listFields(registerId) {
  * @return {Promise<object>} the created field
  */
 export async function createField(registerId, data) {
-	return unwrap(await axios.post(url(`registers/${registerId}/fields`), data, config))
+	return ocsPost(`registers/${registerId}/fields`, data)
 }
 
 /**
@@ -42,14 +28,14 @@ export async function createField(registerId, data) {
  * @return {Promise<object>} the updated field
  */
 export async function updateField(id, data) {
-	return unwrap(await axios.put(url(`fields/${id}`), data, config))
+	return ocsPut(`fields/${id}`, data)
 }
 
 /**
  * @param {number} id field id
  */
 export async function deleteField(id) {
-	await axios.delete(url(`fields/${id}`), config)
+	await ocsDelete(`fields/${id}`)
 }
 
 /**
@@ -58,7 +44,7 @@ export async function deleteField(id) {
  * @return {Promise<object[]>} the reordered fields
  */
 export async function reorderFields(registerId, order) {
-	return unwrap(await axios.post(url(`registers/${registerId}/fields/reorder`), { order }, config))
+	return ocsPost(`registers/${registerId}/fields/reorder`, { order })
 }
 
 /**

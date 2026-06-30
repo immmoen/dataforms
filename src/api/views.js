@@ -3,19 +3,14 @@
  *
  * Client for the saved-views OCS API.
  */
-import axios from '@nextcloud/axios'
-import { generateOcsUrl } from '@nextcloud/router'
-
-const url = (path) => generateOcsUrl('apps/dataforms/api/v1/' + path)
-const config = { timeout: 30000, headers: { 'OCS-APIRequest': 'true', Accept: 'application/json' } }
-const unwrap = (response) => response.data.ocs.data
+import { ocsGet, ocsPost, ocsPut, ocsDelete } from './ocs.js'
 
 /**
  * @param {number} registerId register id
  * @return {Promise<object[]>} saved views visible to the user
  */
 export async function listViews(registerId) {
-	return unwrap(await axios.get(url(`registers/${registerId}/views`), config))
+	return ocsGet(`registers/${registerId}/views`)
 }
 
 /**
@@ -24,7 +19,7 @@ export async function listViews(registerId) {
  * @return {Promise<object>} the created view
  */
 export async function createView(registerId, data) {
-	return unwrap(await axios.post(url(`registers/${registerId}/views`), data, config))
+	return ocsPost(`registers/${registerId}/views`, data)
 }
 
 /**
@@ -33,12 +28,12 @@ export async function createView(registerId, data) {
  * @return {Promise<object>} the updated view
  */
 export async function updateView(id, data) {
-	return unwrap(await axios.put(url(`views/${id}`), data, config))
+	return ocsPut(`views/${id}`, data)
 }
 
 /**
  * @param {number} id view id
  */
 export async function deleteView(id) {
-	await axios.delete(url(`views/${id}`), config)
+	await ocsDelete(`views/${id}`)
 }

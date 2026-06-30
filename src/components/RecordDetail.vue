@@ -73,7 +73,7 @@
 			<NcButton @click="$emit('close')">
 				{{ t('dataforms', 'Close') }}
 			</NcButton>
-			<NcButton v-if="canEdit" type="primary" @click="$emit('edit', record)">
+			<NcButton v-if="canEdit" variant="primary" @click="$emit('edit', record)">
 				{{ t('dataforms', 'Edit') }}
 			</NcButton>
 		</template>
@@ -93,13 +93,18 @@ export default {
 	name: 'RecordDetail',
 	components: { NcButton, NcDialog, NcLoadingIcon, HistoryIcon },
 	props: {
-		fields: { type: Array, required: true },
+		fields: { type: /** @type {import('vue').PropType<import('@/types/models').Field[]>} */ (Array), required: true },
 		record: { type: Object, required: true },
 		canEdit: { type: Boolean, default: false },
 	},
 	emits: ['close', 'edit'],
 	data() {
-		return { showHistory: false, history: [], historyLoading: false }
+		return {
+			showHistory: false,
+			/** @type {Array<{id?:number,action:string,user:string,summary:string,detail:any,created:number}>} */
+			history: [],
+			historyLoading: false,
+		}
 	},
 	methods: {
 		async toggleHistory() {

@@ -37,7 +37,7 @@
 					:clearable="false"
 					class="role" />
 				<NcButton class="add-btn"
-					type="primary"
+					variant="primary"
 					:disabled="saving || !selectedSharee"
 					@click="add">
 					{{ t('dataforms', 'Add') }}
@@ -66,7 +66,7 @@
 							:clearable="false"
 							class="role-sel"
 							@update:model-value="changeRole(share, $event)" />
-						<NcButton type="tertiary" @click="remove(share)">
+						<NcButton variant="tertiary" @click="remove(share)">
 							<template #icon>
 								<DeleteIcon :size="18" />
 							</template>
@@ -100,12 +100,16 @@ export default {
 	emits: ['close'],
 	data() {
 		return {
+			/** @type {import('@/types/models').Share[]} */
 			shares: [],
 			loading: true,
 			saving: false,
+			/** @type {{id:string,label:string,sub?:string,type?:string}|null} */
 			selectedSharee: null, // { id, label, sub, type } picked from search
+			/** @type {Array<{id:string,label:string,sub?:string,type?:string}>} */
 			shareeOptions: [],
 			searching: false,
+			/** @type {any} */
 			searchTimer: null,
 			lastQuery: '',
 			newRole: 'read',

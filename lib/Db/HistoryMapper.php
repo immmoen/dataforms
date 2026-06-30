@@ -34,13 +34,6 @@ class HistoryMapper extends QBMapper {
 		return $this->findEntities($qb);
 	}
 
-	public function deleteForRecord(int $recordId): void {
-		$qb = $this->db->getQueryBuilder();
-		$qb->delete($this->getTableName())
-			->where($qb->expr()->eq('record_id', $qb->createNamedParameter($recordId, IQueryBuilder::PARAM_INT)));
-		$qb->executeStatement();
-	}
-
 	/** Delete all history for a register (used by register purge). */
 	public function deleteByRegister(int $registerId): void {
 		$qb = $this->db->getQueryBuilder();

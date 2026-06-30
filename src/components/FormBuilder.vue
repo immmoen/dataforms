@@ -21,7 +21,7 @@
 					</p>
 				</div>
 				<NcButton v-if="canManage"
-					type="primary"
+					variant="primary"
 					:disabled="fields.length === 0"
 					@click="openAdd">
 					<template #icon>
@@ -48,7 +48,7 @@
 					<FormIcon :size="20" />
 				</template>
 				<template #action>
-					<NcButton v-if="canManage" type="primary" @click="openAdd">
+					<NcButton v-if="canManage" variant="primary" @click="openAdd">
 						{{ t('dataforms', 'Build your first form') }}
 					</NcButton>
 				</template>
@@ -58,8 +58,8 @@
 				<li v-for="form in forms"
 					:key="form.id"
 					class="form-row"
-					:role="canManage ? 'button' : null"
-					:tabindex="canManage ? 0 : null"
+					:role="canManage ? 'button' : undefined"
+					:tabindex="canManage ? 0 : undefined"
 					@click="canManage && openEdit(form)"
 					@keydown.enter.prevent="canManage && openEdit(form)"
 					@keydown.space.prevent="canManage && openEdit(form)">
@@ -91,7 +91,7 @@
 		<!-- ============ EDIT MODE (WYSIWYG builder) ============ -->
 		<div v-else class="builder">
 			<div class="builder-bar">
-				<NcButton type="tertiary" @click="cancelEdit">
+				<NcButton variant="tertiary" @click="cancelEdit">
 					<template #icon>
 						<ArrowLeftIcon :size="20" />
 					</template>
@@ -103,7 +103,7 @@
 					:aria-label="t('dataforms', 'Form name')">
 				<span class="spacer" />
 				<span class="placed-count">{{ n('dataforms', '%n field placed', '%n fields placed', placedCount) }}</span>
-				<NcButton type="primary" :disabled="saving || draft.title.trim() === ''" @click="submit">
+				<NcButton variant="primary" :disabled="saving || draft.title.trim() === ''" @click="submit">
 					<template #icon>
 						<ContentSaveIcon :size="20" />
 					</template>
@@ -166,7 +166,7 @@
 								:placeholder="t('dataforms', 'Section title (optional)')"
 								:aria-label="t('dataforms', 'Section title')">
 							<div class="section-tools">
-								<NcButton type="tertiary-no-background"
+								<NcButton variant="tertiary-no-background"
 									:aria-label="t('dataforms', 'Move section up')"
 									:disabled="si === 0"
 									@click="moveSection(si, -1)">
@@ -174,7 +174,7 @@
 										<ChevronUpIcon :size="20" />
 									</template>
 								</NcButton>
-								<NcButton type="tertiary-no-background"
+								<NcButton variant="tertiary-no-background"
 									:aria-label="t('dataforms', 'Move section down')"
 									:disabled="si === draft.sections.length - 1"
 									@click="moveSection(si, 1)">
@@ -182,7 +182,7 @@
 										<ChevronDownIcon :size="20" />
 									</template>
 								</NcButton>
-								<NcButton type="tertiary-no-background" :aria-label="t('dataforms', 'Remove section')" @click="removeSection(si)">
+								<NcButton variant="tertiary-no-background" :aria-label="t('dataforms', 'Remove section')" @click="removeSection(si)">
 									<template #icon>
 										<DeleteIcon :size="18" />
 									</template>
@@ -245,7 +245,7 @@
 						</ul>
 					</div>
 
-					<NcButton type="secondary" class="add-section" @click="addSection">
+					<NcButton variant="secondary" class="add-section" @click="addSection">
 						<template #icon>
 							<PlusIcon :size="18" />
 						</template>
@@ -308,14 +308,20 @@ export default {
 	},
 	data() {
 		return {
+			/** @type {import('@/types/models').Form[]} */
 			forms: [],
+			/** @type {import('@/types/models').Field[]} */
 			fields: [],
 			loading: true,
+			/** @type {import('@/types/models').Form|Record<string,any>|null} */
 			editing: null, // null = list mode; a form object or {} = edit mode
 			saving: false,
+			/** @type {{title:string,sections:Array<{title:string,fields:string[]}>}} */
 			draft: { title: '', sections: [] },
 			paletteSearch: '',
+			/** @type {Record<string,any>|null} */
 			dragItem: null, // { from: 'palette'|'section', machineName, si? }
+			/** @type {number|null} */
 			dragOverSection: null,
 		}
 	},

@@ -1,3 +1,8 @@
+// @ts-nocheck — imperative DOM glue for the server-rendered admin settings
+// forms (no Vue, no app logic, excluded from coverage). Every finding here is
+// the DOM lib typing querySelector()/getElementById() as the generic Element,
+// which doesn't expose .value/.dataset on the known <input> widgets; exhaustive
+// casts add noise without value. checkJs stays meaningful on the logic + SFCs.
 /**
  * SPDX-License-Identifier: AGPL-3.0-or-later
  *
