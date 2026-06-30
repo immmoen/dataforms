@@ -321,10 +321,10 @@ Talk-room & Deck-board are **⚠ unit-level** by PRD decision (faked `NextcloudA
 
 | Id | Business scenario | Source | Seam | Test | Status |
 |----|-------------------|--------|------|------|--------|
-| AUD-01 | **Create** is recorded (who & when) | Guide 02 §Open a record | E2E | `e2e/audit.spec.ts › records creation` | 🔴 |
-| AUD-02 | **Update** is recorded with the change detail | Guide 02 §Open a record | E2E | `e2e/audit.spec.ts › records update with diff` | 🔴 |
-| AUD-03 | **Delete** is recorded | Guide 02, `docs/AUDIT.md` | E2E | `e2e/audit.spec.ts › records deletion` | 🔴 |
-| AUD-04 | **History** panel in the record detail shows the trail | Guide 02 §Open a record | E2E | `e2e/audit.spec.ts › history panel shows trail` | 🔴 |
+| AUD-01 | **Create** is recorded (who & when) | Guide 02 §Open a record | E2E | `e2e/audit.spec.js › @smoke create + update are recorded and shown in the History panel` | 🟢 |
+| AUD-02 | **Update** is recorded with the change detail | Guide 02 §Open a record | E2E | `e2e/audit.spec.js › @smoke create + update are recorded and shown in the History panel` | 🟢 |
+| AUD-03 | **Delete** is recorded | Guide 02, `docs/AUDIT.md` | E2E | `RecordServiceDeleteTest` (delete logs history) + `HistoryMapperTest` (unit); E2E slot pending (the record is gone from the UI) | 🔴 |
+| AUD-04 | **History** panel in the record detail shows the trail | Guide 02 §Open a record | E2E | `e2e/audit.spec.js › @smoke create + update are recorded and shown in the History panel`; `RecordDetail.spec` | 🟢 |
 
 ## CSV import / export — `CSV`
 
