@@ -42,10 +42,79 @@ describe('FieldInput', () => {
 		wrapper.vm.triggerUpload()
 	})
 
-	it('searches relation options', async () => {
-		const wrapper = mount(FieldInput, { props: { field: field('relation', { config: { target: 9 } }), modelValue: { id: 1, label: 'One' } } })
-		await wrapper.vm.loadRelations('one')
+	it('seeds the picker from the current value and loads options on mount', async () => {
+		const { listOptions } = await import('../api/records.js')
+		const wrapper = mount(FieldInput, {
+			props: { field: field('relation', { config: { targetRegisterId: 9, displayField: 'name' } }), modelValue: { id: 5, label: 'Acme' } },
+		})
+		// The current selection is shown immediately (before options load)...
+		expect(wrapper.vm.relationOptions).toEqual([{ id: 5, label: 'Acme' }])
 		await flushPromises()
-		expect(wrapper.vm.relationOptions.length).toBeGreaterThan(0)
+		// ...then the target register's options are fetched with the display field.
+		expect(listOptions).toHaveBeenCalledWith(9, { display: 'name', search: '' })
+	})
+
+	it('merges the current selection into freshly loaded options without duplicating', async () => {
+		const { listOptions } = await import('../api/records.js')
+		listOptions.mockResolvedValue([{ id: 1, label: 'One' }, { id: 2, label: 'Two' }])
+		const wrapper = mount(FieldInput, {
+			props: { field: field('relation', { config: { targetRegisterId: 9 } }), modelValue: { id: 3, label: 'Kept' } },
+		})
+		await wrapper.vm.loadRelations('')
+		await flushPromises()
+		const ids = wrapper.vm.relationOptions.map((o) => o.id)
+		expect(ids).toEqual([1, 2, 3]) // loaded options + the current selection appended
+	})
+
+	it('does nothing when the relation has no target register', async () => {
+		const { listOptions } = await import('../api/records.js')
+		const wrapper = mount(FieldInput, { props: { field: field('relation', { config: {} }), modelValue: null } })
+		await wrapper.vm.loadRelations('x')
+		expect(listOptions).not.toHaveBeenCalled()
+	})
+
+	it('debounces the search then loads', async () => {
+		vi.useFakeTimers()
+		try {
+			const { listOptions } = await import('../api/records.js')
+			const wrapper = mount(FieldInput, { props: { field: field('relation', { config: { targetRegisterId: 9 } }), modelValue: null } })
+			listOptions.mockClear()
+			wrapper.vm.onRelSearch('ab')
+			wrapper.vm.onRelSearch('abc') // resets the timer
+			vi.advanceTimersByTime(250)
+			expect(listOptions).toHaveBeenCalledWith(9, { display: '', search: 'abc' })
+		} finally {
+			vi.useRealTimers()
+		}
+	})
+
+	it('keeps going if loading options fails', async () => {
+		const { listOptions } = await import('../api/records.js')
+		listOptions.mockRejectedValueOnce(new Error('boom'))
+		const wrapper = mount(FieldInput, { props: { field: field('relation', { config: { targetRegisterId: 9 } }), modelValue: null } })
+		await wrapper.vm.loadRelations('')
+		await flushPromises()
+		expect(wrapper.vm.relLoading).toBe(false)
+	})
+
+	it('relationModel wraps a single value into a list for a multi relation', () => {
+		const single = mount(FieldInput, { props: { field: field('relation', { config: { targetRegisterId: 9 } }), modelValue: { id: 1, label: 'A' } } })
+		expect(single.vm.relationModel).toEqual({ id: 1, label: 'A' })
+
+		const multi = mount(FieldInput, { props: { field: field('relation', { config: { targetRegisterId: 9, multiple: true } }), modelValue: { id: 1, label: 'A' } } })
+		expect(multi.vm.relationModel).toEqual([{ id: 1, label: 'A' }]) // single coerced to a list
+
+		const multiList = mount(FieldInput, { props: { field: field('relation', { config: { targetRegisterId: 9, multiple: true } }), modelValue: [{ id: 1 }, { id: 2 }] } })
+		expect(multiList.vm.relationModel).toEqual([{ id: 1 }, { id: 2 }])
+
+		const multiEmpty = mount(FieldInput, { props: { field: field('relation', { config: { targetRegisterId: 9, multiple: true } }), modelValue: null } })
+		expect(multiEmpty.vm.relationModel).toEqual([])
+	})
+
+	it('emits the picked record(s) from the relation select', async () => {
+		const wrapper = mount(FieldInput, { props: { field: field('relation', { config: { targetRegisterId: 9 } }), modelValue: null } })
+		await flushPromises()
+		wrapper.vm.emit({ id: 7, label: 'Picked' })
+		expect(wrapper.emitted('update:modelValue')[0]).toEqual([{ id: 7, label: 'Picked' }])
 	})
 })
