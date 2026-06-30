@@ -8,6 +8,10 @@ declare(strict_types=1);
 // Nextcloud server context are run via the server's own test bootstrap in CI.
 require_once __DIR__ . '/../vendor/autoload.php';
 
+// Stubs for non-public OC\ symbols referenced (but not shipped) by nextcloud/ocp
+// — needed so the mock generator can resolve some OCP inheritance chains.
+require_once __DIR__ . '/stubs.php';
+
 // nextcloud/ocp ships the public OCP/NCU API as plain files but declares no
 // autoload section (it is meant for static analysis), so OCP classes are not
 // resolvable at unit-test runtime. Register a test-only autoloader that loads

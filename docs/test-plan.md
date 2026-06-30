@@ -174,17 +174,17 @@ types is confirmed in code (`lib/`/`src/api/fields.js`).*
 
 | Id | Business scenario | Source | Seam | Test | Status |
 |----|-------------------|--------|------|------|--------|
-| REC-01 | Create a record via **Blank (all fields)** | Guide 02 §Add a record | E2E | `e2e/records.spec.ts › creates a record (blank)` | 🔴 |
+| REC-01 | Create a record via **Blank (all fields)** | Guide 02 §Add a record | E2E | `e2e/records.spec.js › @smoke create, edit, and delete a record` | 🟢 |
 | REC-02 | Create a record via a named **form** | Guide 02 §Add a record | E2E | `e2e/records.spec.ts › creates a record via form` | 🔴 |
 | REC-03 | **New record** menu offers Blank + each named form | Guide 02 §Add a record | E2E | `e2e/records.spec.ts › new-record menu lists forms` | 🔴 |
-| REC-04 | Required fields are marked and checked on **Save** | Guide 02 §Add a record | E2E | `e2e/records.spec.ts › validates required on save` | 🔴 |
-| REC-05 | Computed & automatic fields are filled on create | Guide 02 §Add a record | E2E | `e2e/records.spec.ts › fills computed and auto fields` | 🔴 |
-| REC-06 | Edit a record via the full form (⋯ → Edit) | Guide 02 §Edit a record | E2E | `e2e/records.spec.ts › edits via full form` | 🔴 |
-| REC-07 | **Double-click a cell** to edit in place (text/number/date/single-select/Yes-No); Enter/blur saves | Guide 02 §Edit a record | E2E | `e2e/records.spec.ts › inline-edits a cell` | 🔴 |
-| REC-08 | **Esc** cancels an inline edit | Guide 02 §Edit a record | E2E | `e2e/records.spec.ts › cancels inline edit with esc` | 🔴 |
-| REC-09 | Delete a record | Guide 02 §Edit a record (⋯ menu) | E2E | `e2e/records.spec.ts › deletes a record` | 🔴 |
-| REC-10 | Open the read-only **detail** — every field incl. linked records & attachments | Guide 02 §Open a record | E2E | `e2e/records.spec.ts › opens record detail` | 🔴 |
-| REC-11 | Contributor can edit/delete **only their own** records; manager can edit any | Guide 02 (callout), guide 06 FAQ | E2E | `e2e/records.spec.ts › ownership limits edit/delete` | 🔴 |
+| REC-04 | Required fields are marked and checked on **Save** | Guide 02 §Add a record | E2E | `RecordForm.spec.js › blocks save … required field is empty` (live, unit); E2E slot pending | 🔴 |
+| REC-05 | Computed & automatic fields are filled on create | Guide 02 §Add a record | E2E | `RecordForm.spec.js › computes a field live`; `RecordServiceCreateTest`/`…ReadTest` (unit); E2E slot pending | 🔴 |
+| REC-06 | Edit a record via the full form (⋯ → Edit) | Guide 02 §Edit a record | E2E | `e2e/records.spec.js › @smoke create, edit, and delete a record` | 🟢 |
+| REC-07 | **Double-click a cell** to edit in place (text/number/date/single-select/Yes-No); Enter/blur saves | Guide 02 §Edit a record | E2E | `e2e/records.spec.js › inline-edit a cell, and cancel an inline edit with Esc` (blur path; Enter glitch tracked in #25) | 🟢 |
+| REC-08 | **Esc** cancels an inline edit | Guide 02 §Edit a record | E2E | `e2e/records.spec.js › inline-edit a cell, and cancel an inline edit with Esc` | 🟢 |
+| REC-09 | Delete a record | Guide 02 §Edit a record (⋯ menu) | E2E | `e2e/records.spec.js › @smoke create, edit, and delete a record` | 🟢 |
+| REC-10 | Open the read-only **detail** — every field incl. linked records & attachments | Guide 02 §Open a record | E2E | `e2e/records.spec.js › open the read-only record detail` | 🟢 |
+| REC-11 | Contributor can edit/delete **only their own** records; manager can edit any | Guide 02 (callout), guide 06 FAQ | E2E | `RecordServicePermissionTest` (own/manage gate, unit); E2E slot pending | 🔴 |
 
 ## Rules (conditional logic) — `RUL`
 
