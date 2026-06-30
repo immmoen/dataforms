@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- SPDX-License-Identifier: AGPL-3.0-or-later -->
+<!--
+	Integration suite: mapper tests against a REAL Nextcloud database, built by
+	the app's own migrations. Runs only inside a Nextcloud instance (the CI
+	3-database matrix, or a local nextcloud container) — see integration/bootstrap.php.
+-->
+<phpunit xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+		 xsi:noNamespaceSchemaLocation="https://schema.phpunit.de/10.5/phpunit.xsd"
+		 bootstrap="integration/bootstrap.php"
+		 colors="true"
+		 failOnWarning="true"
+		 failOnRisky="true">
+	<testsuites>
+		<testsuite name="integration">
+			<directory>integration</directory>
+		</testsuite>
+	</testsuites>
+</phpunit>

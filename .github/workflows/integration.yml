@@ -74,3 +74,10 @@ jobs:
         run: |
           php occ app:list | grep -A1 -i dataforms
           php occ app:enable dataforms 2>&1 | grep -qi "already enabled\|enabled"
+      # The mapper suite runs against the real ${{ matrix.db }} schema the
+      # migrations just built — the highest-risk portable SQL, verified per engine.
+      - name: Mapper integration suite (real ${{ matrix.db }})
+        working-directory: nextcloud/apps/dataforms
+        run: |
+          composer install --no-progress
+          php vendor/bin/phpunit -c tests/phpunit.integration.xml

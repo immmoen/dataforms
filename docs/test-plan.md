@@ -81,12 +81,12 @@ side effect is asserted at the service seam rather than driven through the SPA.
 
 | Id | Business scenario | Source | Seam | Test | Status |
 |----|-------------------|--------|------|------|--------|
-| REG-01 | Create a register (title, optional description, colour); creator becomes its **manager** | Guide 01 §Creating a register | E2E | `e2e/registers.spec.ts › creates a register and grants manager` | 🔴 |
-| REG-02 | Edit a register's metadata (title / description / colour) | Guide 01 | E2E | `e2e/registers.spec.ts › edits register metadata` | 🔴 |
-| REG-03 | Delete a register (removes its records) | Guide 03 §Fields (deletion semantics), `VISION` | E2E | `e2e/registers.spec.ts › deletes a register` | 🔴 |
+| REG-01 | Create a register (title, optional description, colour); creator becomes its **manager** | Guide 01 §Creating a register | E2E | `e2e/registers.spec.js › create and delete a register` | 🟢 |
+| REG-02 | Edit a register's metadata (title / description / colour) | Guide 01 | E2E | _no SPA UI — blocked by #22_ | ⚠ |
+| REG-03 | Delete a register (removes its records) | Guide 03 §Fields (deletion semantics), `VISION` | E2E | `e2e/registers.spec.js › create and delete a register` | 🟢 |
 | REG-04 | Dashboard shows register **cards** with record counts | Guide 01 §What you see | E2E | `e2e/registers.spec.ts › dashboard lists register cards` | 🔴 |
 | REG-05 | Sidebar lists registers; **Favourites** pinned above **All registers** | Guide 01 §What you see | E2E | `e2e/registers.spec.ts › sidebar groups favourites first` | 🔴 |
-| REG-06 | Star / unstar a register (favourite toggle) | Guide 01 §What you see | E2E | `e2e/registers.spec.ts › toggles favourite` | 🔴 |
+| REG-06 | Star / unstar a register (favourite toggle) | Guide 01 §What you see | E2E | `e2e/registers.spec.js › favourite a register` | 🟢 |
 | REG-07 | **Copy link** copies a direct link to the register and the open tab | Guide 01 §Header buttons | E2E | `e2e/registers.spec.ts › copies a deep link` | 🔴 |
 | REG-08 | **Deep link** (`?register=&form=`) opens straight into a register/tab/form entry | Guide 05 §Deep links | E2E | `e2e/registers.spec.ts › deep link opens form entry` | 🔴 |
 | REG-09 | Manager-only tabs (Fields/Forms/Rules/Automations) hidden from viewer & contributor | Guide 01 §tabs, guide 06 FAQ | E2E | `e2e/registers.spec.ts › hides design tabs from non-managers` | 🔴 |
