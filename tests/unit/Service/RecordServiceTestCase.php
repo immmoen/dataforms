@@ -19,6 +19,8 @@ use OCA\Dataforms\Rules\ExpressionEvaluator;
 use OCA\Dataforms\Rules\RuleEvaluator;
 use OCA\Dataforms\Service\FieldValidator;
 use OCA\Dataforms\Service\FieldValue;
+use OCA\Dataforms\Service\RecordComputationService;
+use OCA\Dataforms\Service\RecordRelationService;
 use OCA\Dataforms\Service\RecordService;
 use OCA\Dataforms\Service\RegisterService;
 use OCA\Dataforms\Service\RuleService;
@@ -86,6 +88,19 @@ abstract class RecordServiceTestCase extends TestCase {
 		$expr = new ExpressionEvaluator();
 		$evaluator = new RuleEvaluator($expr);
 
+		// The two extracted collaborators (#8) are wired as REAL instances over
+		// the SAME mocked mappers, so the existing characterization tests exercise
+		// the post-split graph through RecordService's unchanged public API.
+		$computation = new RecordComputationService($this->ruleService, $evaluator, $expr, $this->fieldValidator);
+		$relations = new RecordRelationService(
+			$this->refMapper,
+			$this->recordMapper,
+			$this->fieldMapper,
+			$this->valueMapper,
+			$this->registerService,
+			$this->time,
+		);
+
 		$this->service = new RecordService(
 			$this->recordMapper,
 			$this->valueMapper,
@@ -93,10 +108,8 @@ abstract class RecordServiceTestCase extends TestCase {
 			$this->refMapper,
 			$this->fieldMapper,
 			$this->registerService,
-			$this->ruleService,
-			$evaluator,
-			$expr,
-			$this->fieldValidator,
+			$computation,
+			$relations,
 			$this->rootFolder,
 			$this->time,
 			$this->historyMapper,
