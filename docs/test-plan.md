@@ -193,14 +193,14 @@ Parity is gated by the shared `rule-cases.json` JS/PHP fixture (PRD seam #5).*
 
 | Id | Business scenario | Source | Seam | Test | Status |
 |----|-------------------|--------|------|------|--------|
-| RUL-01 | **Show / hide** a field when conditions are met (live) | Guide 03 §Rules | E2E | `e2e/rules.spec.ts › show-hide effect` | 🔴 |
-| RUL-02 | **Require** a field only when relevant (require-if) | Guide 03 §Rules | E2E | `e2e/rules.spec.ts › require-if effect` | 🔴 |
-| RUL-03 | **Set a default** value | Guide 03 §Rules | E2E | `e2e/rules.spec.ts › set-value effect` | 🔴 |
-| RUL-04 | **Validate** (range / pattern / cross-field) with a custom message | Guide 03 §Rules | E2E | `e2e/rules.spec.ts › validate effect with message` | 🔴 |
-| RUL-05 | **Compute** a value from other fields | Guide 03 §Rules | E2E | `e2e/rules.spec.ts › compute effect` | 🔴 |
-| RUL-06 | Multiple conditions must **all** match | Guide 03; guide 04 §Only if | E2E | `e2e/rules.spec.ts › all-conditions-match` | 🔴 |
-| RUL-07 | Rules are **re-checked on the server** at save (browser/server can't disagree) | Guide 03 §Rules, `VISION` | E2E + unit | `e2e/rules.spec.ts › server re-checks on save`; `RuleEvaluatorTest.php` | 🔴 |
-| RUL-08 | Expressions are **sandboxed** — no scripting / `eval` (negative) | Guide 03, `VISION` no-list | unit | `ExpressionEvaluatorTest.php › rejects arbitrary code`; `expression.spec.js` | 🔴 |
+| RUL-01 | **Show / hide** a field when conditions are met (live) | Guide 03 §Rules | E2E | `rule-cases.json › show-hides-field / show-reveals-field` (JS+PHP parity); E2E slot pending | 🔴 |
+| RUL-02 | **Require** a field only when relevant (require-if) | Guide 03 §Rules | E2E | `rule-cases.json › conditional-require-* + require-*` (JS+PHP parity); E2E slot pending | 🔴 |
+| RUL-03 | **Set a default** value | Guide 03 §Rules | E2E | `rule-cases.json › set-value-* ` (JS+PHP parity); E2E slot pending | 🔴 |
+| RUL-04 | **Validate** (range / pattern / cross-field) with a custom message | Guide 03 §Rules | E2E | `rule-cases.json › validate-*` (range/regex/expression, JS+PHP parity); E2E slot pending | 🔴 |
+| RUL-05 | **Compute** a value from other fields | Guide 03 §Rules | E2E | `e2e/rules.spec.js › @smoke compute rule evaluates live and is re-checked on save` | 🟢 |
+| RUL-06 | Multiple conditions must **all** match | Guide 03; guide 04 §Only if | E2E | `rule-cases.json › or-conditions / require-gte-and-lte` (JS+PHP parity); E2E slot pending | 🔴 |
+| RUL-07 | Rules are **re-checked on the server** at save (browser/server can't disagree) | Guide 03 §Rules, `VISION` | E2E + unit | `e2e/rules.spec.js › @smoke compute … re-checked on save`; `RuleEvaluatorTest.php` | 🟢 |
+| RUL-08 | Expressions are **sandboxed** — no scripting / `eval` (negative) | Guide 03, `VISION` no-list | unit | `ExpressionEvaluatorTest.php › testRejectsUnknownFunction / testUndefinedIdentifierIsNull`; `expression.spec.js › does not expose globals` | 🟢 |
 
 ## Relations — `REL`
 
