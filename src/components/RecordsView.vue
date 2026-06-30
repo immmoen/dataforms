@@ -105,55 +105,11 @@
 			</NcButton>
 		</div>
 
-		<div v-if="showFilter" class="filter-bar">
-			<div v-for="(f, i) in draftFilters" :key="i" class="filter-row">
-				<NcSelect :model-value="f.field"
-					:options="filterFieldOptions"
-					:reduce="(o) => o.id"
-					label="label"
-					:clearable="false"
-					class="f-field"
-					:placeholder="t('dataforms', 'Field')"
-					@update:model-value="onFilterFieldChange(f, $event)" />
-				<NcSelect v-model="f.op"
-					:options="filterOps"
-					:reduce="(o) => o.id"
-					label="label"
-					:clearable="false"
-					class="f-op" />
-				<NcSelect v-if="!['isEmpty', 'isNotEmpty'].includes(f.op) && fieldOptions(f.field).length"
-					v-model="f.value"
-					:options="fieldOptions(f.field)"
-					:clearable="false"
-					class="f-val"
-					:placeholder="t('dataforms', 'Value')" />
-				<NcTextField v-else-if="!['isEmpty', 'isNotEmpty'].includes(f.op)"
-					v-model="f.value"
-					:type="fieldInputType(f.field)"
-					:label="t('dataforms', 'Value')"
-					class="f-val" />
-				<NcButton variant="tertiary" :aria-label="t('dataforms', 'Remove')" @click="draftFilters.splice(i, 1)">
-					<template #icon>
-						<CloseIcon :size="18" />
-					</template>
-				</NcButton>
-			</div>
-			<div class="filter-actions">
-				<NcButton variant="tertiary" @click="addFilter">
-					<template #icon>
-						<PlusIcon :size="18" />
-					</template>
-					{{ t('dataforms', 'Add condition') }}
-				</NcButton>
-				<span class="spacer" />
-				<NcButton @click="clearFilters">
-					{{ t('dataforms', 'Clear') }}
-				</NcButton>
-				<NcButton variant="primary" @click="applyFilters">
-					{{ t('dataforms', 'Apply') }}
-				</NcButton>
-			</div>
-		</div>
+		<RecordsFilterBar v-if="showFilter"
+			:fields="fields"
+			:initial-filters="activeFilters"
+			@apply="onFilterApply"
+			@clear="onFilterClear" />
 
 		<NcLoadingIcon v-if="loading" class="centered" :size="32" />
 
@@ -174,107 +130,19 @@
 		</NcEmptyContent>
 
 		<template v-else>
-			<div class="table-wrap">
-				<table :aria-label="t('dataforms', 'Records')">
-					<thead>
-						<tr>
-							<th v-for="field in columns"
-								:key="field.id"
-								scope="col"
-								class="sortable"
-								role="button"
-								tabindex="0"
-								:aria-sort="ariaSort(field)"
-								@click="toggleSort(field)"
-								@keydown.enter.prevent="toggleSort(field)"
-								@keydown.space.prevent="toggleSort(field)">
-								{{ field.label }}
-								<span v-if="sort === field.machineName" class="sort-ind" aria-hidden="true">{{ direction === 'ASC' ? '▲' : '▼' }}</span>
-							</th>
-							<th scope="col" class="actions-col">
-								<span class="visually-hidden">{{ t('dataforms', 'Actions') }}</span>
-							</th>
-						</tr>
-					</thead>
-					<tbody>
-						<tr v-for="record in records" :key="record.id">
-							<td v-for="field in columns"
-								:key="field.id"
-								:class="{ editable: canModify(record) && isInlineEditable(field), editing: isEditingCell(record, field) }"
-								:tabindex="canModify(record) && isInlineEditable(field) ? 0 : undefined"
-								@click="onCellClick(record, field)"
-								@dblclick="onCellDblClick(record, field)"
-								@keydown.enter.prevent="!isEditingCell(record, field) && canModify(record) && isInlineEditable(field) && onCellDblClick(record, field)">
-								<template v-if="isEditingCell(record, field)">
-									<select v-if="field.type === 'select'"
-										ref="inlineInput"
-										v-model="editValue"
-										class="inline-input"
-										:aria-label="t('dataforms', 'Edit {field}', { field: field.label })"
-										@change="saveInline(record, field)"
-										@keydown.esc="cancelInline"
-										@blur="saveInline(record, field)">
-										<option value="" />
-										<option v-for="o in (field.config?.options || [])" :key="o" :value="o">
-											{{ o }}
-										</option>
-									</select>
-									<select v-else-if="field.type === 'boolean'"
-										ref="inlineInput"
-										v-model="editValue"
-										class="inline-input"
-										:aria-label="t('dataforms', 'Edit {field}', { field: field.label })"
-										@change="saveInline(record, field)"
-										@keydown.esc="cancelInline"
-										@blur="saveInline(record, field)">
-										<option value="" />
-										<option value="true">
-											{{ t('dataforms', 'Yes') }}
-										</option>
-										<option value="false">
-											{{ t('dataforms', 'No') }}
-										</option>
-									</select>
-									<input v-else
-										ref="inlineInput"
-										v-model="editValue"
-										:type="inlineInputType(field)"
-										class="inline-input"
-										:aria-label="t('dataforms', 'Edit {field}', { field: field.label })"
-										@keydown.enter="saveInline(record, field)"
-										@keydown.esc="cancelInline"
-										@blur="saveInline(record, field)">
-								</template>
-								<template v-else>
-									{{ format(field, record.values[field.machineName]) }}
-								</template>
-							</td>
-							<td class="actions-col" @click.stop>
-								<NcActions>
-									<NcActionButton @click="openDetail(record)">
-										<template #icon>
-											<EyeIcon :size="20" />
-										</template>
-										{{ t('dataforms', 'View details') }}
-									</NcActionButton>
-									<NcActionButton v-if="canModify(record)" @click="openEdit(record)">
-										<template #icon>
-											<PencilIcon :size="20" />
-										</template>
-										{{ t('dataforms', 'Edit') }}
-									</NcActionButton>
-									<NcActionButton v-if="canModify(record)" @click="remove(record)">
-										<template #icon>
-											<DeleteIcon :size="20" />
-										</template>
-										{{ t('dataforms', 'Delete') }}
-									</NcActionButton>
-								</NcActions>
-							</td>
-						</tr>
-					</tbody>
-				</table>
-			</div>
+			<RecordsTable :records="records"
+				:columns="columns"
+				:can-manage="canManage"
+				:current-user-id="currentUserId"
+				:sort="sort"
+				:direction="direction"
+				@sort="toggleSort"
+				@detail="openDetail"
+				@edit="openEdit"
+				@delete="remove"
+				@inline-saved="onInlineSaved"
+				@editing-change="inlineEditing = $event"
+				@reload="load" />
 
 			<div class="pager">
 				<span>{{ rangeLabel }}</span>
@@ -382,21 +250,21 @@ import NcTextField from '@nextcloud/vue/components/NcTextField'
 
 import PlusIcon from 'vue-material-design-icons/Plus.vue'
 import FilterIcon from 'vue-material-design-icons/Filter.vue'
-import CloseIcon from 'vue-material-design-icons/Close.vue'
-import PencilIcon from 'vue-material-design-icons/Pencil.vue'
 import DeleteIcon from 'vue-material-design-icons/Delete.vue'
 import DownloadIcon from 'vue-material-design-icons/Download.vue'
 import UploadIcon from 'vue-material-design-icons/Upload.vue'
 import TableIcon from 'vue-material-design-icons/Table.vue'
 import ContentSaveIcon from 'vue-material-design-icons/ContentSave.vue'
-import EyeIcon from 'vue-material-design-icons/Eye.vue'
 import DotsIcon from 'vue-material-design-icons/DotsHorizontal.vue'
 import RefreshIcon from 'vue-material-design-icons/Refresh.vue'
 
 import RecordForm from './RecordForm.vue'
 import RecordDetail from './RecordDetail.vue'
-import { listRecords, deleteRecord, updateRecord, csvExportUrl, importCsv } from '../api/records.js'
-import { listRules, FILTER_OPS } from '../api/rules.js'
+import RecordsFilterBar from './RecordsFilterBar.vue'
+import RecordsTable from './RecordsTable.vue'
+import { columnsFor, isColumnVisible, toggleColumnList, viewDefinition, stateFromView } from './records/viewState.js'
+import { listRecords, deleteRecord, csvExportUrl, importCsv } from '../api/records.js'
+import { listRules } from '../api/rules.js'
 import { listViews, createView, deleteView } from '../api/views.js'
 import { listForms } from '../api/forms.js'
 
@@ -417,18 +285,17 @@ export default {
 		NcTextField,
 		PlusIcon,
 		FilterIcon,
-		CloseIcon,
-		PencilIcon,
 		DeleteIcon,
 		DownloadIcon,
 		UploadIcon,
 		TableIcon,
 		ContentSaveIcon,
-		EyeIcon,
 		DotsIcon,
 		RefreshIcon,
 		RecordForm,
 		RecordDetail,
+		RecordsFilterBar,
+		RecordsTable,
 	},
 	props: {
 		registerId: { type: Number, required: true },
@@ -467,10 +334,10 @@ export default {
 			direction: 'DESC',
 			showFilter: false,
 			/** @type {Array<{field:string,op:string,value?:any}>} */
-			draftFilters: [],
-			/** @type {Array<{field:string,op:string,value?:any}>} */
 			activeFilters: [],
-			filterOps: FILTER_OPS,
+			// True while an inline cell edit is open, so a tab/window-focus refresh
+			// doesn't wipe the in-progress edit (the editor itself lives in RecordsTable).
+			inlineEditing: false,
 			/** @type {import('@/types/models').View[]} */
 			views: [],
 			/** @type {number|null} */
@@ -483,34 +350,17 @@ export default {
 			forms: [],
 			/** @type {import('@/types/models').Form|null} */
 			activeForm: null,
-			/** @type {{recordId:number,machineName:string}|null} */
-			editingCell: null,
-			editValue: '',
-			/** @type {any} */
-			clickTimer: null,
 		}
 	},
 	computed: {
 		columns() {
-			if (this.visibleColumns.length) {
-				return /** @type {import('@/types/models').Field[]} */ (this.visibleColumns
-					.map((mn) => this.fields.find((f) => f.machineName === mn))
-					.filter(Boolean))
-			}
-			return this.fields.slice(0, 6)
+			return columnsFor(this.fields, this.visibleColumns)
 		},
 		viewOptions() {
 			return this.views.map((v) => ({ id: v.id, title: v.title, isOwner: v.isOwner, definition: v.definition }))
 		},
 		activeView() {
 			return this.viewOptions.find((v) => v.id === this.activeViewId) ?? null
-		},
-		filterFieldOptions() {
-			// 'auto' values are computed at read time (no stored column to filter);
-			// file/relation live in join tables. Everything else is filterable.
-			return this.fields
-				.filter((f) => !['file', 'relation', 'auto'].includes(f.type))
-				.map((f) => ({ id: f.machineName, label: f.label }))
 		},
 		rangeLabel() {
 			if (this.total === 0) return ''
@@ -526,7 +376,6 @@ export default {
 			this.sort = 'updated'
 			this.direction = 'DESC'
 			this.showFilter = false
-			this.draftFilters = []
 			this.activeFilters = []
 			this.activeViewId = null
 			this.visibleColumns = []
@@ -553,7 +402,6 @@ export default {
 	beforeUnmount() {
 		document.removeEventListener('visibilitychange', this.onVisible)
 		window.removeEventListener('focus', this.onWindowFocus)
-		clearTimeout(this.clickTimer)
 	},
 	methods: {
 		t,
@@ -567,7 +415,7 @@ export default {
 		},
 		// Reload only when nothing is mid-interaction (no open dialog or inline edit).
 		refreshIfIdle() {
-			if (this.loading || this.showForm || this.showDetail || this.showImport || this.editingCell) {
+			if (this.loading || this.showForm || this.showDetail || this.showImport || this.inlineEditing) {
 				return
 			}
 			this.load()
@@ -598,57 +446,24 @@ export default {
 		},
 		toggleFilterBar() {
 			this.showFilter = !this.showFilter
-			if (this.showFilter && this.draftFilters.length === 0) {
-				this.draftFilters = this.activeFilters.length
-					? this.activeFilters.map((f) => ({ ...f }))
-					: [{ field: this.filterFieldOptions[0]?.id ?? '', op: 'eq', value: '' }]
-			}
 		},
-		// Options for a select/multi-select filter value (empty for other types).
-		fieldOptions(machineName) {
-			const f = this.fields.find((x) => x.machineName === machineName)
-			return /** @type {any[]} */ ((f && ['select', 'multiselect'].includes(f.type)) ? (f.config?.options ?? []) : [])
+		// ---- filter bar (RecordsFilterBar) ----
+		onFilterApply(filters) {
+			this.activeFilters = filters
+			this.page = 0
+			this.load()
 		},
-		// HTML input type for a free-text filter value (date/number where useful).
-		/**
-		 * HTML input type for a field's filter value. 'date' is valid at runtime
-		 * though NcTextField's prop type omits it, so the return is typed loosely.
-		 *
-		 * @param {string} machineName the field's machine name
-		 * @return {any}
-		 */
-		fieldInputType(machineName) {
-			const f = this.fields.find((x) => x.machineName === machineName)
-			if (!f) return 'text'
-			if (['number', 'currency', 'percentage'].includes(f.type)) return 'number'
-			if (f.type === 'date') return 'date'
-			return 'text'
-		},
-		// Reset the value and pick a sensible operator when the field changes.
-		onFilterFieldChange(f, fieldId) {
-			f.field = fieldId
-			const fl = this.fields.find((x) => x.machineName === fieldId)
-			f.value = ''
-			// Multi-select values are stored as a JSON array, so match by 'contains'.
-			f.op = (fl && fl.type === 'multiselect') ? 'contains' : 'eq'
+		onFilterClear() {
+			this.activeFilters = []
+			this.page = 0
+			this.load()
 		},
 		// ---- saved views ----
 		isColumnVisible(field) {
-			return this.visibleColumns.length
-				? this.visibleColumns.includes(field.machineName)
-				: this.fields.slice(0, 6).some((f) => f.id === field.id)
+			return isColumnVisible(this.fields, this.visibleColumns, field)
 		},
 		toggleColumn(field) {
-			const base = this.visibleColumns.length
-				? [...this.visibleColumns]
-				: this.fields.slice(0, 6).map((f) => f.machineName)
-			const i = base.indexOf(field.machineName)
-			if (i === -1) {
-				base.push(field.machineName)
-			} else {
-				base.splice(i, 1)
-			}
-			this.visibleColumns = base
+			this.visibleColumns = toggleColumnList(this.fields, this.visibleColumns, field)
 		},
 		onSelectView(view) {
 			if (!view) {
@@ -656,12 +471,7 @@ export default {
 				return
 			}
 			this.activeViewId = view.id
-			const d = view.definition ?? {}
-			this.visibleColumns = Array.isArray(d.columns) ? d.columns : []
-			this.activeFilters = Array.isArray(d.filters) ? d.filters : []
-			this.search = d.search ?? ''
-			this.sort = d.sort ?? 'updated'
-			this.direction = d.direction ?? 'DESC'
+			Object.assign(this, stateFromView(view))
 			this.page = 0
 			this.load()
 		},
@@ -677,13 +487,13 @@ export default {
 				const view = await createView(this.registerId, {
 					title: this.newView.title.trim(),
 					shared: this.newView.shared,
-					definition: {
+					definition: viewDefinition({
 						columns: this.columns.map((f) => f.machineName),
 						filters: this.activeFilters,
 						sort: this.sort,
 						direction: this.direction,
 						search: this.search,
-					},
+					}),
 				})
 				this.views.push(view)
 				this.activeViewId = view.id
@@ -709,22 +519,6 @@ export default {
 				console.error(e)
 			}
 		},
-		addFilter() {
-			this.draftFilters.push({ field: this.filterFieldOptions[0]?.id ?? '', op: 'eq', value: '' })
-		},
-		applyFilters() {
-			this.activeFilters = this.draftFilters
-				.filter((f) => f.field)
-				.map((f) => ({ field: f.field, op: f.op, value: f.value }))
-			this.page = 0
-			this.load()
-		},
-		clearFilters() {
-			this.draftFilters = []
-			this.activeFilters = []
-			this.page = 0
-			this.load()
-		},
 		toggleSort(field) {
 			if (this.sort === field.machineName) {
 				this.direction = this.direction === 'ASC' ? 'DESC' : 'ASC'
@@ -734,12 +528,6 @@ export default {
 			}
 			this.page = 0
 			this.load()
-		},
-		ariaSort(field) {
-			if (this.sort !== field.machineName) {
-				return 'none'
-			}
-			return this.direction === 'ASC' ? 'ascending' : 'descending'
 		},
 		async reload() {
 			this.rules = await listRules(this.registerId).catch(() => [])
@@ -752,26 +540,6 @@ export default {
 				this.page = 0
 				this.load()
 			}, 300)
-		},
-		format(field, value) {
-			if (value === null || value === undefined) return ''
-			if (field.type === 'file') {
-				const list = Array.isArray(value) ? value : (value && value.id ? [value] : [])
-				if (list.length === 0) return ''
-				return list.length === 1 ? '📎 ' + list[0].name : '📎 ' + t('dataforms', '{n} files', { n: list.length })
-			}
-			if (field.type === 'relation') {
-				const list = Array.isArray(value) ? value : [value]
-				return list.filter(Boolean).map((v) => (v && typeof v === 'object' && 'label' in v) ? v.label : String(v)).join(', ')
-			}
-			if (['number', 'currency', 'percentage'].includes(field.type) && value !== '' && !isNaN(Number(value))) {
-				const dec = field.config?.decimals ?? (field.type === 'currency' ? 2 : 0)
-				return Number(value).toLocaleString(undefined, { minimumFractionDigits: dec, maximumFractionDigits: dec })
-			}
-			if (Array.isArray(value)) return value.join(', ') // multiselect
-			if (typeof value === 'boolean') return value ? t('dataforms', 'Yes') : t('dataforms', 'No')
-			if (typeof value === 'object' && 'label' in value) return value.label // relation
-			return String(value)
 		},
 		/** @param {import('@/types/models').Form|null} form */
 		openNew(form = null) {
@@ -794,108 +562,14 @@ export default {
 			this.detailRecord = record
 			this.showDetail = true
 		},
-		// ---- inline cell editing -----------------------------------------
-		// Simple, single-value types can be edited in place. Multi-value and
-		// resolved types (relation/file/multiselect) and read-only computed/auto
-		// fields fall back to the full edit dialog.
-		isInlineEditable(field) {
-			return ['text', 'email', 'url', 'phone', 'number', 'currency', 'percentage',
-				'date', 'datetime', 'time', 'select', 'boolean'].includes(field.type)
-		},
-		inlineInputType(field) {
-			return {
-				email: 'email',
-				url: 'url',
-				phone: 'tel',
-				number: 'number',
-				currency: 'number',
-				percentage: 'number',
-				date: 'date',
-				datetime: 'datetime-local',
-				time: 'time',
-			}[field.type] ?? 'text'
-		},
-		isEditingCell(record, field) {
-			return this.editingCell
-				&& this.editingCell.recordId === record.id
-				&& this.editingCell.machineName === field.machineName
-		},
-		onCellClick(record, field) {
-			if (this.editingCell) {
-				return
-			}
-			// Defer opening the detail so a double-click (edit) can cancel it.
-			clearTimeout(this.clickTimer)
-			this.clickTimer = setTimeout(() => this.openDetail(record), 220)
-		},
-		onCellDblClick(record, field) {
-			clearTimeout(this.clickTimer)
-			if (!this.canModify(record)) {
-				this.openDetail(record)
-				return
-			}
-			if (this.isInlineEditable(field)) {
-				this.startInline(record, field)
-			} else {
-				this.openEdit(record) // complex types: full editor
-			}
-		},
-		startInline(record, field) {
-			const raw = record.values[field.machineName]
-			let v = raw
-			if (field.type === 'boolean') {
-				v = raw === true ? 'true' : (raw === false ? 'false' : '')
-			} else if (raw === null || raw === undefined) {
-				v = ''
-			}
-			this.editValue = v
-			this.editingCell = { recordId: record.id, machineName: field.machineName }
-			this.$nextTick(() => {
-				const el = this.$refs.inlineInput
-				const node = Array.isArray(el) ? el[0] : el
-				node?.focus()
-				node?.select?.()
-			})
-		},
-		cancelInline() {
-			this.editingCell = null
-			this.editValue = ''
-		},
 		triggerImport() {
 			(/** @type {HTMLInputElement} */ (this.$refs.importInput)).click()
 		},
-		async saveInline(record, field) {
-			if (!this.editingCell) {
-				return
-			}
-			const mn = field.machineName
-			/** @type {any} */
-			let next = this.editValue
-			if (field.type === 'boolean') {
-				next = next === 'true' ? true : (next === 'false' ? false : null)
-			} else if (['number', 'currency', 'percentage'].includes(field.type)) {
-				next = next === '' ? null : Number(next)
-			} else if (next === '') {
-				next = null
-			}
-			const prev = record.values[mn] ?? null
-			// No change → just close the editor.
-			if (next === prev) {
-				this.cancelInline()
-				return
-			}
-			const payload = { ...record.values, [mn]: next }
-			this.cancelInline()
-			try {
-				const updated = await updateRecord(record.id, payload)
-				const i = this.records.findIndex((r) => r.id === record.id)
-				if (i !== -1) {
-					this.records.splice(i, 1, updated)
-				}
-			} catch (e) {
-				showError(e.response?.data?.ocs?.data?.message ?? t('dataforms', 'Could not save the change'))
-				console.error(e)
-				this.load() // re-sync from the server on failure
+		// A cell saved in place (RecordsTable) — swap the updated record in.
+		onInlineSaved(updated) {
+			const i = this.records.findIndex((r) => r.id === updated.id)
+			if (i !== -1) {
+				this.records.splice(i, 1, updated)
 			}
 		},
 		onDetailEdit(record) {
@@ -1027,11 +701,6 @@ export default {
 	border: 0;
 }
 
-th.sortable:focus-visible {
-	outline: 2px solid var(--color-primary-element);
-	outline-offset: -2px;
-}
-
 .spacer {
 	flex: 1;
 }
@@ -1040,107 +709,11 @@ th.sortable:focus-visible {
 	margin: 60px auto;
 }
 
-.table-wrap {
-	overflow: auto;
-	/* Tall viewport for many rows; the header stays pinned while scrolling. */
-	max-height: calc(100vh - 320px);
-	min-height: 200px;
-	border: 1px solid var(--color-border);
-	border-radius: var(--border-radius-large, 8px);
-	background: var(--color-main-background);
-}
-
-table {
-	width: 100%;
-	border-collapse: separate;
-	border-spacing: 0;
-}
-
-thead th {
-	position: sticky;
-	top: 0;
-	z-index: 2;
-	text-align: start;
-	font-size: 0.78em;
-	text-transform: uppercase;
-	letter-spacing: 0.03em;
-	color: var(--color-text-maxcontrast);
-	padding: 10px 14px;
-	border-bottom: 1px solid var(--color-border);
-	background: var(--color-background-dark, var(--color-background-hover));
-	white-space: nowrap;
-}
-
-tbody td {
-	padding: 9px 14px;
-	border-bottom: 1px solid var(--color-border);
-	max-width: 360px;
-	overflow: hidden;
-	text-overflow: ellipsis;
-	white-space: nowrap;
-	font-variant-numeric: tabular-nums;
-}
-
-tbody tr {
-	cursor: pointer;
-}
-
 /* A subtle affordance that a cell can be edited in place (double-click). */
-td.editable:hover {
-	outline: 1px dashed var(--color-primary-element);
-	outline-offset: -2px;
-}
-
-td.editing {
-	padding: 2px 6px;
-}
-
-.inline-input {
-	width: 100%;
-	min-width: 80px;
-	box-sizing: border-box;
-	padding: 5px 8px;
-	border: 2px solid var(--color-primary-element);
-	border-radius: var(--border-radius, 6px);
-	background: var(--color-main-background);
-	color: var(--color-main-text);
-	font: inherit;
-}
 
 /* Subtle zebra striping aids row-tracking across a wide table. */
-tbody tr:nth-child(even) td {
-	background: var(--color-background-hover);
-}
-
-tbody tr:hover td {
-	background: var(--color-primary-element-light, var(--color-background-dark));
-}
-
-tbody tr:last-child td {
-	border-bottom: none;
-}
 
 /* Keep the row actions reachable no matter how wide the table scrolls. */
-.actions-col {
-	width: 44px;
-	text-align: end;
-	position: sticky;
-	inset-inline-end: 0;
-	background: var(--color-main-background);
-}
-
-thead th.actions-col {
-	z-index: 3;
-	background: var(--color-background-dark, var(--color-background-hover));
-}
-
-tbody tr:nth-child(even) td.actions-col {
-	background: var(--color-background-hover);
-}
-
-tbody tr:hover td.actions-col {
-	background: var(--color-primary-element-light, var(--color-background-dark));
-}
 
 .toolbar .view-select {
 	min-width: 170px;
@@ -1159,49 +732,6 @@ tbody tr:hover td.actions-col {
 	color: var(--color-text-maxcontrast);
 	font-size: 0.85em;
 	margin: 0;
-}
-
-.filter-bar {
-	border: 1px solid var(--color-border);
-	border-radius: var(--border-radius-large, 8px);
-	padding: 12px 14px;
-	margin-bottom: 14px;
-	background: var(--color-background-hover);
-	display: flex;
-	flex-direction: column;
-	gap: 8px;
-}
-
-.filter-row {
-	display: grid;
-	grid-template-columns: 1.2fr 0.9fr 1.2fr auto;
-	gap: 8px;
-	align-items: center;
-}
-
-.filter-actions {
-	display: flex;
-	align-items: center;
-	gap: 8px;
-	margin-top: 4px;
-}
-
-.filter-actions .spacer {
-	flex: 1;
-}
-
-th.sortable {
-	cursor: pointer;
-	user-select: none;
-}
-
-th.sortable:hover {
-	color: var(--color-main-text);
-}
-
-.sort-ind {
-	font-size: 0.8em;
-	margin-inline-start: 4px;
 }
 
 .pager {
