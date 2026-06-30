@@ -138,7 +138,7 @@ types is confirmed in code (`lib/`/`src/api/fields.js`).*
 | FLD-21 | **Phone** (format-checked) | Guide 03 §Field types | E2E | `e2e/fields.spec.ts › phone field validates format` | 🔴 |
 | FLD-22 | **User** (Nextcloud) | Guide 03 §Field types | E2E | `e2e/fields.spec.ts › user field` | 🔴 |
 | FLD-23 | **Group** (Nextcloud) | Guide 03 §Field types | E2E | `e2e/fields.spec.ts › group field` | 🔴 |
-| FLD-24 | **Relation** (link to another register) | Guide 03 §Field types, §Relation | E2E | `e2e/fields.spec.ts › relation field` (see REL-\*) | 🔴 |
+| FLD-24 | **Relation** (link to another register) | Guide 03 §Field types, §Relation | E2E | `e2e/relations.spec.js › @smoke link a record via a relation field` (creates a relation field) | 🟢 |
 | FLD-25 | **File attachment** (one or more files via Files) | Guide 03 §Field types, §File | E2E | `e2e/fields.spec.ts › file attachment field` (see ATT-\*) | 🔴 |
 | FLD-26 | **Computed** (read-only expression: `sum,round,if,concat,min,max,abs,len,lower,upper`) | Guide 03 §Computed | E2E | `e2e/fields.spec.ts › computed field` | 🔴 |
 | FLD-27 | **Automatic** field type (system-filled) | Guide 03 §Automatic | E2E | `e2e/fields.spec.ts › automatic field type` | 🔴 |
@@ -209,13 +209,13 @@ Parity is gated by the shared `rule-cases.json` JS/PHP fixture (PRD seam #5).*
 
 | Id | Business scenario | Source | Seam | Test | Status |
 |----|-------------------|--------|------|------|--------|
-| REL-01 | Link a record to a record in another register | Guide 03 §Relation | E2E | `e2e/relations.spec.ts › links a single record` | 🔴 |
-| REL-02 | Allow **several** links (multi-relation) | Guide 03 §Relation | E2E | `e2e/relations.spec.ts › allows multiple links` | 🔴 |
-| REL-03 | Choose the **display field** shown for a linked record | Guide 03 §Relation | E2E | `e2e/relations.spec.ts › uses chosen display field` | 🔴 |
-| REL-04 | Delete policy **clear the link** (`null`) when the linked record is deleted | Guide 03 §Relation | E2E | `e2e/relations.spec.ts › clear-on-delete` | 🔴 |
-| REL-05 | Delete policy **prevent deletion** (`block`) | Guide 03 §Relation | E2E | `e2e/relations.spec.ts › block-on-delete` | 🔴 |
-| REL-06 | Delete policy **cascade-delete** the referencing record | Guide 03 §Relation | E2E | `e2e/relations.spec.ts › cascade-on-delete` | 🔴 |
-| REL-07 | Cross-register **read-permission guard** — no linked data leaks to users without read on the target | `VISION` (server re-checks); PRD story 24 | E2E + unit | `e2e/relations.spec.ts › hides links to unreadable register`; `RecordServiceTest.php` | 🔴 |
+| REL-01 | Link a record to a record in another register | Guide 03 §Relation | E2E | `e2e/relations.spec.js › @smoke link a record via a relation field` | 🟢 |
+| REL-02 | Allow **several** links (multi-relation) | Guide 03 §Relation | E2E | `RecordServiceReadTest › returns multiple relation as list` (unit); E2E slot pending | 🔴 |
+| REL-03 | Choose the **display field** shown for a linked record | Guide 03 §Relation | E2E | `e2e/relations.spec.js › @smoke … show its display value` | 🟢 |
+| REL-04 | Delete policy **clear the link** (`null`) when the linked record is deleted | Guide 03 §Relation | E2E | `RecordServiceDeleteTest / RecordRelationServiceTest › null policy drops dangling refs` (unit); E2E slot pending | 🔴 |
+| REL-05 | Delete policy **prevent deletion** (`block`) | Guide 03 §Relation | E2E | `RecordServiceDeleteTest / RecordRelationServiceTest › block policy throws` (unit); E2E slot pending | 🔴 |
+| REL-06 | Delete policy **cascade-delete** the referencing record | Guide 03 §Relation | E2E | `RecordServiceDeleteTest / RecordRelationServiceTest › cascade soft-deletes` (unit); E2E slot pending | 🔴 |
+| REL-07 | Cross-register **read-permission guard** — no linked data leaks to users without read on the target | `VISION` (server re-checks); PRD story 24 | E2E + unit | `RecordServiceReadTest / RecordRelationServiceTest › anonymises unreadable target` (unit); E2E slot pending | 🔴 |
 
 ## Attachments — `ATT`
 
