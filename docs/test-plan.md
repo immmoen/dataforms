@@ -234,23 +234,23 @@ Parity is gated by the shared `rule-cases.json` JS/PHP fixture (PRD seam #5).*
 
 | Id | Business scenario | Source | Seam | Test | Status |
 |----|-------------------|--------|------|------|--------|
-| VW-01 | Full-text **search** matches text across a record | Guide 02 §Search | E2E | `e2e/views.spec.ts › searches records` | 🔴 |
-| VW-02 | Filter operator **is / is not** | Guide 02 §Filter | E2E | `e2e/views.spec.ts › filter is/is-not` | 🔴 |
-| VW-03 | Filter operator **contains** | Guide 02 §Filter | E2E | `e2e/views.spec.ts › filter contains` | 🔴 |
-| VW-04 | Filter operator **greater than / less than** | Guide 02 §Filter | E2E | `e2e/views.spec.ts › filter comparison` | 🔴 |
-| VW-05 | Filter operator **empty / not empty** | Guide 02 §Filter | E2E | `e2e/views.spec.ts › filter empty` | 🔴 |
-| VW-06 | Filter value for select fields is a **dropdown of the options** | Guide 02 §Filter | E2E | `e2e/views.spec.ts › filter select uses option dropdown` | 🔴 |
-| VW-07 | **Add condition** for several filters; **Apply** / **Clear** | Guide 02 §Filter | E2E | `e2e/views.spec.ts › multiple conditions apply/clear` | 🔴 |
-| VW-08 | **Filter** button shows a count when filters are active | Guide 02 §Filter | E2E | `e2e/views.spec.ts › active-filter badge` | 🔴 |
-| VW-09 | **Sort** by clicking a column header; click again to reverse (▲/▼) | Guide 02 §Sort | E2E | `e2e/views.spec.ts › sorts by column` | 🔴 |
-| VW-10 | Sort by the **Number** (sequence) column | Guide 02 §Sort | E2E | `e2e/views.spec.ts › sorts by sequence number` | 🔴 |
-| VW-11 | **Choose columns** (⋯ More → Columns) | Guide 02 §Choose columns | E2E | `e2e/views.spec.ts › chooses columns` | 🔴 |
-| VW-12 | **Save current view** (columns + filters + sort + search) | Guide 02 §Saved views, guide 03 §Views | E2E | `e2e/views.spec.ts › saves a view` | 🔴 |
-| VW-13 | **Share** a view with everyone who can see the register | Guide 02 §Saved views, guide 03 §Views | E2E | `e2e/views.spec.ts › shares a view` | 🔴 |
-| VW-14 | A **private** (unshared) view is visible only to its owner | Guide 03 §Views | E2E | `e2e/views.spec.ts › private view hidden from others` | 🔴 |
-| VW-15 | Edit / delete a view (owner or manager) | Guide 03 §Views | E2E | `e2e/views.spec.ts › edits and deletes a view` | 🔴 |
-| VW-16 | **View selector** appears and switches between views | Guide 02 §Saved views | E2E | `e2e/views.spec.ts › switches via view selector` | 🔴 |
-| VW-17 | **Refresh** reloads the list (manual + automatically on tab return) | Guide 02 §Refresh | E2E | `e2e/views.spec.ts › refreshes the list` | 🔴 |
+| VW-01 | Full-text **search** matches text across a record | Guide 02 §Search | E2E | `e2e/views.spec.js › @smoke search, sort, filter and save a view` | 🟢 |
+| VW-02 | Filter operator **is / is not** | Guide 02 §Filter | E2E | `RecordMapperTest › filter eq/neq` (unit); E2E slot pending | 🔴 |
+| VW-03 | Filter operator **contains** | Guide 02 §Filter | E2E | `RecordMapperTest › contains filter` (unit); E2E slot pending | 🔴 |
+| VW-04 | Filter operator **greater than / less than** | Guide 02 §Filter | E2E | `e2e/views.spec.js › @smoke search, sort, filter and save a view` | 🟢 |
+| VW-05 | Filter operator **empty / not empty** | Guide 02 §Filter | E2E | `RecordMapperTest › isEmpty/isNotEmpty` (unit); E2E slot pending | 🔴 |
+| VW-06 | Filter value for select fields is a **dropdown of the options** | Guide 02 §Filter | E2E | `RecordsFilterBar.spec › value options for select` (unit); E2E slot pending | 🔴 |
+| VW-07 | **Add condition** for several filters; **Apply** / **Clear** | Guide 02 §Filter | E2E | `e2e/views.spec.js › @smoke search, sort, filter and save a view` (apply); `RecordsFilterBar.spec` (clear) | 🟢 |
+| VW-08 | **Filter** button shows a count when filters are active | Guide 02 §Filter | E2E | `e2e/views.spec.js › @smoke search, sort, filter and save a view` | 🟢 |
+| VW-09 | **Sort** by clicking a column header; click again to reverse (▲/▼) | Guide 02 §Sort | E2E | `e2e/views.spec.js › @smoke search, sort, filter and save a view` | 🟢 |
+| VW-10 | Sort by the **Number** (sequence) column | Guide 02 §Sort | E2E | `RecordServiceListTest › auto-sequence sort remap` (unit); E2E slot pending | 🔴 |
+| VW-11 | **Choose columns** (⋯ More → Columns) | Guide 02 §Choose columns | E2E | `records/viewState.spec` + `RecordsView.spec › toggles column visibility` (unit); E2E slot pending | 🔴 |
+| VW-12 | **Save current view** (columns + filters + sort + search) | Guide 02 §Saved views, guide 03 §Views | E2E | `e2e/views.spec.js › @smoke search, sort, filter and save a view` | 🟢 |
+| VW-13 | **Share** a view with everyone who can see the register | Guide 02 §Saved views, guide 03 §Views | E2E | `ViewServiceTest`/`ViewMapperTest › own+shared` (unit); E2E slot pending | 🔴 |
+| VW-14 | A **private** (unshared) view is visible only to its owner | Guide 03 §Views | E2E | `ViewMapperTest › own plus shared, private excluded` (unit); E2E slot pending | 🔴 |
+| VW-15 | Edit / delete a view (owner or manager) | Guide 03 §Views | E2E | `ViewServiceTest › owner/manager edit+delete` (unit); E2E slot pending | 🔴 |
+| VW-16 | **View selector** appears and switches between views | Guide 02 §Saved views | E2E | `e2e/views.spec.js › @smoke search, sort, filter and save a view` | 🟢 |
+| VW-17 | **Refresh** reloads the list (manual + automatically on tab return) | Guide 02 §Refresh | E2E | `RecordsView.spec › refreshes on tab/window return` (unit); E2E slot pending | 🔴 |
 
 ## Sharing & permissions — `SHR`
 
