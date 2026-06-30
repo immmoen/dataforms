@@ -332,15 +332,15 @@ Talk-room & Deck-board are **⚠ unit-level** by PRD decision (faked `NextcloudA
 
 | Id | Business scenario | Source | Seam | Test | Status |
 |----|-------------------|--------|------|------|--------|
-| CSV-01 | **Export** the current (filtered) table to CSV | Guide 02 §Export | E2E | `e2e/csv.spec.ts › exports filtered table` | 🔴 |
-| CSV-02 | Import: first row **headers** match field **labels or machine names** | Guide 03 §CSV import | E2E | `e2e/csv.spec.ts › imports matching headers` | 🔴 |
-| CSV-03 | Import: each row goes through the normal **validation/rules pipeline** | Guide 03 §CSV import | E2E | `e2e/csv.spec.ts › imports through validation pipeline` | 🔴 |
-| CSV-04 | Import: **per-row error report** for rows that don't fit | Guide 03 §CSV import | E2E | `e2e/csv.spec.ts › reports per-row errors` | 🔴 |
-| CSV-05 | Import: the **auto Number** column is excluded and assigned automatically | Guide 03 §CSV import | E2E | `e2e/csv.spec.ts › auto-assigns sequence number` | 🔴 |
-| CSV-06 | Import: select/multi-select values must match the field's options **exactly** | Guide 03 §CSV import | E2E | `e2e/csv.spec.ts › rejects unknown option values` | 🔴 |
-| CSV-07 | Import: the **5000-row cap** stops the import with a clear message | Guide 03 (server limit) | unit | `ImportServiceTest.php › stops at row cap` | 🔴 |
-| CSV-08 | Import: bulk import **does not fire automations** | PRD story 27 | unit | `ImportServiceTest.php › suppresses automations` | 🔴 |
-| CSV-09 | **Download template** gives a header-only CSV | Guide 03 §CSV import | E2E | `e2e/csv.spec.ts › downloads header template` | 🔴 |
+| CSV-01 | **Export** the current (filtered) table to CSV | Guide 02 §Export | E2E | `e2e/csv.spec.js › @smoke import a CSV with a bad row, then export and download a template` | 🟢 |
+| CSV-02 | Import: first row **headers** match field **labels or machine names** | Guide 03 §CSV import | E2E | `e2e/csv.spec.js › @smoke import a CSV with a bad row, then export and download a template`; `ImportServiceTest` | 🟢 |
+| CSV-03 | Import: each row goes through the normal **validation/rules pipeline** | Guide 03 §CSV import | E2E | `e2e/csv.spec.js › @smoke import a CSV with a bad row, then export and download a template`; `ImportServiceTest` | 🟢 |
+| CSV-04 | Import: **per-row error report** for rows that don't fit | Guide 03 §CSV import | E2E | `e2e/csv.spec.js › @smoke import a CSV with a bad row, then export and download a template`; `ImportServiceTest › per-row errors` | 🟢 |
+| CSV-05 | Import: the **auto Number** column is excluded and assigned automatically | Guide 03 §CSV import | E2E | `ImportServiceTest` (auto field) + `RecordService` sequence assignment (unit); E2E slot pending | 🔴 |
+| CSV-06 | Import: select/multi-select values must match the field's options **exactly** | Guide 03 §CSV import | E2E | `FieldValidatorTest › select option membership` (unit, #6); E2E slot pending | 🔴 |
+| CSV-07 | Import: the **5000-row cap** stops the import with a clear message | Guide 03 (server limit) | unit | `ImportServiceTest › stops at the row cap with a message` | 🟢 |
+| CSV-08 | Import: bulk import **does not fire automations** | PRD story 27 | unit | `ImportServiceTest › goes through createForImport, never create` | 🟢 |
+| CSV-09 | **Download template** gives a header-only CSV | Guide 03 §CSV import | E2E | `e2e/csv.spec.js › @smoke import a CSV with a bad row, then export and download a template` | 🟢 |
 
 ## Admin & integration — `ADM`
 
