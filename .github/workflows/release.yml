@@ -1,0 +1,61 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+#
+# Automated releases. release-please watches conventional commits on main and
+# keeps an open "release PR" that bumps the SemVer version (in package.json,
+# package-lock.json and appinfo/info.xml) and regenerates CHANGELOG.md. Merging
+# that PR creates the git tag + GitHub Release; the package job then builds the
+# stripped app tarball and attaches it as a release asset.
+#
+#   feat: …      → minor bump        fix: …  → patch bump
+#   feat!: … / "BREAKING CHANGE:" in the body → major bump
+#   chore/test/ci/docs → no release on their own
+name: Release
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  release-please:
+    runs-on: ubuntu-latest
+    outputs:
+      release_created: ${{ steps.rp.outputs.release_created }}
+      tag_name: ${{ steps.rp.outputs.tag_name }}
+    steps:
+      - uses: googleapis/release-please-action@v4
+        id: rp
+        with:
+          config-file: release-please-config.json
+          manifest-file: .release-please-manifest.json
+
+  # Runs only on the push that merges a release PR (release_created == true).
+  package:
+    needs: release-please
+    if: ${{ needs.release-please.outputs.release_created == 'true' }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      # Production dependency tree (no dev deps in the shipped tarball).
+      - run: composer install --no-dev --optimize-autoloader --no-progress
+      - run: npm ci
+      # `make appstore` rebuilds the frontend clean and rsyncs the stripped tree
+      # into build/sign/dataforms, then tars it to build/dataforms.tar.gz. The
+      # exclude list in the Makefile is the source of truth for what ships.
+      - name: Build the app package
+        run: make appstore
+      - name: Attach the app package to the release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release upload "${{ needs.release-please.outputs.tag_name }}" \
+            build/dataforms.tar.gz --clobber
