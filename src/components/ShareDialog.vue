@@ -100,12 +100,16 @@ export default {
 	emits: ['close'],
 	data() {
 		return {
+			/** @type {import('@/types/models').Share[]} */
 			shares: [],
 			loading: true,
 			saving: false,
+			/** @type {{id:string,label:string,sub?:string,type?:string}|null} */
 			selectedSharee: null, // { id, label, sub, type } picked from search
+			/** @type {Array<{id:string,label:string,sub?:string,type?:string}>} */
 			shareeOptions: [],
 			searching: false,
+			/** @type {any} */
 			searchTimer: null,
 			lastQuery: '',
 			newRole: 'read',

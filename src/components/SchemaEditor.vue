@@ -287,14 +287,18 @@ export default {
 	},
 	data() {
 		return {
+			/** @type {import('@/types/models').Field[]} */
 			fields: [],
 			loading: true,
 			showAdd: false,
+			/** @type {import('@/types/models').Field|null} */
 			editingField: null,
 			saving: false,
 			draft: emptyDraft(),
 			typeOptions: FIELD_TYPES,
+			/** @type {import('@/types/models').Register[]} */
 			registers: [],
+			/** @type {import('@/types/models').Field[]} */
 			targetFields: [],
 		}
 	},
@@ -483,7 +487,7 @@ export default {
 			}
 		},
 		async submitEdit() {
-			if (this.draft.label.trim() === '' || this.saving) {
+			if (!this.editingField || this.draft.label.trim() === '' || this.saving) {
 				return
 			}
 			this.saving = true

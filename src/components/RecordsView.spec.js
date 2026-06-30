@@ -44,6 +44,30 @@ describe('RecordsView', () => {
 		wrapper.vm.triggerImport()
 	})
 
+	it('toggles the filter bar, builds columns, and deletes the active view', async () => {
+		window.confirm = vi.fn(() => true)
+		const wrapper = mount(RecordsView, { props: { registerId: 5, canWrite: true, canManage: true } })
+		await flushPromises()
+		wrapper.vm.fields = [{ id: 1, machineName: 't', label: 'T', type: 'text' }]
+		wrapper.vm.visibleColumns = ['t']
+		await wrapper.vm.$nextTick()
+		expect(wrapper.vm.columns.length).toBe(1)
+		wrapper.vm.toggleFilterBar()
+		expect(wrapper.vm.showFilter).toBe(true)
+		wrapper.vm.activeViewId = 3
+		wrapper.vm.views = [{ id: 3, title: 'V', isOwner: true }]
+		await wrapper.vm.removeActiveView()
+		expect(wrapper.vm.views.find((v) => v.id === 3)).toBeUndefined()
+	})
+
+	it('seeds the inline editor from a record value', async () => {
+		const wrapper = mount(RecordsView, { props: { registerId: 5, canWrite: true } })
+		await flushPromises()
+		wrapper.vm.startInline({ id: 1, values: { flag: true } }, { machineName: 'flag', type: 'boolean' })
+		expect(wrapper.vm.editValue).toBe('true')
+		expect(wrapper.vm.editingCell).toEqual({ recordId: 1, machineName: 'flag' })
+	})
+
 	it('maps a field to its filter input type', async () => {
 		const wrapper = mount(RecordsView, { props: { registerId: 5, canWrite: true } })
 		await flushPromises()

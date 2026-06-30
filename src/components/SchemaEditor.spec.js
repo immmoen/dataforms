@@ -32,5 +32,13 @@ describe('SchemaEditor', () => {
 		await wrapper.vm.$nextTick()
 		expect(wrapper.vm.showAdd).toBe(true)
 		expect(wrapper.html()).toBeTruthy()
+
+		// submitEdit returns early without an editing field (guards line)
+		wrapper.vm.editingField = null
+		await wrapper.vm.submitEdit()
+		// …and saves an edited field when one is set
+		wrapper.vm.editingField = { id: 2, machineName: 'qty', label: 'Qty', type: 'number' }
+		wrapper.vm.draft.label = 'Quantity'
+		await wrapper.vm.submitEdit()
 	})
 })

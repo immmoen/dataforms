@@ -58,8 +58,8 @@
 				<li v-for="form in forms"
 					:key="form.id"
 					class="form-row"
-					:role="canManage ? 'button' : null"
-					:tabindex="canManage ? 0 : null"
+					:role="canManage ? 'button' : undefined"
+					:tabindex="canManage ? 0 : undefined"
 					@click="canManage && openEdit(form)"
 					@keydown.enter.prevent="canManage && openEdit(form)"
 					@keydown.space.prevent="canManage && openEdit(form)">
@@ -308,14 +308,20 @@ export default {
 	},
 	data() {
 		return {
+			/** @type {import('@/types/models').Form[]} */
 			forms: [],
+			/** @type {import('@/types/models').Field[]} */
 			fields: [],
 			loading: true,
+			/** @type {import('@/types/models').Form|Record<string,any>|null} */
 			editing: null, // null = list mode; a form object or {} = edit mode
 			saving: false,
+			/** @type {{title:string,sections:Array<{title:string,fields:string[]}>}} */
 			draft: { title: '', sections: [] },
 			paletteSearch: '',
+			/** @type {Record<string,any>|null} */
 			dragItem: null, // { from: 'palette'|'section', machineName, si? }
+			/** @type {number|null} */
 			dragOverSection: null,
 		}
 	},

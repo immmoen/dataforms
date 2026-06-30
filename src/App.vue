@@ -150,7 +150,7 @@
 					:register-id="selected.id"
 					:can-write="selected.canWrite"
 					:can-manage="selected.canManage"
-					:open-form-id="deepLinkFormId"
+					:open-form-id="deepLinkFormId ?? undefined"
 					@form-consumed="deepLinkFormId = null" />
 				<SchemaEditor v-else-if="activeTab === 'fields'"
 					:key="'fld-' + selected.id"
@@ -281,8 +281,10 @@ export default {
 	},
 	data() {
 		return {
+			/** @type {import('@/types/models').Register[]} */
 			registers: [],
 			loading: true,
+			/** @type {number|null} */
 			selectedId: null,
 			activeTab: 'records',
 			showShare: false,
@@ -290,6 +292,7 @@ export default {
 			saving: false,
 			draft: { title: '', description: '', color: REGISTER_COLORS[0] },
 			colors: REGISTER_COLORS,
+			/** @type {number|null} */
 			deepLinkFormId: null,
 		}
 	},

@@ -10,8 +10,7 @@
 		:register-id="registerId"
 		:fields="fields"
 		:rules="rules"
-		:record="null"
-		:form="form"
+		:form="form ?? undefined"
 		@saved="onSaved"
 		@close="$emit('close')" />
 </template>
@@ -33,7 +32,15 @@ export default {
 	},
 	emits: ['close', 'saved'],
 	data() {
-		return { fields: [], rules: [], form: null, ready: false }
+		return {
+			/** @type {import('@/types/models').Field[]} */
+			fields: [],
+			/** @type {import('@/types/models').Rule[]} */
+			rules: [],
+			/** @type {import('@/types/models').Form|null} */
+			form: null,
+			ready: false,
+		}
 	},
 	async mounted() {
 		try {

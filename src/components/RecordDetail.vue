@@ -99,7 +99,12 @@ export default {
 	},
 	emits: ['close', 'edit'],
 	data() {
-		return { showHistory: false, history: [], historyLoading: false }
+		return {
+			showHistory: false,
+			/** @type {Array<{id?:number,action:string,user:string,summary:string,detail:any,created:number}>} */
+			history: [],
+			historyLoading: false,
+		}
 	},
 	methods: {
 		async toggleHistory() {

@@ -201,7 +201,7 @@
 							<td v-for="field in columns"
 								:key="field.id"
 								:class="{ editable: canModify(record) && isInlineEditable(field), editing: isEditingCell(record, field) }"
-								:tabindex="canModify(record) && isInlineEditable(field) ? 0 : null"
+								:tabindex="canModify(record) && isInlineEditable(field) ? 0 : undefined"
 								@click="onCellClick(record, field)"
 								@dblclick="onCellDblClick(record, field)"
 								@keydown.enter.prevent="!isEditingCell(record, field) && canModify(record) && isInlineEditable(field) && onCellDblClick(record, field)">
@@ -215,7 +215,7 @@
 										@keydown.esc="cancelInline"
 										@blur="saveInline(record, field)">
 										<option value="" />
-										<option v-for="o in (field.config.options || [])" :key="o" :value="o">
+										<option v-for="o in (field.config?.options || [])" :key="o" :value="o">
 											{{ o }}
 										</option>
 									</select>
@@ -291,14 +291,14 @@
 			:register-id="registerId"
 			:fields="fields"
 			:rules="rules"
-			:record="editing"
-			:form="activeForm"
+			:record="editing ?? undefined"
+			:form="activeForm ?? undefined"
 			@saved="onSaved"
 			@close="showForm = false" />
 
 		<RecordDetail v-if="showDetail"
 			:fields="fields"
-			:record="detailRecord"
+			:record="detailRecord || {}"
 			:can-edit="canModify(detailRecord)"
 			@edit="onDetailEdit"
 			@close="showDetail = false" />
@@ -440,8 +440,11 @@ export default {
 	data() {
 		return {
 			currentUserId: getCurrentUser()?.uid ?? '',
+			/** @type {import('@/types/models').RecordRow[]} */
 			records: [],
+			/** @type {import('@/types/models').Field[]} */
 			fields: [],
+			/** @type {import('@/types/models').Rule[]} */
 			rules: [],
 			total: 0,
 			loading: true,
@@ -449,37 +452,50 @@ export default {
 			page: 0,
 			limit: 25,
 			showForm: false,
+			/** @type {import('@/types/models').RecordRow|null} */
 			editing: null,
 			showDetail: false,
+			/** @type {import('@/types/models').RecordRow|null} */
 			detailRecord: null,
 			importing: false,
 			showImport: false,
+			/** @type {{imported:number,failed:number,errors:string[]}|null} */
 			importResult: null,
+			/** @type {any} */
 			searchTimer: null,
 			sort: 'updated',
 			direction: 'DESC',
 			showFilter: false,
+			/** @type {Array<{field:string,op:string,value?:any}>} */
 			draftFilters: [],
+			/** @type {Array<{field:string,op:string,value?:any}>} */
 			activeFilters: [],
 			filterOps: FILTER_OPS,
+			/** @type {import('@/types/models').View[]} */
 			views: [],
+			/** @type {number|null} */
 			activeViewId: null,
+			/** @type {string[]} */
 			visibleColumns: [],
 			showSaveView: false,
 			newView: { title: '', shared: false },
+			/** @type {import('@/types/models').Form[]} */
 			forms: [],
+			/** @type {import('@/types/models').Form|null} */
 			activeForm: null,
+			/** @type {{recordId:number,machineName:string}|null} */
 			editingCell: null,
 			editValue: '',
+			/** @type {any} */
 			clickTimer: null,
 		}
 	},
 	computed: {
 		columns() {
 			if (this.visibleColumns.length) {
-				return this.visibleColumns
+				return /** @type {import('@/types/models').Field[]} */ (this.visibleColumns
 					.map((mn) => this.fields.find((f) => f.machineName === mn))
-					.filter(Boolean)
+					.filter(Boolean))
 			}
 			return this.fields.slice(0, 6)
 		},
@@ -591,7 +607,7 @@ export default {
 		// Options for a select/multi-select filter value (empty for other types).
 		fieldOptions(machineName) {
 			const f = this.fields.find((x) => x.machineName === machineName)
-			return (f && ['select', 'multiselect'].includes(f.type)) ? (f.config?.options ?? []) : []
+			return /** @type {any[]} */ ((f && ['select', 'multiselect'].includes(f.type)) ? (f.config?.options ?? []) : [])
 		},
 		// HTML input type for a free-text filter value (date/number where useful).
 		/**
@@ -679,10 +695,11 @@ export default {
 			}
 		},
 		async removeActiveView() {
-			if (!this.activeView || !window.confirm(t('dataforms', 'Delete this view?'))) {
+			const view = this.activeView
+			if (!view || !window.confirm(t('dataforms', 'Delete this view?'))) {
 				return
 			}
-			const id = this.activeViewId
+			const id = view.id
 			try {
 				await deleteView(id)
 				this.views = this.views.filter((v) => v.id !== id)
@@ -756,6 +773,7 @@ export default {
 			if (typeof value === 'object' && 'label' in value) return value.label // relation
 			return String(value)
 		},
+		/** @param {import('@/types/models').Form|null} form */
 		openNew(form = null) {
 			this.editing = null
 			this.activeForm = form

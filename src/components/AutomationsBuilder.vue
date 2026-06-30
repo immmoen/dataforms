@@ -344,7 +344,7 @@ import { listFields } from '../api/fields.js'
 import { searchSharees } from '../api/shares.js'
 import { FILTER_OPS } from '../api/rules.js'
 
-const blank = () => ({ name: '', trigger: 'create', conditions: [], actionType: 'notify', recipients: [], subject: '', message: '', setField: '', setValue: '', url: '', secret: '', basePath: '', folderLines: '', templateSource: '', templateDest: '', eventTitle: '', startField: '', duration: 60, calendar: '', eventDescription: '', roomName: '', participantsField: '', roomMessage: '', boardTitle: '', boardColumns: '', serviceAccount: '' })
+const blank = () => ({ name: '', trigger: 'create', conditions: /** @type {Array<{field:string,op:string,value:any}>} */ ([]), actionType: 'notify', recipients: /** @type {Array<{id:string,label?:string}>} */ ([]), subject: '', message: '', setField: '', setValue: '', url: '', secret: '', basePath: '', folderLines: '', templateSource: '', templateDest: '', eventTitle: '', startField: '', duration: 60, calendar: '', eventDescription: '', roomName: '', participantsField: '', roomMessage: '', boardTitle: '', boardColumns: '', serviceAccount: '' })
 
 export default {
 	name: 'AutomationsBuilder',
@@ -373,24 +373,33 @@ export default {
 	},
 	data() {
 		return {
+			/** @type {import('@/types/models').Automation[]} */
 			automations: [],
+			/** @type {import('@/types/models').Field[]} */
 			fields: [],
 			loading: true,
 			showDialog: false,
+			/** @type {import('@/types/models').Automation|null} */
 			editing: null,
 			saving: false,
 			draft: blank(),
 			triggers: TRIGGERS.map((x) => ({ ...x, label: t('dataforms', x.label) })),
 			actionTypes: ACTION_TYPES.map((x) => ({ ...x, label: t('dataforms', x.label) })),
+			/** @type {string[]} */
 			availableTypes: [],
+			/** @type {Array<{id:string,name:string}>} */
 			serviceAccounts: [],
 			showLog: false,
+			/** @type {Array<Record<string,any>>} */
 			log: [],
 			logLoading: false,
 			ops: FILTER_OPS,
+			/** @type {Array<{id:string,label:string,sub?:string}>} */
 			recipientOptions: [],
 			searching: false,
+			/** @type {any} */
 			searchTimer: null,
+			/** @type {any} */
 			liftTimer: null,
 			durationOptions: [
 				{ id: 30, label: t('dataforms', '30 minutes') },

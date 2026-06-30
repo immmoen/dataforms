@@ -238,10 +238,13 @@ export default {
 	},
 	data() {
 		return {
+			/** @type {import('@/types/models').Rule[]} */
 			rules: [],
+			/** @type {import('@/types/models').Field[]} */
 			fields: [],
 			loading: true,
 			showAdd: false,
+			/** @type {import('@/types/models').Rule|null} */
 			editingRule: null,
 			saving: false,
 			draft: emptyDraft(),
@@ -281,7 +284,7 @@ export default {
 		},
 		optionsForField(machineName) {
 			const field = this.fields.find((f) => f.machineName === machineName)
-			return field?.config?.options ?? []
+			return /** @type {any[]} */ (field?.config?.options ?? [])
 		},
 		openAdd() {
 			this.editingRule = null

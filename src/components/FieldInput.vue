@@ -9,7 +9,7 @@
 	<div class="field-input">
 		<input v-if="['text', 'email', 'url', 'phone'].includes(field.type)"
 			:type="htmlType"
-			:value="modelValue ?? ''"
+			:value="nativeValue"
 			:disabled="disabled"
 			v-bind="ariaAttrs"
 			class="native-input"
@@ -25,7 +25,7 @@
 
 		<input v-else-if="['number', 'currency', 'percentage'].includes(field.type)"
 			type="number"
-			:value="modelValue ?? ''"
+			:value="nativeValue"
 			:disabled="disabled"
 			v-bind="ariaAttrs"
 			class="native-input"
@@ -52,7 +52,7 @@
 
 		<input v-else-if="['date', 'datetime', 'time'].includes(field.type)"
 			:type="htmlType"
-			:value="modelValue ?? ''"
+			:value="nativeValue"
 			:disabled="disabled"
 			v-bind="ariaAttrs"
 			class="native-input"
@@ -141,7 +141,7 @@
 
 		<input v-else
 			type="text"
-			:value="modelValue ?? ''"
+			:value="nativeValue"
 			:disabled="disabled"
 			v-bind="ariaAttrs"
 			:placeholder="['user', 'group'].includes(field.type) ? t('dataforms', 'Enter an id') : ''"
@@ -181,8 +181,10 @@ export default {
 	emits: ['update:modelValue'],
 	data() {
 		return {
+			/** @type {Array<{id:number,label:string}>} */
 			relationOptions: [],
 			relLoading: false,
+			/** @type {any} */
 			relTimer: null,
 			uploading: false,
 		}
@@ -193,11 +195,15 @@ export default {
 		// any help/error text associated by the parent form (WCAG 4.1.2 / 3.3.1).
 		ariaAttrs() {
 			return {
-				'aria-label': this.label || null,
-				'aria-required': this.required || null,
-				'aria-invalid': this.invalid || null,
-				'aria-describedby': this.describedby || null,
+				'aria-label': this.label || undefined,
+				'aria-required': this.required || undefined,
+				'aria-invalid': this.invalid || undefined,
+				'aria-describedby': this.describedby || undefined,
 			}
+		},
+		/** The value bound to the native <input>/<textarea> controls. */
+		nativeValue() {
+			return /** @type {string|number} */ (this.modelValue ?? '')
 		},
 		htmlType() {
 			return {
@@ -235,13 +241,13 @@ export default {
 			if (this.field.config?.multiple) {
 				return Array.isArray(this.modelValue) ? this.modelValue : (this.modelValue ? [this.modelValue] : [])
 			}
-			return this.modelValue
+			return /** @type {any} */ (this.modelValue)
 		},
 	},
 	mounted() {
 		if (this.field.type === 'relation') {
 			if (this.modelValue && typeof this.modelValue === 'object') {
-				this.relationOptions = [this.modelValue]
+				this.relationOptions = /** @type {Array<{id:number,label:string}>} */ ([this.modelValue])
 			}
 			this.loadRelations('')
 		}
@@ -304,7 +310,7 @@ export default {
 				const opts = await listOptions(target, { display: this.field.config?.displayField ?? '', search })
 				const current = this.modelValue && typeof this.modelValue === 'object' ? [this.modelValue] : []
 				const seen = new Set(opts.map((o) => o.id))
-				this.relationOptions = [...opts, ...current.filter((c) => !seen.has(/** @type {any} */ (c).id))]
+				this.relationOptions = /** @type {Array<{id:number,label:string}>} */ ([...opts, ...current.filter((c) => !seen.has(/** @type {any} */ (c).id))])
 			} catch (e) {
 				console.error(e)
 			} finally {
