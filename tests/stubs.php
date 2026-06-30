@@ -24,3 +24,36 @@ namespace OC\User {
 		}
 	}
 }
+
+// nextcloud/ocp's DownloadResponse stub builds a Content-Disposition header via
+// Symfony's UnicodeString + HeaderUtils (shipped by the real server, not the
+// stub package). Minimal stand-ins so DataDownloadResponse is constructible in
+// unit tests; the header value itself is not asserted.
+
+namespace Symfony\Component\String {
+	if (!class_exists(UnicodeString::class)) {
+		class UnicodeString {
+			public function __construct(
+				private string $value = '',
+			) {
+			}
+			public function ascii(): self {
+				return $this;
+			}
+			public function toString(): string {
+				return $this->value;
+			}
+		}
+	}
+}
+
+namespace Symfony\Component\HttpFoundation {
+	if (!class_exists(HeaderUtils::class)) {
+		class HeaderUtils {
+			public const DISPOSITION_ATTACHMENT = 'attachment';
+			public static function makeDisposition(string $disposition, string $filename, string $filenameFallback = ''): string {
+				return $disposition . '; filename="' . $filename . '"';
+			}
+		}
+	}
+}
