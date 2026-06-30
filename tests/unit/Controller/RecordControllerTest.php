@@ -7,6 +7,7 @@ declare(strict_types=1);
 namespace OCA\Dataforms\Tests\Unit\Controller;
 
 use OCA\Dataforms\Controller\RecordController;
+use OCA\Dataforms\Exception\ForbiddenException;
 use OCA\Dataforms\Exception\NotFoundException;
 use OCA\Dataforms\Exception\ValidationException;
 use OCA\Dataforms\Service\ImportService;
@@ -59,6 +60,22 @@ class RecordControllerTest extends TestCase {
 	public function testShowMapsNotFound(): void {
 		$this->service->method('get')->willThrowException(new NotFoundException('Record not found'));
 		$this->assertSame(Http::STATUS_NOT_FOUND, $this->controller->show(5)->getStatus());
+	}
+
+	public function testRefusesUnauthorizedReadViaTheApi(): void {
+		// No read permission → the service throws NotFound (existence is not leaked),
+		// the controller maps it to 404. Server-enforced (SHR-10).
+		$this->service->method('get')->willThrowException(new NotFoundException('Record not found'));
+		$this->assertSame(Http::STATUS_NOT_FOUND, $this->controller->show(7)->getStatus());
+	}
+
+	public function testRefusesUnauthorizedWriteViaTheApi(): void {
+		// No write permission → ForbiddenException → 403, on both create and update (SHR-11).
+		$this->service->method('create')->willThrowException(new ForbiddenException('no write'));
+		$this->assertSame(Http::STATUS_FORBIDDEN, $this->controller->create(2, ['title' => 'x'])->getStatus());
+
+		$this->service->method('update')->willThrowException(new ForbiddenException('only your own'));
+		$this->assertSame(Http::STATUS_FORBIDDEN, $this->controller->update(5, ['title' => 'y'])->getStatus());
 	}
 
 	public function testCreateReturnsCreated(): void {

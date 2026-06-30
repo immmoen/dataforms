@@ -259,18 +259,18 @@ Negative cases prove the server, not the SPA, enforces access (PRD story 28).*
 
 | Id | Business scenario | Source | Seam | Test | Status |
 |----|-------------------|--------|------|------|--------|
-| SHR-01 | Grant **Read** to a user | Guide 03 §Sharing | E2E | `e2e/sharing.spec.ts › grants read to a user` | 🔴 |
-| SHR-02 | Grant **Write** to a user | Guide 03 §Sharing | E2E | `e2e/sharing.spec.ts › grants write to a user` | 🔴 |
-| SHR-03 | Grant **Manage** to a user | Guide 03 §Sharing | E2E | `e2e/sharing.spec.ts › grants manage to a user` | 🔴 |
-| SHR-04 | Grant a role to a **group** | Guide 03 §Sharing | E2E | `e2e/sharing.spec.ts › grants to a group` | 🔴 |
-| SHR-05 | Change an existing role | Guide 03 §Sharing | E2E | `e2e/sharing.spec.ts › changes a role` | 🔴 |
-| SHR-06 | Remove access | Guide 03 §Sharing | E2E | `e2e/sharing.spec.ts › removes access` | 🔴 |
-| SHR-07 | **Read** role: view/search/filter/export only — no **New record** | Guide 03 §Sharing, guide 02 | E2E | `e2e/sharing.spec.ts › read role cannot add records` | 🔴 |
-| SHR-08 | **Write** role: add records + edit/delete **own** only | Guide 03 §Sharing, guide 06 FAQ | E2E | `e2e/sharing.spec.ts › write role limited to own records` | 🔴 |
-| SHR-09 | **Manage** role: edit **any** record + design the register | Guide 03 §Sharing | E2E | `e2e/sharing.spec.ts › manage role can design` | 🔴 |
-| SHR-10 | Negative: server **refuses unauthorized read** via the API | Guide 03 (server-enforced), `VISION` | unit | `RecordControllerTest.php › refuses read without permission` | 🔴 |
-| SHR-11 | Negative: server **refuses unauthorized write** via the API | Guide 03, `VISION` | unit | `RecordControllerTest.php › refuses write without permission` | 🔴 |
-| SHR-12 | Negative: server **refuses unauthorized manage/design** via the API | Guide 03, `VISION` | unit | `FieldControllerTest.php › refuses design without manage` | 🔴 |
+| SHR-01 | Grant **Read** to a user | Guide 03 §Sharing | E2E | `e2e/sharing.spec.js › @smoke grant a role to a user` | 🟢 |
+| SHR-02 | Grant **Write** to a user | Guide 03 §Sharing | E2E | `ShareServiceTest › add … read implied` (unit, any role); E2E slot pending | 🔴 |
+| SHR-03 | Grant **Manage** to a user | Guide 03 §Sharing | E2E | `ShareServiceTest › add … manage` (unit); E2E slot pending | 🔴 |
+| SHR-04 | Grant a role to a **group** | Guide 03 §Sharing | E2E | `ShareServiceTest › updates existing group share` + `ShareMapperTest` (unit); E2E slot pending | 🔴 |
+| SHR-05 | Change an existing role | Guide 03 §Sharing | E2E | `ShareDialog.spec › changes a role` + `ShareServiceTest › setPermissions` (unit); E2E slot pending | 🔴 |
+| SHR-06 | Remove access | Guide 03 §Sharing | E2E | `ShareDialog.spec › removes a share` + `ShareServiceTest › remove` (unit); E2E slot pending | 🔴 |
+| SHR-07 | **Read** role: view/search/filter/export only — no **New record** | Guide 03 §Sharing, guide 02 | E2E | `RegisterService` permission gate (100%) + `RecordServicePermissionTest` (unit); E2E slot pending | 🔴 |
+| SHR-08 | **Write** role: add records + edit/delete **own** only | Guide 03 §Sharing, guide 06 FAQ | E2E | `RecordServicePermissionTest › creator vs manager` (unit); E2E slot pending | 🔴 |
+| SHR-09 | **Manage** role: edit **any** record + design the register | Guide 03 §Sharing | E2E | `RegisterService.findManageable` + `RecordServicePermissionTest` (unit); E2E slot pending | 🔴 |
+| SHR-10 | Negative: server **refuses unauthorized read** via the API | Guide 03 (server-enforced), `VISION` | unit | `RecordControllerTest › refuses unauthorized read via the API` (404) | 🟢 |
+| SHR-11 | Negative: server **refuses unauthorized write** via the API | Guide 03, `VISION` | unit | `RecordControllerTest › refuses unauthorized write via the API` (403) | 🟢 |
+| SHR-12 | Negative: server **refuses unauthorized manage/design** via the API | Guide 03, `VISION` | unit | `FieldControllerTest › destroy maps Forbidden` (403) | 🟢 |
 
 ## Automations & workflow — `AUT`
 
