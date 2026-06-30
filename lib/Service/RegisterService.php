@@ -211,6 +211,14 @@ class RegisterService {
 	}
 
 	/**
+	 * Whether the user holds the Manage bit on the register — the capability
+	 * check (no throw) services use to let a manager act on others' content.
+	 */
+	public function isManager(Register $register, string $userId): bool {
+		return ($this->permissionsFor($register, $userId) & Share::PERMISSION_MANAGE) !== 0;
+	}
+
+	/**
 	 * @param string[] $groupIds
 	 * @return array<string,mixed>
 	 */

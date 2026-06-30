@@ -16,7 +16,6 @@ use OCA\Dataforms\Db\RecordMapper;
 use OCA\Dataforms\Db\RecordRefMapper;
 use OCA\Dataforms\Db\RecordValueMapper;
 use OCA\Dataforms\Db\Register;
-use OCA\Dataforms\Db\Share;
 use OCA\Dataforms\Event\RecordCreatedEvent;
 use OCA\Dataforms\Event\RecordDeletedEvent;
 use OCA\Dataforms\Event\RecordUpdatedEvent;
@@ -498,7 +497,7 @@ class RecordService {
 		if ($record->getCreatedBy() === $userId) {
 			return;
 		}
-		if (($this->registerService->permissionsFor($register, $userId) & Share::PERMISSION_MANAGE) !== 0) {
+		if ($this->registerService->isManager($register, $userId)) {
 			return;
 		}
 		throw new ForbiddenException('You can only edit entries you created');
